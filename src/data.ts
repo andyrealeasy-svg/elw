@@ -1,5 +1,6 @@
 import { Combatant, Skill, Element, Artifact, ArtifactSlot, StatType, BattleState, Rarity, ArtifactSet, Dungeon, ArtifactSubStat } from "./types";
 import { playCritSound } from "./lib/sound";
+import { SPLASH_IMAGES } from "./lib/images";
 
 export const dealDamage = (source: Combatant, target: Combatant, multiplier: number, element: Element, log: (msg: string) => void, floatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void, hits: number = 1, state?: BattleState, defIgnore: number = 0, ignoreShields: boolean = false, guaranteedCrit: boolean = false) => {
   const hitDelay = 200;
@@ -785,40 +786,7 @@ export const characterConstellations: Record<string, ConstellationInfo[]> = {
 };
 
 export const getCharSplash = (id: string): string | null => {
-  switch (id) {
-    case 'zephyr': return '/src/assets/images/zephyr_splash_1787175091416.jpg';
-    case 'aurum': return '/src/assets/images/aurum_splash_1787175110047.jpg';
-    case 'rix': return '/src/assets/images/rix_splash_1787175129239.jpg';
-    case 'volosatinya': return '/src/assets/images/volosatinya_banner_1779474488907.png';
-    case 'kamikaze': return '/src/assets/images/kamikaze_banner_1779477753901.png';
-    case 'kopro': return '/src/assets/images/kopro_banner_1779474510034.png';
-    case 'aelita': return '/src/assets/images/aelita_banner_1779474527129.png';
-    case 'gotka': return '/src/assets/images/gotka_banner_1779474549439.png';
-    case 'echo': return '/src/assets/images/echo_banner_1779477228500.png';
-    case 'selva': return '/src/assets/images/selva_banner_1779474568432.png';
-    case 'moyan': return '/src/assets/images/moyan_banner_1779474588301.png';
-    case 'selina': return '/src/assets/images/selina_1779473466737.png';
-    case 'neuron': return '/src/assets/images/neuron_banner_1779476075017.png';
-    case 'krona': return '/src/assets/images/krona_banner_1779476311309.png';
-    case 'patch': return '/src/assets/images/patch_banner_1779478177312.png';
-    case 'claymore': return '/src/assets/images/miner_claymore_banner_1779480174942.png';
-    case 'viper': return '/src/assets/images/viper_splash_1779481171022.png';
-    case 'spark': return '/src/assets/images/spark_splash_1779481206662.png';
-    case 'aegis': return '/src/assets/images/aegis_splash_1779481221990.png';
-    case 'blaze': return '/src/assets/images/blaze_splash_1779481239711.png';
-    case 'tide': return '/src/assets/images/tide_splash_1779481255824.png';
-    case 'nova': return '/src/assets/images/nova_splash_1779481272985.png';
-    case 'cyrus': return '/src/assets/images/cyrus_splash_1779652822412.png';
-    case 'raven': return '/src/assets/images/raven_splash_1779654092799.png';
-    case 'glacier': return '/src/assets/images/glacier_splash_1779481288792.png';
-    case 'pulse': return '/src/assets/images/pulse_splash_1779481307038.png';
-    case 'gaia': return '/src/assets/images/gaia_splash_1779481328726.png';
-    case 'fenris': return '/src/assets/images/fenris_splash_1779481345678_png_1779486175808.png';
-    case 'asher': return '/src/assets/images/asher_splash_1779520118601.png';
-    case 'ineffa': return '/src/assets/images/ineffa_splash_1787173046669.jpg';
-    case 'maestro': return '/src/assets/images/maestro_splash_1782143804586.jpg';
-    default: return null;
-  }
+  return SPLASH_IMAGES[id] || null;
 };
 
 export const characterBlueprints: Record<string, (uid: string, level: number, c: number, arts?: Artifact[]) => Combatant> = {
