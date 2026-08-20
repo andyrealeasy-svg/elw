@@ -61,9 +61,10 @@ export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
       {/* Sidebar Navigation - Desktop/Tablet Only */}
       <div className="hidden md:flex md:w-1/4 bg-slate-900 border-r border-slate-800 flex-col shrink-0 overflow-y-auto">
          <div className="p-4 md:p-6">
-            <h1 className="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 uppercase">
-               ИНОЕ ИЗМЕРЕНИЕ
+            <h1 className="text-xl font-black italic tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-500 uppercase leading-none">
+               DIFFERENT DIMENSION
             </h1>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1">Иное Измерение</p>
          </div>
          
          <nav className="flex-1 flex flex-col gap-2 p-4">
@@ -128,10 +129,10 @@ export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
             {/* Top Close Row */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
                <div>
-                  <h2 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 uppercase">
-                     ИНОЕ ИЗМЕРЕНИЕ
+                  <h2 className="text-lg font-black italic tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-500 uppercase leading-none">
+                     DIFFERENT DIMENSION
                   </h2>
-                  <p className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mt-0.5">Навигационное Меню</p>
+                  <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1">Иное Измерение</p>
                </div>
                <button 
                   onClick={() => setMenuOpen(false)}

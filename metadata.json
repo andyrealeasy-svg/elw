@@ -1,6 +1,6 @@
 {
-  "name": "FNaF World: Иное Измерение",
-  "description": "Пошаговая RPG игра в стиле FNaF World с новыми уникальными персонажами.",
+  "name": "Different Dimension",
+  "description": "Пошаговая RPG игра Different Dimension с уникальными персонажами, историей и боссами.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
