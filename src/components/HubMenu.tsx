@@ -7,13 +7,14 @@ import { cn } from '../lib/utils';
 
 interface Props {
   profile: PlayerProfile;
-  setRoute: (r: GameRoute | { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT' }) => void;
+  setRoute: (r: GameRoute | { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT', runs?: number }) => void;
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
 }
 
 export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DAILIES' | 'DUNGEONS' | 'ACHIEVEMENTS' | 'SHOP' | 'EVENTS' | 'EXPEDITIONS'>('OVERVIEW');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [goldExpRuns, setGoldExpRuns] = useState<Record<string, number>>({ GOLD: 1, EXP: 1 });
 
   // Daily Tasks Data
   const DAILIES = [
@@ -80,17 +81,7 @@ export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
             <button onClick={() => setActiveTab('DUNGEONS')} className={`flex items-center gap-3 p-3 rounded-lg font-bold transition-colors ${activeTab === 'DUNGEONS' ? 'bg-slate-800 text-blue-400' : 'hover:bg-slate-800/50 text-slate-400'}`}>
                <Swords className="w-5 h-5" /> Подземелья
             </button>
-            <button onClick={() => setRoute('ABYSS')} className="flex items-center gap-3 p-3 rounded-lg font-bold hover:bg-slate-800/50 text-purple-400 transition-colors">
-               <Layers className="w-5 h-5" /> Бездна
-            </button>
-            <button onClick={() => setRoute('BOSS_RUSH_MENU')} className="flex items-center justify-between p-3 rounded-lg font-bold bg-fuchsia-950/40 border border-fuchsia-500/30 hover:bg-fuchsia-900/50 text-fuchsia-300 transition-all group">
-               <div className="flex items-center gap-3">
-                  <Skull className="w-5 h-5 text-fuchsia-400 group-hover:scale-110 transition-transform" /> 
-                  <span>Теневой Натиск</span>
-               </div>
-               <span className="text-[9px] bg-fuchsia-500/20 text-fuchsia-300 px-1.5 py-0.5 rounded font-black border border-fuchsia-500/40 uppercase">Новое</span>
-            </button>
-            <button onClick={() => setRoute('META')} className="flex items-center gap-3 p-3 rounded-lg font-bold hover:bg-slate-800/50 text-yellow-400 transition-colors group">
+            <button onClick={() => setRoute('META')} className="flex items-center gap-3 p-3 rounded-lg font-bold hover:bg-slate-800/50 text-slate-400 group transition-colors">
                <Trophy className="w-5 h-5 group-hover:rotate-12 transition-transform" /> Мета-гайд
             </button>
             <button onClick={() => setActiveTab('DAILIES')} className={`flex items-center gap-3 p-3 rounded-lg font-bold transition-colors ${activeTab === 'DAILIES' ? 'bg-slate-800 text-green-400' : 'hover:bg-slate-800/50 text-slate-400'}`}>
@@ -622,7 +613,7 @@ export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
             {activeTab === 'EVENTS' && (
                <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 pt-4 pb-8">
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Calendar className="text-purple-400"/> Временные События</h2>
-                  <EventsMenu profile={profile} updateProfile={updateProfile} />
+                  <EventsMenu profile={profile} updateProfile={updateProfile} setRoute={setRoute} />
                </div>
             )}
 
@@ -749,43 +740,75 @@ export default function HubMenu({ profile, setRoute, updateProfile }: Props) {
 
                          return (
                            <div key={dType} className={`border p-5 rounded-xl ${color}`}>
-                             <div className="flex items-center gap-3 mb-2">
-                                <span className="text-2xl">{icon}</span>
-                                <div>
-                                   <h3 className={`font-black text-xl tracking-tight uppercase ${color.split(' ')[0]}`}>{title}</h3>
-                                   <p className="text-sm font-mono text-slate-400">{desc}</p>
+                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-3">
+                                   <span className="text-2xl">{icon}</span>
+                                   <div>
+                                      <h3 className={`font-black text-xl tracking-tight uppercase ${color.split(' ')[0]}`}>{title}</h3>
+                                      <p className="text-sm font-mono text-slate-400">{desc}</p>
+                                   </div>
                                 </div>
+                                {dType !== 'ARTIFACT' && (
+                                   <div className="flex items-center gap-1.5 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                                      <span className="text-[10px] font-black uppercase text-slate-400 px-1">Заходов:</span>
+                                      {[1, 2, 3, 4, 5].map(n => {
+                                         const isSelected = (goldExpRuns[dType] || 1) === n;
+                                         const cost = 20 * n;
+                                         const hasResin = profile.resin >= cost;
+                                         return (
+                                            <button
+                                               key={n}
+                                               disabled={!hasResin && n > 1}
+                                               onClick={() => setGoldExpRuns(prev => ({ ...prev, [dType]: n }))}
+                                               className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                  isSelected
+                                                     ? 'bg-indigo-600 text-white'
+                                                     : !hasResin
+                                                        ? 'text-slate-700 cursor-not-allowed opacity-40'
+                                                        : 'text-slate-400 hover:bg-slate-900 hover:text-white'
+                                               }`}
+                                            >
+                                               {n}x
+                                            </button>
+                                         );
+                                      })}
+                                   </div>
+                                )}
                              </div>
                              
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-5">
-                                {[1, 2, 3, 4, 5, 6].map(lvl => (
-                                   <div key={lvl} className="bg-slate-950/80 border border-slate-800 p-3 rounded-lg flex flex-col justify-between group">
-                                      <div className="mb-3 flex justify-between items-center bg-slate-900/40 p-1 rounded-md">
-                                         <h4 className="font-bold text-slate-300 text-xs">Ур. {lvl}</h4>
-                                         <div className="flex items-center gap-0.5 text-[9px] font-bold text-blue-300 bg-blue-900/30 px-1 py-0.5 rounded border border-blue-800/50 uppercase">
-                                            <Zap className="w-2.5 h-2.5 text-blue-400" /> 20
+                                {[1, 2, 3, 4, 5, 6].map(lvl => {
+                                   const currentRuns = goldExpRuns[dType] || 1;
+                                   const totalCost = 20 * currentRuns;
+                                   return (
+                                      <div key={lvl} className="bg-slate-950/80 border border-slate-800 p-3 rounded-lg flex flex-col justify-between group">
+                                         <div className="mb-3 flex justify-between items-center bg-slate-900/40 p-1 rounded-md">
+                                            <h4 className="font-bold text-slate-300 text-xs">Ур. {lvl}</h4>
+                                            <div className="flex items-center gap-0.5 text-[9px] font-bold text-blue-300 bg-blue-900/30 px-1 py-0.5 rounded border border-blue-800/50 uppercase">
+                                               <Zap className="w-2.5 h-2.5 text-blue-400" /> {dType === 'ARTIFACT' ? 20 : totalCost}
+                                            </div>
                                          </div>
+                                         <button 
+                                            onClick={() => {
+                                               if (dType === 'ARTIFACT') {
+                                                  setRoute('ARTIFACT_DUNGEON_SELECTOR');
+                                               } else if (profile.resin >= totalCost) {
+                                                  updateProfile(p => ({...p, resin: p.resin - totalCost, dailies: { ...p.dailies, resinsSpent: (p.dailies.resinsSpent || 0) + totalCost }}));
+                                                  setRoute({ type: 'DUNGEON', level: lvl, dungeonType: dType, runs: currentRuns });
+                                               } else {
+                                                  alert("Недостаточно смолы!");
+                                               }
+                                            }}
+                                            className={`w-full py-2 font-bold rounded text-xs uppercase tracking-widest transition-all ${btnColor}`}
+                                         >
+                                            {dType === 'ARTIFACT' ? 'Выбор' : 'Начать'}
+                                         </button>
                                       </div>
-                                      <button 
-                                         onClick={() => {
-                                            if (dType === 'ARTIFACT') {
-                                               setRoute('ARTIFACT_DUNGEON_SELECTOR');
-                                            } else if (profile.resin >= 20) {
-                                               updateProfile(p => ({...p, resin: p.resin - 20, dailies: { ...p.dailies, resinsSpent: (p.dailies.resinsSpent || 0) + 20 }}));
-                                               setRoute({ type: 'DUNGEON', level: lvl, dungeonType: dType });
-                                            } else {
-                                               alert("Недостаточно смолы!");
-                                            }
-                                         }}
-                                         className={`w-full py-2 font-bold rounded text-xs uppercase tracking-widest transition-all ${btnColor}`}
-                                      >
-                                         {dType === 'ARTIFACT' ? 'Выбор' : 'Начать'}
-                                      </button>
-                                   </div>
-                                ))}
+                                   );
+                                })}
                              </div>
                            </div>
-                         )
+                         );
                      })}
                   </div>
                </div>

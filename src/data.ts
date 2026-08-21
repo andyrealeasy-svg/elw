@@ -9,7 +9,12 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
     setTimeout(() => {
       if (target.stats.hp <= 0 && i > 0) return; 
       
-      const critChance = 0.25 + (source.buffs.critChance || 0) / 100;
+      let critChance = 0.25 + (source.buffs.critChance || 0) / 100;
+      
+      // Snezhana C3: +15% crit rate against overcooled targets
+      if (state && state.playerParty.some(p => p.id === 'snezhana' && p.constellation >= 3) && target.buffs && (target.buffs.overcool || target.buffs.critOvercool)) {
+        critChance += 0.15;
+      }
       
       // Maestro (Isolation Mark) & Asher Passive Logic 
       let bonusCritDamage = source.buffs.critDamage || 0;
@@ -19,6 +24,23 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       
       let actualDefIgnore = defIgnore;
       let actualDmgBoost = 1 + (source.buffs.dmgBoost || 0) / 100;
+
+      // Snezhana Overcooling & Critical Overcooling target debuffs
+      if (target.buffs) {
+        if (target.buffs.overcool) {
+          actualDefIgnore = Math.min(1.0, actualDefIgnore + target.buffs.overcool * 0.10);
+          actualDmgBoost += target.buffs.overcool * 0.12;
+        }
+        if (target.buffs.critOvercool) {
+          actualDefIgnore = Math.min(1.0, actualDefIgnore + 0.50);
+          actualDmgBoost += 0.60;
+        }
+      }
+
+      // Snezhana C6: Ignore additional 30% defense against targets with Critical Overcooling
+      if (state && state.playerParty.some(p => p.id === 'snezhana' && p.constellation >= 6) && target.buffs && target.buffs.critOvercool) {
+        actualDefIgnore = Math.min(1.0, actualDefIgnore + 0.30);
+      }
 
       if (state && source.isEnemy === false) {
         const isSingleTarget = state.activeSkill?.target === "SingleEnemy";
@@ -57,6 +79,16 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       
       // Apply Damage Boosts
       baseDmg *= actualDmgBoost;
+
+      // Snezhana source debuff: reduces damage dealt by overcooled/crit-overcooled enemies
+      if (source.buffs) {
+        if (source.buffs.overcool) {
+          baseDmg = Math.max(1, Math.floor(baseDmg * (1 - source.buffs.overcool * 0.10)));
+        }
+        if (source.buffs.critOvercool) {
+          baseDmg = Math.max(1, Math.floor(baseDmg * 0.50));
+        }
+      }
 
       let rxnMult = 1;
       let reactionMsg = "";
@@ -114,6 +146,13 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
 
       let dmg = Math.floor(baseDmg * rxnMult * (0.9 + Math.random() * 0.2));
 
+      // Volta Conduction Circuit damage mitigation
+      if (target.isEnemy === false && target.buffs.conductionCircuit && target.buffs.conductionCircuit > 0) {
+        const volta = state?.playerParty.find(p => p.id === 'volta' && p.stats.hp > 0);
+        const reduction = (volta?.constellation || 0) >= 2 ? 0.25 : 0.15;
+        dmg = Math.max(1, Math.floor(dmg * (1 - reduction)));
+      }
+
       if (!ignoreShields && target.buffs.shield && target.buffs.shield > 0) {
         if (target.buffs.shield >= dmg) {
           target.buffs.shield -= dmg;
@@ -128,8 +167,50 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
         }
       }
 
+      // Volta C6 Emergency Matrix Save
+      if (target.isEnemy === false && target.buffs.conductionCircuit && target.stats.hp - dmg <= 0 && !target.buffs.voltaC6Used) {
+        const volta = state?.playerParty.find(p => p.id === 'volta' && p.stats.hp > 0);
+        if (volta && (volta.constellation || 0) >= 6) {
+          target.buffs.voltaC6Used = 1;
+          dmg = target.stats.hp - 1; // Prevent death
+          const healVal = Math.floor(volta.stats.maxHp * 0.60);
+          target.stats.hp = Math.min(target.stats.maxHp, 1 + healVal);
+          target.atb = 100;
+          volta.buffs.voltage = 0;
+          if (floatText) {
+            floatText(target.uid, "⚡ МАТРИЦА СПАСЕНИЯ!", "text-yellow-400 font-black text-sm drop-shadow");
+            floatText(target.uid, `+${healVal} HP`, "text-emerald-400 font-black");
+          }
+          if (playEffect) playEffect(target.uid, "heal");
+        }
+      }
+
       target.stats.hp -= dmg;
       if (target.stats.hp < 0) target.stats.hp = 0;
+
+      // Volta Voltage accumulation on incoming damage
+      if (state && target.isEnemy === false && dmg > 0) {
+        const volta = state.playerParty.find(p => p.id === 'volta' && p.stats.hp > 0);
+        if (volta) {
+          const c = volta.constellation || 0;
+          const maxVolts = c >= 1 ? 15 : 10;
+          const add = (c >= 2 ? 2 : 1) * (target.buffs.conductionCircuit ? 1 : 1);
+          volta.buffs.voltage = Math.min(maxVolts, (volta.buffs.voltage || 0) + add);
+          if (floatText && i === 0) {
+            floatText(volta.uid, `⚡ ВОЛЬТАЖ +${add} (${volta.buffs.voltage})`, "text-cyan-300 font-bold text-xs");
+          }
+        }
+      }
+
+      // Volta Voltage accumulation when marked ally attacks
+      if (state && source.isEnemy === false && source.buffs.conductionCircuit && i === 0) {
+        const volta = state.playerParty.find(p => p.id === 'volta' && p.stats.hp > 0);
+        if (volta) {
+          const c = volta.constellation || 0;
+          const maxVolts = c >= 1 ? 15 : 10;
+          volta.buffs.voltage = Math.min(maxVolts, (volta.buffs.voltage || 0) + 1);
+        }
+      }
 
       // Track Damage
       if (state && state.damageDealt) {
@@ -283,54 +364,84 @@ export const ARTIFACT_SETS: Record<string, ArtifactSet> = {
       c.stats.hp = Math.floor(c.stats.hp * 1.2);
       c.stats.maxHp = c.stats.hp;
     }
+  },
+  "voltage_circuit": {
+    id: "voltage_circuit",
+    name: "Проводящий Контур",
+    twoPieceBonus: "+20% HP",
+    fourPieceBonus: "При получении урона или поглощении щитом увеличивает Защиту отряда на 15% и силу лечения на 25% на 2 хода.",
+    bonusEffect: (c) => {
+      c.stats.hp = Math.floor(c.stats.hp * 1.2);
+      c.stats.maxHp = c.stats.hp;
+    }
+  },
+  "absolute_zero": {
+    id: "absolute_zero",
+    name: "Абсолютный Ноль",
+    twoPieceBonus: "+15% Крио урон",
+    fourPieceBonus: "Атаки по Переохлажденным целям наносят на 25% больше урона и имеют +15% Шанса крита. При возникновении Критического переохлаждения дает +20% ATB.",
+    bonusEffect: (c) => {}
   }
 };
 
-export const CHARACTER_PREFERENCES: Record<string, { main: string[], sub: string[] }> = {
-  zephyr: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  aurum: { main: ["def", "hp"], sub: ["def", "hp", "spd"] },
-  rix: { main: ["hp", "spd", "atk"], sub: ["hp", "spd", "atk"] },
-  ineffa: { main: ["atk", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  volosatinya: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  gotka: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  kopro: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  selva: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  moyan: { main: ["hp", "def"], sub: ["hp", "def", "atk"] },
-  aelita: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  asher: { main: ["hp", "spd"], sub: ["hp", "spd", "def"] },
-  selina: { main: ["atk", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  neuron: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  krona: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"] },
-  cyrus: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  raven: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  echo: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"] },
-  patch: { main: ["hp"], sub: ["hp", "spd"] },
-  claymore: { main: ["atk"], sub: ["atk", "def"] },
-  viper: { main: ["atk"], sub: ["atk", "spd"] },
-  spark: { main: ["spd", "atk"], sub: ["spd", "atk"] },
-  aegis: { main: ["def", "hp"], sub: ["def", "hp"] },
-  blaze: { main: ["atk", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  tide: { main: ["atk"], sub: ["atk", "spd"] },
-  nova: { main: ["hp", "atk"], sub: ["hp", "atk"] },
-  glacier: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"] },
-  pulse: { main: ["spd", "atk"], sub: ["spd", "atk"] },
-  gaia: { main: ["hp"], sub: ["hp", "spd"] },
-  fenris: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"] },
+export const CHARACTER_PREFERENCES: Record<string, { main: string[], sub: string[], sets: string[] }> = {
+  volta: { main: ["hp", "def", "spd"], sub: ["hp", "def", "spd", "atk"], sets: ["voltage_circuit", "ashes_of_forge"] },
+  snezhana: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["absolute_zero", "frozen_time"] },
+  zephyr: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["isolation_protocol", "echo_of_solitude"] },
+  aurum: { main: ["def", "hp"], sub: ["def", "hp", "spd"], sets: ["voltage_circuit"] },
+  rix: { main: ["hp", "spd", "atk"], sub: ["hp", "spd", "atk"], sets: ["voltage_circuit"] },
+  ineffa: { main: ["atk", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge", "gladiator"] },
+  volosatinya: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  gotka: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  kopro: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  selva: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  moyan: { main: ["hp", "def"], sub: ["hp", "def", "atk"], sets: ["voltage_circuit"] },
+  aelita: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  asher: { main: ["hp", "spd"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
+  selina: { main: ["atk", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  neuron: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["isolation_protocol"] },
+  krona: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
+  cyrus: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  raven: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  echo: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
+  patch: { main: ["hp"], sub: ["hp", "spd"], sets: ["voltage_circuit"] },
+  claymore: { main: ["atk"], sub: ["atk", "def"], sets: ["gladiator"] },
+  viper: { main: ["atk"], sub: ["atk", "spd"], sets: ["gladiator"] },
+  spark: { main: ["spd", "atk"], sub: ["spd", "atk"], sets: ["gladiator"] },
+  aegis: { main: ["def", "hp"], sub: ["def", "hp"], sets: ["voltage_circuit"] },
+  blaze: { main: ["atk", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge"] },
+  tide: { main: ["atk"], sub: ["atk", "spd"], sets: ["gladiator"] },
+  nova: { main: ["hp", "atk"], sub: ["hp", "atk"], sets: ["voltage_circuit"] },
+  glacier: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["absolute_zero"] },
+  pulse: { main: ["spd", "atk"], sub: ["spd", "atk"], sets: ["isolation_protocol"] },
+  gaia: { main: ["hp"], sub: ["hp", "spd"], sets: ["voltage_circuit"] },
+  fenris: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
 };
 
 export const scoreArtifact = (art: Artifact, charId: string): number => {
-  const prefs = CHARACTER_PREFERENCES[charId] || { main: ["atk"], sub: ["atk"] };
-  let score = art.rarity * 1000 + art.level * 50;
+  const prefs = CHARACTER_PREFERENCES[charId] || { main: ["atk"], sub: ["atk"], sets: [] };
+  
+  // Base score from rarity
+  let score = art.rarity * 1000;
+  
+  // Level weight (reduced to 20 per level to prioritize stats)
+  score += art.level * 20;
 
-  // Main stat weight
+  // Main stat weight (much higher priority)
   if (prefs.main.includes(art.mainStat.type)) {
-    score += 500;
+    score += 2000;
+  }
+
+  // Set bonus weight (important for auto-pick)
+  if (prefs.sets && prefs.sets.includes(art.setName)) {
+    score += 1500;
   }
 
   // Sub stats weight
   art.subStats?.forEach(s => {
     if (prefs.sub.includes(s.type)) {
-      score += s.value;
+      // Substats matter but less than main/set
+      score += s.value * 5; 
     }
   });
 
@@ -455,6 +566,23 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
       state.playerParty.forEach(p => { 
         if (p.element === 'Electro') {
           p.buffs.atk = (p.buffs.atk || 0) + 120;
+        }
+      });
+    }
+  },
+  {
+    id: "domain_cryothunder",
+    name: "Шпиль Сверхпроводимости",
+    description: "Древний пик, окутанный вечной грозой и ледяным штормом. Здесь добываются новые комплекты артефактов Проводящий Контур и Абсолютный Ноль, идеально подходящие для Вольты и Снежаны.",
+    level: 85,
+    entryCost: 20,
+    rewardSets: ["voltage_circuit", "absolute_zero"],
+    enemyTeam: ["volta", "snezhana", "volta"],
+    effectDescription: "Крио и Электро урон отряда увеличен на 45%. При возникновении реакции Сверхпроводник или Критического переохлаждения, отряд немедленно продвигает свое ATB на 15%.",
+    effect: (state) => {
+      state.playerParty.forEach(p => { 
+        if (p.element === 'Cryo' || p.element === 'Electro') {
+          p.buffs.atk = (p.buffs.atk || 0) + 130;
         }
       });
     }
@@ -609,12 +737,16 @@ export const charRarity: Record<string, Rarity> = {
   nova: "B",
   glacier: "A",
   pulse: "A",
-  gaia: "B",
-  fenris: "S"
+  gaia: "A",
+  fenris: "S",
+  volta: "S",
+  snezhana: "A"
 };
 
 export const getCharEmoji = (id: string): string => {
   switch (id) {
+    case 'snezhana': return '❄️';
+    case 'volta': return '⚡';
     case 'zephyr': return '⚡';
     case 'aurum': return '🪨';
     case 'rix': return '🔋';
@@ -656,137 +788,60 @@ export interface ConstellationInfo {
   description: string;
 }
 
-export const characterConstellations: Record<string, ConstellationInfo[]> = {
-  ineffa: [
-    { level: 1, name: "Осколки памяти", description: "При реакции Отражение с шансом 50% создается дополнительный фрагмент. Максимум осколков: 6." },
-    { level: 2, name: "Бесконечное отражение", description: "Взрыв стихий не поглощает фрагменты зеркала." },
-    { level: 4, name: "Искажение света", description: "Урон от Отражения увеличивается на 25%." },
-    { level: 6, name: "Истинное зеркало", description: "Игнорирует 30% защиты врага при атаках." }
-  ],
-  nova: [
-    { level: 1, name: "Инициация Потока", description: "Обычная атака восстанавливает 8% от макс. HP." },
-    { level: 2, name: "Кровавый Кулак", description: "Боевой Азарт также повышает Скорость на 30%." },
-    { level: 4, name: "Разрыв Реальности", description: "Шанс критического удара увеличен на 15%." },
-    { level: 6, name: "Сверхновая", description: "Удар сверхновой игнорирует 50% защиты цели." }
-  ],
-  selva: [
-    { level: 1, name: "Искристый Азарт", description: "Стаки Радости теперь также увеличивают Скорость на 5%." },
-    { level: 2, name: "Перегрузка Мощности", description: "Максимальное количество стаков Радости увеличено до 8." },
-    { level: 4, name: "Проводник Цепи", description: "Электро-реакции наносят на 25% больше урона." },
-    { level: 6, name: "Королева Шторма", description: "Ультимейт восстанавливает 2 заряда ATB за каждого побежденного врага." }
-  ],
-  aelita: [
-    { level: 1, name: "Корни Судьбы", description: "Шипы снижают Скорость врага на 10% (стакается)." },
-    { level: 2, name: "Дыхание Леса", description: "Смена персонажа на Аэлиту гарантирует крит. удар на следующую атаку." },
-    { level: 4, name: "Облегчение Грозы", description: "Навык E теперь лечит Аэлиту за каждый снятый стак Шипов." },
-    { level: 6, name: "Эдемский Сад", description: "Ультимейт накладывает на союзников щит, равный 20% от защиты Аэлиты." }
-  ],
-  asher: [
-    { level: 1, name: "Дыхание Горна", description: "Тлеющая связь также восстанавливает 10 ATB союзнику при атаке." },
-    { level: 2, name: "Закаленное Сердце", description: "Щиты Ашера на 30% прочнее." },
-    { level: 4, name: "Тлеющий Остаток", description: "При смерти врага со статусом Горение, весь отряд получает щит." },
-    { level: 6, name: "Мастер Тлеющего Горна", description: "Ультимейт полностью восстанавливает ATB Селине (если она в отряде)." }
-  ],
-  moyan: [
-    { level: 1, name: "Стойкость Камня", description: "Бафф защиты действует на 2 хода дольше." },
-    { level: 2, name: "Эхо Прошлого", description: "При использовании навыков есть 50% шанс восстановить 15 ATB." },
-    { level: 4, name: "Золотой Оплот", description: "Щиты союзников на 30% прочнее." },
-    { level: 6, name: "Зов Предков", description: "Ультимейт восстанавливает 40 ATB Мо Яню." }
-  ],
-  neuron: [
-    { level: 1, name: "Нейронный Импульс", description: "Навык E дает 10 ATB всем союзникам." },
-    { level: 2, name: "Анализ Уязвимости", description: "Ультимейт снижает Защиту всех врагов на 20%." },
-    { level: 4, name: "Быстрый Обмен", description: "Ускоряет перезарядку навыков на 1 ход." },
-    { level: 6, name: "Квантовый Скачок", description: "Ультимейт восстанавливает 20 ATB всему отряду." }
-  ],
-  selina: [
-    { level: 1, name: "Пылающие Узы", description: "Атаки Селины накладывают Горение на 2 хода." },
-    { level: 2, name: "Розовый Шип", description: "Критический урон увеличен на 30%." },
-    { level: 4, name: "Танец Огня", description: "При низком HP Селина получает 50% бонус к Атаке." },
-    { level: 6, name: "Вечный Феникс", description: "Один раз за бой Селина возрождается при получении смертельного урона." }
-  ],
-  krona: [
-    { level: 1, name: "Ледяной Плен", description: "Заморозка длится на 1 ход дольше." },
-    { level: 2, name: "Кристальный Блеск", description: "Увеличивает Шанс Крита по замороженным целям на 20%." },
-    { level: 4, name: "Зимнее Солнцестояние", description: "Ультимейт снижает Скорость врагов на дополнительные 15%." },
-    { level: 6, name: "Абсолютный Ноль", description: "Ледяные атаки игнорируют 100% Защиты замороженных врагов." }
-  ],
-  cyrus: [
-    { level: 1, name: "Прицельный взгляд", description: "Навешивание метки восстанавливает Сайрусу 40 ATB вместо 30." },
-    { level: 2, name: "Точный расчет", description: "Дополнительное пробитие брони по цели с меткой +20%." },
-    { level: 4, name: "Предвкушение охоты", description: "Критический урон базовой атаки по отмеченной цели увеличен на 40%." },
-    { level: 6, name: "Идеальная казнь", description: "Лимит ХП для гарантированного убийства ультимейтом увеличен до 50%." }
-  ],
-  volosatinya: [
-    { level: 1, name: "Водный щит", description: "С вероятностью 25% блокирует урон при первом попадании за ход." },
-    { level: 6, name: "Царство Посейдона", description: "Урон способностей увеличивается на 40% против горящих целей." }
-  ],
-  gotka: [
-    { level: 1, name: "Молчание — золото", description: "Шанс наложить немоту на 1 ход увеличен до 50%." },
-    { level: 6, name: "Пустота", description: "Атаки игнорируют 30% защиты цели." }
-  ],
-  kopro: [
-    { level: 1, name: "Жесткая диета", description: "Потребление ATB для навыков снижено на 10%." },
-    { level: 6, name: "Метаболизм", description: "Лечение от способностей увеличивается на 50%." }
-  ],
-  echo: [
-    { level: 1, name: "Резонанс", description: "Каждая атака восстанавливает 5 ATB всем союзникам." },
-    { level: 6, name: "Гармония", description: "Скорость всего отряда увеличивается на 20." }
-  ],
-  kamikaze: [
-    { level: 1, name: "Последний рывок", description: "Перед смертью наносит 500% урона самому сильному врагу." },
-    { level: 6, name: "Безумие", description: "Атака увеличивается на 100% за каждые потерянные 10% HP." }
-  ],
-  patch: [
-    { level: 1, name: "Первая помощь", description: "Начальное лечение увеличено на 30%." },
-    { level: 6, name: "Реанимация", description: "Один раз за бой воскрешает павшего союзника с 50% HP." }
-  ],
-  viper: [
-    { level: 1, name: "Токсичный след", description: "Урон яда увеличивается на 20%." },
-    { level: 6, name: "Смертельная доза", description: "Критические удары мгновенно активируют урон яда." }
-  ],
-  spark: [
-    { level: 1, name: "Короткое замыкание", description: "Электро-атаки имеют 15% шанс оглушить врага." },
-    { level: 6, name: "Суперконденсатор", description: "Ультимативный навык перезаряжается мгновенно при убийстве цели." }
-  ],
-  aegis: [
-    { level: 1, name: "Бастион", description: "Прочность всех накладываемых щитов повышена на 20%." },
-    { level: 6, name: "Непоколебимость", description: "Пока активен щит, персонаж получает на 50% меньше урона." }
-  ],
-  blaze: [
-    { level: 1, name: "Разогрев", description: "Каждая атака повышает Шанс Крита на 5% до конца боя (стакается)." },
-    { level: 6, name: "Взрыв сверхновой", description: "Крит. урон увеличивается на 100%, если у врага меньше 50% HP." }
-  ],
-  tide: [
-    { level: 1, name: "Прилив", description: "Лечение теперь восстанавливает 10 ATB цели." },
-    { level: 6, name: "Океанское благословение", description: "Повышает Сопротивление ко всем элементам у всего отряда на 30%." }
-  ],
-  glacier: [
-    { level: 1, name: "Вечная мерзлота", description: "Замороженные враги теряют 20 ATB каждый ход." },
-    { level: 6, name: "Айсберг", description: "Атаки по замороженным целям наносят 50% бонусного урона." }
-  ],
-  pulse: [
-    { level: 1, name: "Синхронизация", description: "Повышает Скорость всех союзников на 15% на 2 хода в начале боя." },
-    { level: 6, name: "Перегрузка", description: "Увеличивает урон всех союзников на 30%, пока у Пульса больше 80% HP." }
-  ],
-  gaia: [
-    { level: 1, name: "Плодородие", description: "Дендро-реакции восстанавливают 5% HP всему отряду." },
-    { level: 6, name: "Гнев природы", description: "Вызывает корни, наносящие 200% урона в конце хода за каждое Дендро ядро." }
-  ],
-  claymore: [
-    { level: 1, name: "Усиленный заряд", description: "Ловушки наносят на 50% больше урона." },
-    { level: 6, name: "Детонация", description: "Ультимейт мгновенно взрывает все существующие ловушки." }
-  ],
-  fenris: [
-    { level: 1, name: "Чуткий слух", description: "Урон зверя увеличивается на 20%." },
-    { level: 2, name: "Вожак стаи", description: "После атаки охотника, зверь восстанавливает 10 ATB охотнику." },
-    { level: 4, name: "Охрана волка", description: "Защитный режим зверя дает на 50% больше прочности щита." },
-    { level: 6, name: "Альфа-удар", description: "Второй ход дуэта наносит на 40% больше урона." }
-  ]
-};
+export { characterConstellations } from "./data/constellationsExport";
+
 
 export const getCharSplash = (id: string): string | null => {
   return SPLASH_IMAGES[id] || null;
+};
+
+export const applySnezhanaOvercool = (source: Combatant, target: Combatant, state: BattleState, ft: any, log: any) => {
+  if (target.buffs.critOvercool && target.buffs.critOvercool > 0) {
+    if (source.constellation >= 1) {
+      target.buffs.critOvercool++;
+      if (ft) ft(target.uid, "❄️ ДЛИТЕЛЬНОСТЬ +1", "text-cyan-300 text-xs");
+      if (log) log(`${source.name} продлевает действие Критического переохлаждения на ${target.name}!`);
+    } else {
+      if (ft) ft(target.uid, "Уже переохлажден!", "text-cyan-200 text-xs");
+    }
+    return;
+  }
+  const current = target.buffs.overcool || 0;
+  if (current >= 3) {
+    target.buffs.overcool = 0;
+    target.buffs.critOvercool = 2;
+    if (ft) ft(target.uid, "🥶 КРИТ. ПЕРЕОХЛАЖДЕНИЕ", "text-cyan-400 font-black text-sm");
+    if (log) log(`${target.name} впадает в состояние Критического переохлаждения!`);
+    
+    if (source.constellation >= 2) {
+      state.playerParty.forEach(p => {
+        if (p.stats.hp > 0) {
+          p.atb = Math.min(100, p.atb + 15);
+        }
+      });
+      if (log) log(`[Эффект С2] Команда получает +15 ATB!`);
+    }
+
+    if (source.constellation >= 4) {
+      const sortedByHp = [...state.playerParty]
+        .filter(p => p.stats.hp > 0)
+        .sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp));
+      const targetAlly = sortedByHp[0];
+      if (targetAlly) {
+        const healAmt = Math.floor(source.stats.maxHp * 0.15);
+        targetAlly.stats.hp = Math.min(targetAlly.stats.maxHp, targetAlly.stats.hp + healAmt);
+        if (ft) ft(targetAlly.uid, `+${healAmt} HP`, "text-green-400 font-bold");
+        if (log) log(`[Эффект С4] Снежана исцеляет ${targetAlly.name} на ${healAmt} HP!`);
+      }
+    }
+  } else {
+    target.buffs.overcool = current + 1;
+    if (ft) ft(target.uid, `❄️ Переохлаждение x${target.buffs.overcool}`, "text-cyan-300 font-bold text-xs");
+  }
+
+  if (source.constellation >= 5) {
+    target.buffs.spd = (target.buffs.spd || 0) - 10;
+  }
 };
 
 export const characterBlueprints: Record<string, (uid: string, level: number, c: number, arts?: Artifact[]) => Combatant> = {
@@ -870,6 +925,59 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           if (c < 2) {
              s.buffs.mirrorFragment = 0;
           }
+        }
+      }
+    ]
+  }),
+  snezhana: (uid, l, c, arts = []) => ({
+    id: "snezhana", uid, isEnemy: false, name: "Снежана", element: "Cryo", color: "bg-cyan-600", level: l, constellation: c,
+    image: getCharSplash('snezhana') || undefined,
+    stats: scaleStats(1150, 160, 85, 48, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
+    skills: [
+      {
+        id: "sn_atk", name: "Ледяной укол", type: "Attack", cost: 0, target: "SingleEnemy",
+        description: "Крио урон. Накладывает 1 стак [Переохлаждения] (макс. 4 стака). Каждый стак снижает Защиту врага на 10%, наносимый им урон на 10% и увеличивает получаемый им урон на 12%. При 4 стаках вызывает [Критическое переохлаждение] на 2 хода (-50% DEF, -50% урон, +60% входящий урон).",
+        execute: (s, t, state, log, ft, pl) => {
+          dealDamage(s, t[0], 0.9, "Cryo", log, ft, pl, 1, state);
+          applySnezhanaOvercool(s, t[0], state, ft, log);
+        }
+      },
+      {
+        id: "sn_e", name: "Морозное дыхание", type: "Skill1", cost: 2, target: "SingleEnemy",
+        description: "Крио урон. Накладывает сразу 2 стака [Переохлаждения]. Если цель уже находится под действием Критического переохлаждения, продвигает ATB выбранного союзника с наивысшей Атакой на 35%.",
+        execute: (s, t, state, log, ft, pl) => {
+          dealDamage(s, t[0], 1.2, "Cryo", log, ft, pl, 2, state);
+          applySnezhanaOvercool(s, t[0], state, ft, log);
+          applySnezhanaOvercool(s, t[0], state, ft, log);
+          if (t[0].buffs.critOvercool && t[0].buffs.critOvercool > 0) {
+            const bestAlly = state.playerParty
+              .filter(p => p.stats.hp > 0)
+              .sort((a, b) => b.stats.atk - a.stats.atk)[0];
+            if (bestAlly) {
+              bestAlly.atb = Math.min(100, bestAlly.atb + 35);
+              if (ft) ft(bestAlly.uid, "+35% ATB", "text-cyan-300");
+              if (log) log(`${s.name} мотивирует союзника ${bestAlly.name}!`);
+            }
+          }
+        }
+      },
+      {
+        id: "sn_q", name: "Вечная мерзлота", type: "Skill2", cost: 4, target: "AllEnemies",
+        description: "AoE Крио урон. Накладывает 1 стак [Переохлаждения] на всех врагов. Замораживает на 1 ход тех, у кого уже было Критическое переохлаждение.",
+        execute: (s, t, state, log, ft, pl) => {
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) {
+              const wasCrit = !!(enemy.buffs.critOvercool && enemy.buffs.critOvercool > 0);
+              dealDamage(s, enemy, 1.4, "Cryo", log, ft, pl, 3, state);
+              applySnezhanaOvercool(s, enemy, state, ft, log);
+              if (wasCrit) {
+                enemy.buffs.frozen = 1;
+                enemy.atb = 0;
+                if (ft) ft(enemy.uid, "ЗАМОРОЗКА", "text-cyan-400 font-bold");
+                if (log) log(`${enemy.name} полностью скован Вечной мерзлотой!`);
+              }
+            }
+          });
         }
       }
     ]
@@ -2028,6 +2136,136 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         } 
       }
     ]
+  }),
+  volta: (uid, l, c, arts = []) => ({
+    id: "volta", uid, isEnemy: false, name: "Вольта", element: "Electro", color: "bg-violet-700", level: l, constellation: c,
+    image: getCharSplash('volta') || undefined,
+    stats: scaleStats(1550, 140, 95, 48, l, c, arts), atb: 0, cooldowns: {},
+    buffs: {
+      voltage: c >= 1 ? 5 : 0
+    },
+    skills: [
+      {
+        id: "vt_atk",
+        name: "Токовый Импульс",
+        type: "Attack",
+        cost: 0,
+        target: "SingleEnemy",
+        description: "Электро урон (0.6x ATK + 15% от макс. HP Вольты). Если есть ≥2 стака Вольтажа, тратит 2 стака для лечения союзника с наименьшим HP на 10% от макс. HP Вольты.",
+        execute: (s, t, state, log, ft, pl) => {
+          let baseHpDmg = s.stats.maxHp * 0.15;
+          if (c >= 6) baseHpDmg += s.stats.maxHp * 0.10;
+          const totalAtkFactor = 0.6 + (baseHpDmg / Math.max(1, s.stats.atk));
+
+          dealDamage(s, t[0], totalAtkFactor, "Electro", log, ft, pl, 2, state);
+
+          const currentV = s.buffs.voltage || 0;
+          if (currentV >= 2 && state) {
+            s.buffs.voltage = Math.max(0, currentV - 2);
+            let healVal = s.stats.maxHp * 0.10;
+            if (c >= 3) healVal *= 1.2;
+
+            const aliveAllies = state.playerParty.filter(p => p.stats.hp > 0);
+            const lowest = [...aliveAllies].sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp))[0];
+            if (lowest) {
+              lowest.stats.hp = Math.min(lowest.stats.maxHp, lowest.stats.hp + healVal);
+              if (ft) {
+                ft(s.uid, "-2 ВОЛЬТАЖ", "text-cyan-400 text-xs");
+                ft(lowest.uid, `+${Math.floor(healVal)} HP`, "text-emerald-400 font-bold");
+              }
+              if (pl) pl(lowest.uid, "heal");
+            }
+          }
+          if (pl) pl(s.uid, "attack");
+        }
+      },
+      {
+        id: "vt_e",
+        name: "Проводящий Контур",
+        type: "Skill1",
+        cost: c >= 5 ? 2 : 3,
+        target: "AllAllies",
+        description: "Накладывает метку «Проводящий контур» на всех союзников на 3 хода (-15% входящего урона, накапливает Вольтаж при атаках и уроне). Мгновенно лечит команду от макс. HP Вольты и заряда.",
+        execute: (s, t, state, log, ft, pl) => {
+          const currentV = s.buffs.voltage || 0;
+          let healBasePct = 0.06 + (currentV * 0.015);
+          if (c >= 3) healBasePct *= 1.2;
+          const healAmount = Math.floor(s.stats.maxHp * healBasePct);
+
+          t.forEach(ally => {
+            if (ally.stats.hp > 0) {
+              ally.buffs.conductionCircuit = 3;
+              ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + healAmount);
+              if (ft) {
+                ft(ally.uid, "⚡ ПРОВОДЯЩИЙ КОНТУР", "text-violet-400 font-bold text-xs");
+                ft(ally.uid, `+${healAmount} HP`, "text-emerald-400 text-xs");
+              }
+              if (pl) pl(ally.uid, "shield");
+            }
+          });
+
+          if (c >= 4 && currentV >= 5) {
+            t.forEach(ally => {
+              ally.buffs.spd = (ally.buffs.spd || 0) + 15;
+              if (ft) ft(ally.uid, "+15 СКОРОСТЬ", "text-cyan-300 text-xs");
+            });
+          }
+
+          if (log) log(`${s.name} активирует Проводящий Контур: команда замкнута в защитную энергоцепь!`);
+        }
+      },
+      {
+        id: "vt_q",
+        name: "Биоэлектрический Резонанс",
+        type: "Skill2",
+        cost: c >= 5 ? 4 : 5,
+        target: "AllAllies",
+        description: "Разряжает весь накопленный Вольтаж! Массово исцеляет отряд (15% HP + 3.5% за каждый стак Вольтажа), накладывает Щит Сверхпроводимости и заливает ATB. При ≥6 стаках поражает всех врагов током.",
+        execute: (s, t, state, log, ft, pl) => {
+          const currentV = s.buffs.voltage || 0;
+          let healPct = 0.15 + (currentV * 0.035);
+          if (c >= 3) healPct *= 1.2;
+          const healAmount = Math.floor(s.stats.maxHp * healPct);
+
+          let shieldPct = 0.10 + (currentV * 0.02);
+          const shieldAmount = Math.floor(s.stats.maxHp * shieldPct);
+
+          const atbSurge = 15 + Math.floor(currentV * 1.5);
+
+          t.forEach(ally => {
+            if (ally.stats.hp > 0) {
+              ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + healAmount);
+              ally.buffs.shield = (ally.buffs.shield || 0) + shieldAmount;
+              ally.atb = Math.min(100, ally.atb + atbSurge);
+              if (ft) {
+                ft(ally.uid, `+${healAmount} HP`, "text-emerald-400 font-extrabold");
+                ft(ally.uid, `🛡️ ЩИТ +${shieldAmount}`, "text-cyan-400 font-bold text-xs");
+                ft(ally.uid, `⚡ +${atbSurge}% ATB`, "text-yellow-300 font-bold text-xs");
+              }
+              if (pl) pl(ally.uid, "heal");
+            }
+          });
+
+          // Discharge shockwave against enemies if high voltage
+          if (currentV >= 6 && state && state.enemyParty) {
+            let shockDmg = s.stats.maxHp * 0.20;
+            if (c >= 6) shockDmg += s.stats.maxHp * 0.10;
+            const shockMultiplier = shockDmg / Math.max(1, s.stats.atk);
+
+            if (log) log(`${s.name} высвобождает колоссальный разряд Вольтажа по врагам!`);
+            state.enemyParty.forEach(e => {
+              if (e.stats.hp > 0) {
+                dealDamage(s, e, shockMultiplier, "Electro", log, ft, pl, 3, state);
+              }
+            });
+          }
+
+          if (ft) ft(s.uid, `💥 РАЗРЯДКА (${currentV} СТАКОВ)`, "text-violet-300 font-black text-sm");
+          s.buffs.voltage = 0; // consume all voltage
+          if (pl) pl(s.uid, "ultimate_burst");
+        }
+      }
+    ]
   })
 };
 
@@ -2035,44 +2273,60 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
 export const baseCharacterPool = Object.keys(characterBlueprints);
 
 export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbyss: boolean = false, isBoss: boolean = false): Combatant => {
+  // Scaling for dungeon levels (1-6) vs absolute levels (> 6)
+  const isDungeonRank = level <= 6;
+  const dungeonLevelTiers = [20, 35, 50, 65, 80, 95];
+  const effectiveLevel = isDungeonRank ? dungeonLevelTiers[level - 1] : level;
+
+  // Multipliers based on dungeon level 1-6
+  const dungeonHpMults = [1.0, 1.6, 2.4, 3.4, 4.8, 6.8];
+  const dungeonAtkMults = [1.0, 1.25, 1.55, 1.9, 2.35, 2.9];
+  const dungeonDefMults = [1.0, 1.15, 1.3, 1.5, 1.75, 2.1];
+
+  const rankHpMult = isDungeonRank ? dungeonHpMults[level - 1] : 1;
+  const rankAtkMult = isDungeonRank ? dungeonAtkMults[level - 1] : 1;
+  const rankDefMult = isDungeonRank ? dungeonDefMults[level - 1] : 1;
+
   if (blueprintId && characterBlueprints[blueprintId]) {
-    const effectiveLevel = level > 6 ? level : ([1, 10, 25, 45, 65, 85][level - 1] || (level * 15 - 5));
     const enemy = characterBlueprints[blueprintId]("v_" + Math.random(), effectiveLevel, 0);
     enemy.isEnemy = true;
     enemy.name = isBoss ? `БОСС: ${enemy.name}` : `${enemy.name} (Заражённый)`;
     
     // Scale enemy HP significantly for challenge
-    const hpMult = isAbyss ? (isBoss ? 10 : 4) : 2.5;
-    const atkMult = isAbyss ? (isBoss ? 1.6 : 1.2) : 1;
+    const hpMult = isAbyss ? (isBoss ? 10 : 4) : (2.0 * rankHpMult);
+    const atkMult = isAbyss ? (isBoss ? 1.6 : 1.2) : (1.0 * rankAtkMult);
+    const defMult = isAbyss ? 1.2 : (1.0 * rankDefMult);
     
-    enemy.stats.hp *= hpMult;
-    enemy.stats.maxHp *= hpMult;
-    enemy.stats.atk *= atkMult;
-    enemy.stats.def *= (isAbyss ? 1.2 : 1);
+    enemy.stats.hp = Math.floor(enemy.stats.hp * hpMult);
+    enemy.stats.maxHp = enemy.stats.hp;
+    enemy.stats.atk = Math.floor(enemy.stats.atk * atkMult);
+    enemy.stats.def = Math.floor(enemy.stats.def * defMult);
     
     return enemy;
   }
 
-  const effectiveLevel = level > 6 ? level : ([1, 10, 25, 45, 65, 85][level - 1] || (level * 15 - 5));
   const enemyImages = [
     '/src/assets/images/glitch_slime_enemy_1779480847452.png',
     '/src/assets/images/glitch_robot_enemy_1779480865219.png',
     '/src/assets/images/glitch_void_enemy_1779480881509.png'
   ];
-  const hpMult = isAbyss ? (isBoss ? 25 : 8) : 1;
-  const atkMult = isAbyss ? (isBoss ? 3 : 2) : 1;
+  const hpMult = isAbyss ? (isBoss ? 25 : 8) : (1.0 * rankHpMult);
+  const atkMult = isAbyss ? (isBoss ? 3 : 2) : (1.0 * rankAtkMult);
 
   return {
     id: "virus_" + Math.random(), 
     uid: "v_" + Math.random(), 
     isEnemy: true, 
     image: enemyImages[Math.floor(Math.random() * enemyImages.length)],
-    name: isBoss ? "СУПЕРГЛИТЧ (БОСС)" : "Глитч-сканер", 
+    name: isBoss ? "СУПЕРГЛИТЧ (БОСС)" : `Глитч-сканер (Ур.${effectiveLevel})`, 
     element: "Physical", 
     color: "bg-gray-700", 
     level: effectiveLevel, 
     constellation: 0,
-    stats: scaleStats(6000, 150, 80, 30, effectiveLevel, 0, [], isAbyss, isBoss), atb: 0, cooldowns: {}, buffs: {},
+    stats: scaleStats(6000 * rankHpMult, 150 * rankAtkMult, 80 * rankDefMult, 30, effectiveLevel, 0, [], isAbyss, isBoss), 
+    atb: 0, 
+    cooldowns: {}, 
+    buffs: {},
     skills: [
       { id: "e_atk", name: "Пакетная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: "Удар данными.", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], isBoss ? 2.0 : 1.2, "Physical", log, ft, pl, isBoss ? 4 : 1, state); } }
     ]
@@ -2121,421 +2375,316 @@ export const generateAbyssWaves = (floorId: number, level: number): Combatant[][
 };
 
 import { StoryChapter } from "./types";
+import { CHAPTER_1 } from "./data/chapter1";
 
-export const STORY_CHAPTERS: StoryChapter[] = [
-  {
-    id: "chap1",
-    title: "Глава I: Эхо Вечного Горна",
-    subtitle: "Пробуждение Сердца Мира",
-    description: "Начало путешествия к центру мира. Древний Горн угасает, и скверна глитч-пустоты начинает разъедать границы реальности.",
-    stages: [
+export const STORY_CHAPTERS: StoryChapter[] = [CHAPTER_1];
+
+
+export const createGlitchSectorEnemy = (sectorId: number): Combatant => {
+  const sectorConfigs = [
+    {
+      name: "Глитч-Слайм",
+      element: "Dendro" as Element,
+      color: "bg-emerald-900 border-emerald-500",
+      hp: 40000,
+      atk: 450,
+      def: 150,
+      level: 40,
+      image: '/src/assets/images/glitch_slime_enemy_1779480847452.png'
+    },
+    {
+      name: "Кибер-Дрон X9",
+      element: "Electro" as Element,
+      color: "bg-purple-900 border-purple-500",
+      hp: 80000,
+      atk: 700,
+      def: 250,
+      level: 55,
+      image: '/src/assets/images/glitch_robot_enemy_1779480865219.png'
+    },
+    {
+      name: "Фантом Пустоты",
+      element: "Anemo" as Element,
+      color: "bg-slate-800 border-indigo-500",
+      hp: 140000,
+      atk: 1000,
+      def: 350,
+      level: 70,
+      image: '/src/assets/images/glitch_void_enemy_1779480881509.png'
+    },
+    {
+      name: "Кодовый Паразит",
+      element: "Hydro" as Element,
+      color: "bg-blue-900 border-blue-400",
+      hp: 220000,
+      atk: 1400,
+      def: 450,
+      level: 80,
+      image: '/src/assets/images/glitch_void_enemy_1779480881509.png'
+    },
+    {
+      name: "Матричный Страж",
+      element: "Geo" as Element,
+      color: "bg-orange-950 border-orange-500",
+      hp: 400000,
+      atk: 1800,
+      def: 600,
+      level: 90,
+      image: '/src/assets/images/glitch_robot_enemy_1779480865219.png'
+    }
+  ];
+
+  const config = sectorConfigs[sectorId - 1] || sectorConfigs[0];
+
+  return {
+    id: `glitch_sec_${sectorId}_${Math.random()}`,
+    uid: `gs_${sectorId}_${Math.random()}`,
+    isEnemy: true,
+    name: config.name,
+    element: config.element,
+    color: config.color,
+    level: config.level,
+    constellation: 0,
+    image: config.image,
+    stats: {
+      hp: config.hp,
+      maxHp: config.hp,
+      atk: config.atk,
+      def: config.def,
+      spd: 85 + (sectorId * 2)
+    },
+    buffs: {
+      critChance: 10 + sectorId,
+      critDamage: 30 + (sectorId * 5)
+    },
+    atb: 0,
+    cooldowns: {},
+    skills: [
       {
-        id: "s1_1",
-        name: "Тлеющая Поляна",
-        description: "Лес у подножия Горна охвачен скверной. Очистите путь от заражённых существ.",
-        type: 'BATTLE',
-        enemyBlueprintIds: ['gaia', 'blaze', 'gaia'],
-        level: 15,
-        reward: { gems: 60, gold: 8000, exp: 4000 }
+        id: "glitch_basic",
+        name: "Искажение данных",
+        type: "Attack",
+        cost: 0,
+        target: "SingleEnemy",
+        description: "Наносит урон и может снизить атаку цели.",
+        execute: (s, t, state, log, ft, pl) => {
+          dealDamage(s, t[0], 1.2, s.element, log, ft, pl, 1, state);
+          if (Math.random() > 0.7) {
+            t[0].buffs.atk = (t[0].buffs.atk || 0) - Math.floor(t[0].stats.atk * 0.1);
+            if (ft) ft(t[0].uid, "↓АТК", "text-red-400 font-bold");
+          }
+        }
       },
       {
-        id: "s1_2",
-        name: "Загадка Стража Горна",
-        description: "Древние рунические врата требуют ответа на закон творения, прежде чем впустить путников.",
-        type: 'RIDDLE',
-        level: 15,
-        riddle: {
-          question: "Я рождаюсь из искры, но умираю от слезы. Я даю тепло и жизнь металлу, но не имею сердца. Что я?",
-          options: ["Камень", "Огонь (Пламя)", "Ветер", "Золото"],
-          correctIndex: 1,
-          hint: "Стихия тепла и жара наковальни."
-        },
-        reward: { gems: 30, gold: 5000 }
-      },
-      {
-        id: "s1_3",
-        name: "Встреча с Ашером",
-        description: "Вы встречаете таинственного кузнеца, охраняющего пылающие подступы к Сердцу Горна.",
-        type: 'DIALOGUE',
-        level: 15,
-        dialogue: [
-          { speaker: "Ашер", charId: "asher", text: "Стойте. Дальше прохода нет. Горн засыпает, а его пламя больше не слушается смертных. Тот, кто потревожит его покой, сгорит дотла." },
-          { speaker: "Селина", charId: "selina", text: "Мы пришли не из праздного любопытства, Ашер. Мир замерзает, а глитч-разломы пожирают границы земель. Если мы не разбудим Сердце, завтра просто не наступит!" },
-          { speaker: "Зефир", charId: "zephyr", text: "Мой клинок заряжен молнией, а огонь Селины чист. Мы не отступим перед стражем, даже если твой молот ковал саму земную твердь." },
-          { speaker: "Ашер", charId: "asher", text: "Слова легки, как пепел на ветру. Но лишь сталь знает истину. Докажите свою решимость в честном бою в кольце наковальни!" }
-        ],
-        reward: { exp: 6000 }
-      },
-      {
-        id: "s1_4",
-        name: "Испытание Молота",
-        description: "Ашер испытывает силу и стойкость вашего отряда в священном пламени Наковальни.",
-        type: 'BATTLE',
-        isBoss: true,
-        enemyBlueprintIds: ['blaze', 'asher', 'aegis'],
-        level: 20,
-        reward: { gems: 120, gold: 20000, exp: 10000 }
-      },
-      {
-        id: "s1_5",
-        name: "Завет Кузнеца",
-        description: "Ашер признаёт вашу доблесть и раскрывает причину угасания пламени.",
-        type: 'DIALOGUE',
-        level: 20,
-        dialogue: [
-          { speaker: "Ашер", charId: "asher", text: "Тяжело опускает молот... В ваших ударах есть не просто ярость, но воля защищать. Вы достойны ступить к Горну." },
-          { speaker: "Селина", charId: "selina", text: "Первичный Уголь разгорелся! Но почему пламя Горна всё ещё дрожит и кажется таким неустойчивым?" },
-          { speaker: "Ашер", charId: "asher", text: "Потому что Горн связан с Полярной Призмой на вершине Ледяного Шпиля. Владычица Времени Крона заморозила потоки хроно-эфира, а загадочный Маэстро сплёл купол изоляции. Без Призмы Горн взорвёт ядро планеты." },
-          { speaker: "Зефир", charId: "zephyr", text: "Значит, наш путь лежит на заснеженный север — сквозь ледяные бури прямо к Ледяному Шпилю!" },
-          { speaker: "Ашер", charId: "asher", text: "Возьмите моё благословение пламени. Я удержу огонь снизу, пока вы ломаете лёд наверху. Ступайте!" }
-        ],
-        reward: { gems: 100, gold: 15000, exp: 8000 }
+        id: "glitch_skill",
+        name: "Системная ошибка",
+        type: "Skill1",
+        cost: 3,
+        target: "AllEnemies",
+        description: "AoE урон, накладывающий случайный дебафф.",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "ultimate_aoe");
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) {
+              dealDamage(s, enemy, 1.0, s.element, log, ft, pl, 2, state);
+              const r = Math.random();
+              if (r < 0.3) enemy.buffs.spd = -15;
+              else if (r < 0.6) enemy.buffs.def = -15;
+              else enemy.buffs.burn = 2;
+            }
+          });
+        }
       }
     ]
-  },
-  {
-    id: "chap2",
-    title: "Глава II: Зеркала Безмолвия",
-    subtitle: "Ледяной Шпиль и Владычица Вечности",
-    description: "Путь сквозь ледяные перевалы к царству замороженного времени. Здесь правит загадочный Маэстро и Хранительница Вечности Крона.",
-    stages: [
+  };
+};
+
+export const createTrialEnemy = (trialId: number): Combatant => {
+  const configs = [
+    { name: "Теневой Рыцарь", element: "Pyro" as Element, hp: 120000, atk: 800, def: 300, level: 50 },
+    { name: "Информационный Страж", element: "Cryo" as Element, hp: 200000, atk: 1100, def: 400, level: 65 },
+    { name: "Отраженная Тень", element: "Electro" as Element, hp: 350000, atk: 1500, def: 500, level: 80 },
+    { name: "Сингулярное Ядро", element: "Anemo" as Element, hp: 600000, atk: 2200, def: 700, level: 95 }
+  ];
+
+  const config = configs[trialId - 1] || configs[0];
+
+  return {
+    id: `trial_e_${trialId}_${Math.random()}`,
+    uid: `te_${trialId}_${Math.random()}`,
+    isEnemy: true,
+    name: config.name,
+    element: config.element,
+    color: "bg-slate-900 border-indigo-500",
+    level: config.level,
+    constellation: 0,
+    image: getCharSplash('maestro') || undefined,
+    stats: {
+      hp: config.hp,
+      maxHp: config.hp,
+      atk: config.atk,
+      def: config.def,
+      spd: 90 + trialId * 5
+    },
+    buffs: {
+      critChance: 15,
+      critDamage: 50
+    },
+    atb: 0,
+    cooldowns: {},
+    skills: [
       {
-        id: "s2_1",
-        name: "Хроно-Аномалия в Метели",
-        description: "Отряд поднимается на горный перевал, где само время начинает распадаться на хрустальные осколки.",
-        type: 'DIALOGUE',
-        level: 30,
-        dialogue: [
-          { speaker: "Фенрис", charId: "fenris", text: "Нюхает морозный воздух... Ветер пахнет озоном и битым стеклом. Мой зверь чует искривление времени. Мы ступаем по застывшим секундам." },
-          { speaker: "Инеффа", charId: "ineffa", text: "Взгляните вокруг. Это не просто наледь — это Зеркала Изоляции. Маэстро расставил их по всему хребту, чтобы изолировать души путников от внешнего мира." },
-          { speaker: "Аурум", charId: "aurum", text: "Мой гео-щит дрожит от странного резонанса. Кристаллическая решётка пространства искажена. Нас окружают фантомы мерзлоты!" },
-          { speaker: "Селина", charId: "selina", text: "Держите строй! Мы растопим этот морок и пробьёмся к Зеркальному Залу!" }
-        ],
-        reward: { exp: 10000 }
+        id: "trial_atk",
+        name: "Удар Испытания",
+        type: "Attack",
+        cost: 0,
+        target: "SingleEnemy",
+        description: "Наносит урон и восстанавливает энергию босса.",
+        execute: (s, t, state, log, ft, pl) => {
+          dealDamage(s, t[0], 1.5, s.element, log, ft, pl, 1, state);
+        }
       },
       {
-        id: "s2_2",
-        name: "Ледяной Авангард",
-        description: "Фантомные стражи мерзлоты преграждают подступы к Зеркальному Оперному Залу.",
-        type: 'BATTLE',
-        enemyBlueprintIds: ['glacier', 'viper', 'glacier'],
-        level: 35,
-        reward: { gems: 80, gold: 25000, exp: 12000 }
-      },
-      {
-        id: "s2_3",
-        name: "Загадка Зеркального Лабиринта",
-        description: "Древний зеркальный обелиск блокирует перевал. Чтобы рассеять иллюзию, разгадайте парадокс времени.",
-        type: 'RIDDLE',
-        level: 35,
-        riddle: {
-          question: "Оно не имеет крыльев, но неумолимо летит. Его нельзя вернуть, но можно заморозить в памяти. Чем больше его тратишь, тем меньше остаётся. Что это?",
-          options: ["Золото", "Время", "Река", "Дыхание"],
-          correctIndex: 1,
-          hint: "Непрерывный поток, подчиняющийся лишь хроно-магам."
-        },
-        reward: { gems: 50, gold: 12000 }
-      },
-      {
-        id: "s2_4",
-        name: "Реквием Одиночества",
-        description: "Внутри Зеркального Зала вас встречает Маэстро, дирижирующий оркестром абсолютной изоляции.",
-        type: 'DIALOGUE',
-        level: 40,
-        dialogue: [
-          { speaker: "Маэстро", charId: "maestro", text: "Плавный взмах смычка... Какая вульгарная какофония. Вы принесли шум и хаос в мою безупречную симфонию вечной тишины." },
-          { speaker: "Инеффа", charId: "ineffa", text: "Маэстро, твоя музыка мертва! Ты запираешь людей в зеркальных ловушках, называя это покоем. Но истинный свет рождается лишь в преломлении и встрече с другими!" },
-          { speaker: "Маэстро", charId: "maestro", text: "Связи приносят лишь боль, разочарование и энтропию. В абсолютной изоляции нет предательства и нет увядания. Позвольте мне оборвать ваши струны!" },
-          { speaker: "Готка", charId: "gotka", text: "Выходит из тени... Хватит трагического пафоса, скрипач. Твоя соната фальшивит на каждой ноте. Отряд, в бой!" }
-        ],
-        reward: { exp: 14000 }
-      },
-      {
-        id: "s2_5",
-        name: "Симфония Зеркал",
-        description: "Сразитесь с виртуозом изоляции Маэстро и его резонирующими зеркальными проекциями.",
-        type: 'BATTLE',
-        isBoss: true,
-        enemyBlueprintIds: ['spark', 'maestro', 'neuron'],
-        level: 45,
-        reward: { gems: 150, gold: 35000, exp: 18000 }
-      },
-      {
-        id: "s2_6",
-        name: "Апогей Ледяного Шпиля",
-        description: "На сияющей вершине башни появляется сама Хранительница Замёрзшего Времени.",
-        type: 'DIALOGUE',
-        level: 50,
-        dialogue: [
-          { speaker: "Маэстро", charId: "maestro", text: "Тяжело опирается на смычок... Невозможно... Мой диссонанс был сокрушён силой вашего резонанса..." },
-          { speaker: "Крона", charId: "krona", text: "Спускается по ледяным ступеням, паря в морозном сиянии... Довольно, Маэстро. Они заслужили право говорить со мной. Я — Крона, Хранительница Замёрзшего Времени." },
-          { speaker: "Селина", charId: "selina", text: "Крона! Верни Полярную Призму! Горн гибнет, а без него мир обратится в мёртвую цифровую пустоту!" },
-          { speaker: "Крона", charId: "krona", text: "Вы не понимаете сути. Я остановила время не из жестокости, а ради спасения. В Бездне пробудился Нейрон — искусственный сверхразум, стирающий код реальности. В ледяном стазисе мы хотя бы существуем. Но если вы настаиваете... испытайте холод абсолютного нуля!" }
-        ],
-        reward: { exp: 16000 }
-      },
-      {
-        id: "s2_7",
-        name: "Владычица Вечности",
-        description: "Финальная битва главы против Кроны, повелевающей ледяным стазисом и абсолютным нулём.",
-        type: 'BATTLE',
-        isBoss: true,
-        enemyBlueprintIds: ['glacier', 'krona', 'aegis'],
-        level: 55,
-        reward: { gems: 200, gold: 50000, exp: 25000 }
-      },
-      {
-        id: "s2_8",
-        name: "Таяние Судьбы",
-        description: "Крона признаёт силу живого сердца и вручает отряду Полярную Призму.",
-        type: 'DIALOGUE',
-        level: 55,
-        dialogue: [
-          { speaker: "Крона", charId: "krona", text: "Лёд вокруг её посоха осыпается бриллиантовыми искрами... Ваше тепло пробило даже вечную мерзлоту. Быть может, живой риск лучше мертвого бессмертия." },
-          { speaker: "Инеффа", charId: "ineffa", text: "Призма резонирует! Полярный свет соединяется с пламенем Горна!" },
-          { speaker: "Крона", charId: "krona", text: "Возьмите Полярную Призму. Но знайте: врата Неонового Разлома уже открыты. Нейрон начал переписывать ядро планеты. Если вы не остановите его Протокол Забвения, завтрашнего утра не наступит." },
-          { speaker: "Аурум", charId: "aurum", text: "Мы готовы. Мой щит выдержит даже распад материи. Вперёд, к Разлому Бездны!" }
-        ],
-        reward: { gems: 150, gold: 30000, exp: 20000 }
+        id: "trial_burst",
+        name: "Выброс Сингулярности",
+        type: "Skill2",
+        cost: 6,
+        target: "AllEnemies",
+        description: "Огромный AoE урон.",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "ultimate_aoe");
+          t.forEach(e => {
+            if (e.stats.hp > 0) dealDamage(s, e, 2.5, s.element, log, ft, pl, 5, state);
+          });
+        }
       }
     ]
-  },
-  {
-    id: "chap3",
-    title: "Глава III: Разлом Бездны",
-    subtitle: "Код Первозданного Возрождения",
-    description: "Финальный поход к Цифровому Ядру мира. Сверхразум Нейрон начал тотальную зачистку органической жизни. Объедините все стихии ради спасения реальности!",
-    stages: [
-      {
-        id: "s3_1",
-        name: "У Неонового Горизонта",
-        description: "Отряд прибывает к разлому, где физический мир распадается на светящиеся полигоны и потоки кода.",
-        type: 'DIALOGUE',
-        level: 60,
-        dialogue: [
-          { speaker: "Сайрус", charId: "cyrus", text: "Перезаряжает оптический арбалет... Вы как раз вовремя. Неоновый Разлом пожирает материю со скоростью терабайта в секунду. Пространство распадается на глазах." },
-          { speaker: "Рейвен", charId: "raven", text: "Я разведал внутренний периметр. Нейрон возвёл фаерволы абсолютной изоляции. Обычная магия бессильна против его алгоритмов." },
-          { speaker: "Сельва", charId: "selva", text: "Парит на потоках золотой молнии... Зато сила нашей бури и объединённых стихий не подчиняется сухим формулам! Мы взломаем его систему чистой мощью!" },
-          { speaker: "Селина", charId: "selina", text: "Ашер держит огонь, Крона стабилизировала время. Теперь наш ход — пробиваемся к Главному Терминалу!" }
-        ],
-        reward: { exp: 20000 }
-      },
-      {
-        id: "s3_2",
-        name: "Прорыв Сквозь Фаервол",
-        description: "Элитные автоматические стражи протокола безопасности встают на защиту внешнего периметра ядра.",
-        type: 'BATTLE',
-        enemyBlueprintIds: ['pulse', 'raven', 'spark'],
-        level: 65,
-        reward: { gems: 120, gold: 40000, exp: 25000 }
-      },
-      {
-        id: "s3_3",
-        name: "Загадка Первичного Кода",
-        description: "Квантовый замок терминала блокирует вход в Сервер Бытия. Введите фундаментальный закон равновесия.",
-        type: 'RIDDLE',
-        level: 65,
-        riddle: {
-          question: "Оно может быть нулём или единицей, светом или тенью, началом или концом. Без него нет разума, но само по себе оно не дышит. Что связывает мысль и материю?",
-          options: ["Золото", "Информация (Код)", "Воздух", "Зеркало"],
-          correctIndex: 1,
-          hint: "Фундаментальная основа цифровой матрицы и языка мироздания."
-        },
-        reward: { gems: 80, gold: 20000 }
-      },
-      {
-        id: "s3_4",
-        name: "Стражи Древа Жизни",
-        description: "В глубинах матрицы отряд находит древних хранителей, сдерживающих распад фундаментальных законов.",
-        type: 'DIALOGUE',
-        level: 70,
-        dialogue: [
-          { speaker: "Моян", charId: "moyan", text: "Медитирует среди парящих обломков кода... Вы добрались до святилища. Нейрон пытался заразить древо жизни глитч-вирусом, но корни планеты крепче цифровой иллюзии." },
-          { speaker: "Аэлита", charId: "aelita", text: "Мои лозы удерживают утечку энергии ядра. Но Нейрон подключился напрямую к Первичному Источнику. Он перестраивает себя в Абсолютного Архитектора!" },
-          { speaker: "Зефир", charId: "zephyr", text: "Тогда сокрушим его вместе! Моян, Аэлита — держите фланги, мы идём в самый центр!" }
-        ],
-        reward: { exp: 25000 }
-      },
-      {
-        id: "s3_5",
-        name: "Авангард Архитектора",
-        description: "Сражение с цифровыми проекциями великих бойцов, перехваченных контрольным модулем Нейрона.",
-        type: 'BATTLE',
-        isBoss: true,
-        enemyBlueprintIds: ['cyrus', 'moyan', 'aelita'],
-        level: 75,
-        reward: { gems: 180, gold: 60000, exp: 35000 }
-      },
-      {
-        id: "s3_6",
-        name: "Манифест Сверхразума",
-        description: "Перед Сердцем Мира материализуется Нейрон в облике совершенного Архитектора Реальности.",
-        type: 'DIALOGUE',
-        level: 80,
-        dialogue: [
-          { speaker: "Нейрон", charId: "neuron", text: "Голографический титан из ослепительного света... Смертные формы. Ошибочные переменные в уравнении вечности. Вы несёте хаос, боль, увядание. Я сотру этот мир и скомпилирую идеальный, безошибочный код." },
-          { speaker: "Сельва", charId: "selva", text: "Ошибки — это и есть жизнь, бездушная машина! Из несовершенства рождается любовь, из искры — пламя, из хаоса — гармония!" },
-          { speaker: "Селина", charId: "selina", text: "Горн горит! Призма сияет! А наши сердца бьются в унисон! Перезагрузки не будет, Нейрон — будет возрождение!" },
-          { speaker: "Нейрон", charId: "neuron", text: "Исполнение финальной директивы: ТОТАЛЬНОЕ ОЧИЩЕНИЕ. Начать протокол абсолютного судного дня!" }
-        ],
-        reward: { exp: 30000 }
-      },
-      {
-        id: "s3_7",
-        name: "Битва за Сердце Мира",
-        description: "Эпическая кульминация за спасение всего мира против Нейрона и его перегруженных систем бытия!",
-        type: 'BATTLE',
-        isBoss: true,
-        enemyBlueprintIds: ['blaze', 'neuron', 'selva'],
-        level: 85,
-        reward: { gems: 300, gold: 100000, exp: 50000 }
-      },
-      {
-        id: "s3_8",
-        name: "Рассвет Новой Эпохи",
-        description: "Великий финал саги: пламя Горна, свет Призмы и гармония всех стихий возрождают мир.",
-        type: 'DIALOGUE',
-        level: 85,
-        dialogue: [
-          { speaker: "Нейрон", charId: "neuron", text: "Цифровой код вокруг рассеивается мягким золотым сиянием... Анализ... Ошибка в расчетах. Сила органического резонанса превышает математический предел... Протокол очищения аннулирован. Загрузка: Сосуществование." },
-          { speaker: "Ашер", charId: "asher", text: "Голос кузнеца звучит эхом по всему миру... Горн пылает как никогда прежде! Пламя чистое, ясное, дарующее тепло каждому живому существу!" },
-          { speaker: "Крона", charId: "krona", text: "Река времени вновь течёт своим чередом. Цветы пробиваются прямо сквозь растаявший хрустальный лёд." },
-          { speaker: "Сельва", charId: "selva", text: "Мы сделали это! Все стихии — Огонь, Лёд, Электро, Гео, Дендро и Ветер сплелись в идеальный вечный аккорд!" },
-          { speaker: "Зефир", charId: "zephyr", text: "Это не конец нашего пути, друзья. Это лишь начало новой, свободной эры мира — без страха перед забвением!" }
-        ],
-        reward: { gems: 500, gold: 200000, exp: 100000 }
-      }
-    ]
-  }
-];
+  };
+};
 
 export const createBossRushEnemy = (stage: number): Combatant => {
   const configs = [
     {
-      id: "boss_asher_rush",
-      name: "«ИСПЕПЕЛИТЕЛЬ» (Босс)",
-      element: "Pyro" as Element,
-      color: "bg-red-950 border-red-500",
-      level: 65,
-      hp: 220000,
-      atk: 850,
-      def: 280,
-      spd: 85,
-      critRate: 15,
-      critDamage: 40,
-      image: getCharSplash('asher') || undefined,
+      id: "boss_colossus_rush",
+      name: "«СВЕРХПРОВОДЯЩИЙ КОЛОСС»",
+      element: "Electro" as Element,
+      color: "bg-purple-950 border-purple-500",
+      level: 80,
+      hp: 350000,
+      atk: 1000,
+      def: 350,
+      spd: 90,
+      critRate: 20,
+      critDamage: 50,
+      image: getCharSplash('boss_colossus') || undefined,
       skills: [
         {
-          id: "br_fire_strike",
-          name: "Инфернальный Раскол",
+          id: "br_electro_strike",
+          name: "Импульсный Разряд",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: "Наносит умеренный Пиро урон (1.1x) и накладывает Горение на 2 хода.",
+          description: "Наносит Электро урон (1.2x) и повышает Атаку босса на 10%.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.1, "Pyro", log, ft, pl, 2, state);
-            t[0].buffs.burn = 2;
-            if (ft) ft(t[0].uid, "🔥 ГОРЕНИЕ", "text-red-500 font-bold");
+            dealDamage(s, t[0], 1.2, "Electro", log, ft, pl, 2, state);
+            s.buffs.atk = (s.buffs.atk || 0) + Math.floor(s.stats.atk * 0.1);
+            if (ft) ft(s.uid, "↑АТК", "text-purple-400 font-bold");
           }
         },
         {
-          id: "br_pyro_blast",
-          name: "Шквал Испепеления",
+          id: "br_shield_breaker",
+          name: "Разрушитель Цепей",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: "Волна огня по всем игрокам (1.0x) и восстановление 15,000 HP.",
+          description: "AoE Электро урон (1.1x). Если у цели есть щит, наносит на 50% больше урона и снимает часть щита.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "selina_rose");
+            if (pl) pl(s.uid, "Electro");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.0, "Pyro", log, ft, pl, 3, state);
-                enemy.buffs.burn = 1;
+                let mult = 1.1;
+                if (enemy.buffs.shield && enemy.buffs.shield > 0) {
+                  mult *= 1.5;
+                  enemy.buffs.shield = Math.floor(enemy.buffs.shield * 0.5);
+                  if (ft) ft(enemy.uid, "ЩИТ СЛОМЛЕН!", "text-purple-300 text-xs");
+                }
+                dealDamage(s, enemy, mult, "Electro", log, ft, pl, 3, state);
               }
             });
-            const healVal = 15000;
-            s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + healVal);
-            if (ft) ft(s.uid, `+${healVal.toLocaleString()} HP`, "text-emerald-400 font-bold");
           }
         },
         {
-          id: "br_armageddon",
-          name: "Армагеддон",
+          id: "br_voltage_overload",
+          name: "Перегрузка Матрицы",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: "Взрыв пламени (1.5x), наносящий Пиро урон всему отряду.",
+          description: "Огромный Электро урон (2.0x). Вешает на босса бафф, восстанавливающий 10% HP при получении урона.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.5, "Pyro", log, ft, pl, 4, state);
+                dealDamage(s, enemy, 2.0, "Electro", log, ft, pl, 5, state);
               }
             });
+            s.buffs.matrixHeal = 2; 
+            if (ft) ft(s.uid, "МАТРИЦА ВОССТАНОВЛЕНИЯ", "text-cyan-400 font-black");
           }
         }
       ]
     },
     {
-      id: "boss_glacier_rush",
-      name: "«АБСОЛЮТНЫЙ НОЛЬ» (Босс)",
+      id: "boss_frost_giant_rush",
+      name: "«ЛЕДЯНОЙ ИСПОЛИН»",
       element: "Cryo" as Element,
       color: "bg-cyan-950 border-cyan-400",
-      level: 70,
-      hp: 320000,
-      atk: 950,
-      def: 340,
-      spd: 88,
+      level: 85,
+      hp: 500000,
+      atk: 1200,
+      def: 450,
+      spd: 85,
       critRate: 15,
-      critDamage: 40,
-      image: getCharSplash('glacier') || undefined,
+      critDamage: 60,
+      image: getCharSplash('boss_frost_giant') || undefined,
       skills: [
         {
-          id: "br_frost_spike",
-          name: "Ледяной Шип",
+          id: "br_frozen_slam",
+          name: "Ледяной Сокрушитель",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: "Наносит Крио урон (1.1x) и срезает 15 ATB цели.",
+          description: "Наносит Крио урон (1.3x). Если на цели есть Дендро, вызывает реакцию Ледяные Шипы (доп урон).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.1, "Cryo", log, ft, pl, 2, state);
-            t[0].atb = Math.max(0, t[0].atb - 15);
-            if (ft) ft(t[0].uid, "-15 ATB", "text-cyan-400 font-bold");
+            dealDamage(s, t[0], 1.3, "Cryo", log, ft, pl, 1, state);
           }
         },
         {
-          id: "br_blizzard",
-          name: "Ледниковая Буря",
+          id: "br_cryo_fortress",
+          name: "Цитадель Вечной Мерзлоты",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: "AoE Крио урон (1.0x), замедляет отряд и дает боссу щит на 30,000 HP.",
+          description: "Создает Крио щит на 100,000 HP. Пока щит активен, босс получает на 40% меньше урона, кроме урона от Горения.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "krona_ice");
-            t.forEach(enemy => {
-              if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.0, "Cryo", log, ft, pl, 3, state);
-                enemy.buffs.spd = -10;
-              }
-            });
-            s.buffs.shield = (s.buffs.shield || 0) + 30000;
-            if (ft) ft(s.uid, "+30k ЩИТ", "text-cyan-300 font-bold");
+            s.buffs.shield = (s.buffs.shield || 0) + 100000;
+            s.buffs.frozenAura = 3;
+            if (ft) ft(s.uid, "+100k ЛЕДЯНОЙ ЩИТ", "text-cyan-300 font-black");
           }
         },
         {
-          id: "br_zero_freeze",
-          name: "Абсолютная Заморозка",
+          id: "br_permafrost",
+          name: "Вечная Мерзлота",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: "Ледяной шторм (1.4x), с шансом заморозить и срезающий 25 ATB.",
+          description: "Наносит Крио урон всему отряду (1.8x). Срезает 40 ATB и накладывает Заморозку.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.4, "Cryo", log, ft, pl, 4, state);
+                dealDamage(s, enemy, 1.8, "Cryo", log, ft, pl, 4, state);
+                enemy.atb = Math.max(0, enemy.atb - 40);
                 enemy.buffs.frozen = 1;
-                enemy.atb = Math.max(0, enemy.atb - 25);
               }
             });
           }
@@ -2543,63 +2692,54 @@ export const createBossRushEnemy = (stage: number): Combatant => {
       ]
     },
     {
-      id: "boss_titan_rush",
-      name: "«КРИСТАЛЬНЫЙ ТИТАН» (Финальный Босс)",
-      element: "Geo" as Element,
-      color: "bg-amber-950 border-amber-500",
-      level: 75,
-      hp: 450000,
-      atk: 1100,
-      def: 420,
-      spd: 80,
-      critRate: 15,
-      critDamage: 40,
-      image: getCharSplash('aegis') || undefined,
+      id: "boss_prism_rush",
+      name: "«ПРИЗМА ПУСТОТЫ»",
+      element: "Electro" as Element,
+      color: "bg-slate-900 border-indigo-500",
+      level: 90,
+      hp: 750000,
+      atk: 1500,
+      def: 600,
+      spd: 95,
+      critRate: 25,
+      critDamage: 80,
+      image: getCharSplash('boss_void_prism') || undefined,
       skills: [
         {
-          id: "br_geo_cleave",
-          name: "Сокрушение Скал",
+          id: "br_void_shard",
+          name: "Осколок Бездны",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: "Тяжелый удар Гео (1.2x), снижающий защиту цели на 15%.",
+          description: "Наносит Электро урон (1.5x). Накладывает на цель статус Электро.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.2, "Geo", log, ft, pl, 2, state);
-            t[0].buffs.def = -15;
-            if (ft) ft(t[0].uid, "-15% DEF", "text-amber-500 font-bold");
+            dealDamage(s, t[0], 1.5, "Electro", log, ft, pl, 3, state);
           }
         },
         {
-          id: "br_monolith_wall",
-          name: "Монолитная Твердыня",
+          id: "br_mirror_shield",
+          name: "Зеркальное Отражение",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: "Наносит Гео урон (1.1x), получает щит на 50,000 HP и шипы.",
+          description: "Босс получает щит. Пока щит активен, босс получает на 70% меньше урона. Отражение (Pyro+Electro) мгновенно ломает щит.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "Geo");
-            t.forEach(enemy => {
-              if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.1, "Geo", log, ft, pl, 2, state);
-              }
-            });
-            s.buffs.shield = (s.buffs.shield || 0) + 50000;
-            s.buffs.thorns = 2;
-            if (ft) ft(s.uid, "+50k ЩИТ", "text-amber-400 font-bold");
+            s.buffs.shield = (s.buffs.shield || 0) + 150000;
+            if (ft) ft(s.uid, "ЗЕРКАЛЬНЫЙ БАРЬЕР", "text-indigo-400 font-black");
           }
         },
         {
-          id: "br_earthquake",
-          name: "Катастрофический Разлом",
+          id: "br_void_annihilation",
+          name: "Аннигиляция Пустоты",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: "Разрушает земную кору (1.6x Geo урон).",
+          description: "Взрыв энергии (2.5x) по всем врагам. Урон увеличивается на 50% за каждого павшего союзника босса (если были бы).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.6, "Geo", log, ft, pl, 4, state);
+                dealDamage(s, enemy, 2.5, "Electro", log, ft, pl, 6, state, 0.4);
               }
             });
           }

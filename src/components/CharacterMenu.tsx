@@ -1,8 +1,29 @@
 import React, { useState } from 'react';
 import { PlayerProfile, GameRoute, ArtifactSlot, Artifact } from '../types';
-import { characterBlueprints, getCharEmoji, getCharSplash, characterConstellations, ARTIFACT_SETS, scoreArtifact } from '../data';
-import { ArrowLeft, Zap, Shield, Users, Swords, Plus, TrendingUp, Package, Star, Sparkles, X, Check, Search } from 'lucide-react';
+import { characterBlueprints, getCharEmoji, getCharSplash, characterConstellations, ARTIFACT_SETS, scoreArtifact, charRarity, CHARACTER_PREFERENCES } from '../data';
+import { ArrowLeft, Zap, Shield, Users, Swords, Plus, TrendingUp, Package, Star, Sparkles, X, Check, Search, Flame, Droplets, Leaf, Snowflake, Mountain, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { SquadBuilder } from './SquadBuilder';
+
+const elementNamesRU: Record<string, string> = {
+  Pyro: "Пиро",
+  Hydro: "Гидро",
+  Electro: "Электро",
+  Dendro: "Дендро",
+  Cryo: "Крио",
+  Geo: "Гео",
+  Physical: "Физ",
+};
+
+const elementIcons: Record<string, React.ReactNode> = {
+  Pyro: <Flame className="w-3.5 h-3.5 text-red-400" />,
+  Hydro: <Droplets className="w-3.5 h-3.5 text-blue-400" />,
+  Electro: <Zap className="w-3.5 h-3.5 text-purple-400" />,
+  Dendro: <Leaf className="w-3.5 h-3.5 text-emerald-400" />,
+  Cryo: <Snowflake className="w-3.5 h-3.5 text-cyan-400" />,
+  Geo: <Mountain className="w-3.5 h-3.5 text-amber-500" />,
+  Physical: <Shield className="w-3.5 h-3.5 text-slate-300" />,
+};
 
 const elementColors: Record<string, string> = {
   Hydro: "text-blue-400 border-blue-400 focus:ring-blue-400",
@@ -26,6 +47,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
   const [activeTab, setActiveTab] = useState<'STATS' | 'ARTIFACTS' | 'CONSTELLATIONS'>('STATS');
   const [selectingSlot, setSelectingSlot] = useState<ArtifactSlot | null>(null);
   const [artifactSearchQuery, setArtifactSearchQuery] = useState("");
+  const [isSquadBuilderOpen, setIsSquadBuilderOpen] = useState(false);
 
   if (ownedIds.length === 0) return <div className="text-white p-4">Нет персонажей</div>;
 
@@ -86,28 +108,63 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
        cData.artifacts = cData.artifacts ? { ...cData.artifacts } : { flower: null, plume: null, sands: null, goblet: null, circlet: null };
        const slots: ArtifactSlot[] = ["flower", "plume", "sands", "goblet", "circlet"];
        
+       // Track used artifacts by OTHER characters
        const allUsedArtifacts: Record<string, string> = {}; // artId -> charId
        Object.entries(newP.roster).forEach(([cid, data]) => {
+         if (cid === selectedId) return; 
          Object.values(data.artifacts || {}).forEach(aid => {
            if (aid) allUsedArtifacts[aid] = cid;
          });
        });
 
-       slots.forEach(slot => {
-          // Find best artifact for this slot based on score
-          // Even if used by others, we might want to take it if it's significantly better?
-          // For now, let's just use unused ones to avoid stripping other characters
-          
-          const available = p.artifacts
-            .filter(a => a.slot === slot && !allUsedArtifacts[a.id])
-            .sort((a,b) => scoreArtifact(b, selectedId) - scoreArtifact(a, selectedId));
-          
-          if (available[0]) {
-             cData.artifacts![slot] = available[0].id;
-             allUsedArtifacts[available[0].id] = selectedId;
-          }
+       const availableArtifacts = p.artifacts.filter(a => !allUsedArtifacts[a.id]);
+       const prefs = CHARACTER_PREFERENCES[selectedId] || { main: ["atk"], sub: ["atk"], sets: [] };
+
+       // Try to find the best build
+       let bestBuild: Record<ArtifactSlot, string | null> = { flower: null, plume: null, sands: null, goblet: null, circlet: null };
+       let bestTotalScore = -1;
+
+       // Consider each preferred set + a general best-in-slot approach
+       const targetSets = [...(prefs.sets || []), "any"]; 
+
+       targetSets.forEach(targetSet => {
+         const currentBuild: Record<ArtifactSlot, string | null> = { flower: null, plume: null, sands: null, goblet: null, circlet: null };
+         let currentTotalScore = 0;
+         let setPiecesCount = 0;
+
+         slots.forEach(slot => {
+            const possible = availableArtifacts
+              .filter(a => a.slot === slot)
+              .map(a => ({ art: a, score: scoreArtifact(a, selectedId) }));
+            
+            // Boost score if it matches the target set we are evaluating
+            if (targetSet !== "any") {
+              possible.forEach(item => {
+                 if (item.art.setName === targetSet) item.score += 5000; 
+              });
+            }
+
+            possible.sort((a,b) => b.score - a.score);
+            
+            if (possible[0]) {
+              currentBuild[slot] = possible[0].art.id;
+              currentTotalScore += possible[0].score;
+              if (possible[0].art.setName === targetSet) setPiecesCount++;
+            }
+         });
+
+         // Penalty if we didn't reach at least 4 pieces of the target set (unless it's "any")
+         if (targetSet !== "any" && setPiecesCount < 4) {
+            currentTotalScore -= 20000; // Strong penalty to ensure we don't pick a broken set over a good random build
+         }
+
+         if (currentTotalScore > bestTotalScore) {
+            bestTotalScore = currentTotalScore;
+            bestBuild = { ...currentBuild };
+         }
        });
-       newP.roster[selectedId] = cData;
+
+       newP.roster[selectedId] = { ...cData, artifacts: bestBuild };
        return newP;
     });
   };
@@ -136,14 +193,33 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
   };
 
   return (
-    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gray-950 md:rounded-xl border-t-2 md:border-4 border-gray-800 shadow-2xl flex flex-col font-mono text-gray-200">
-      <div className="flex items-center p-3 sm:p-4 border-b-2 border-gray-800 bg-gray-900 shrink-0">
-        <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded transition mr-3 sm:mr-4">
-           <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gray-950 md:rounded-xl border-t-2 md:border-4 border-gray-800 shadow-2xl flex flex-col font-mono text-gray-200 relative">
+      {isSquadBuilderOpen && (
+        <SquadBuilder 
+          profile={profile} 
+          updateProfile={updateProfile} 
+          onClose={() => setIsSquadBuilderOpen(false)} 
+        />
+      )}
+
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b-2 border-gray-800 bg-gray-900 shrink-0">
+        <div className="flex items-center">
+          <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded transition mr-3 sm:mr-4">
+             <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          <h1 className="text-base sm:text-xl font-bold font-sans tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 uppercase">
+            Отряд / Инвентарь
+          </h1>
+        </div>
+
+        <button 
+          onClick={() => setIsSquadBuilderOpen(true)}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-sans font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg border border-indigo-400/30 transition-all min-h-[40px]"
+        >
+          <Swords className="w-4 h-4" />
+          <span className="hidden sm:inline">Настройка боевого отряда</span>
+          <span className="sm:hidden">Состав</span>
         </button>
-        <h1 className="text-lg sm:text-xl font-bold font-sans tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 uppercase">
-          Отряд / Инвентарь
-        </h1>
       </div>
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
@@ -171,8 +247,20 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                      )}
                   </div>
                   <div className="min-w-0 flex-1">
-                     <div className="font-bold text-xs sm:text-sm truncate">{preview.name}</div>
-                     <div className="text-[9px] sm:text-xs opacity-70 uppercase tracking-widest">Ур. {charData.level}</div>
+                     <div className="font-bold text-xs sm:text-sm truncate flex items-center gap-1 justify-between">
+                       <span>{preview.name}</span>
+                       <span className={cn(
+                         "text-[9px] font-black px-1 rounded",
+                         (charRarity[id] || "B") === "S" ? "text-amber-400 bg-amber-500/10" :
+                         (charRarity[id] || "B") === "A" ? "text-purple-400 bg-purple-500/10" :
+                         "text-slate-400 bg-slate-500/10"
+                       )}>{charRarity[id] || "B"}</span>
+                     </div>
+                     <div className="text-[9px] sm:text-xs opacity-70 flex items-center gap-1 mt-0.5 font-medium">
+                       <span>Ур. {charData.level}</span>
+                       <span className="opacity-30">|</span>
+                       <span className="text-[9px] lowercase font-semibold text-slate-300">{elementNamesRU[preview.element] || preview.element}</span>
+                     </div>
                   </div>
                </button>
              );
@@ -221,9 +309,37 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                   </div>
                  <div className="pt-1">
                     <h2 className={cn("text-2xl sm:text-3xl font-bold drop-shadow-md", (elementColors[charDef.element] || "text-slate-300").split(' ')[0])}>{charDef.name}</h2>
-                    <p className="text-gray-400 flex items-center gap-2 mt-1 text-sm bg-gray-900/80 px-2 py-1 rounded inline-flex">
-                       <Zap className="w-4 h-4" /> Ур. {charDef.level} | Созвездие {charDef.constellation}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                       <span className="text-gray-400 flex items-center gap-1 text-xs bg-gray-900/80 px-2.5 py-1 rounded border border-gray-800">
+                          <Zap className="w-3.5 h-3.5 text-indigo-400" /> Ур. {charDef.level} | Созвездие {charDef.constellation}
+                       </span>
+                       <span className={cn(
+                         "px-2.5 py-1 rounded text-xs font-bold border flex items-center gap-1 bg-gray-900/80",
+                         charDef.element === "Pyro" ? "text-red-400 border-red-500/20" :
+                         charDef.element === "Hydro" ? "text-blue-400 border-blue-500/20" :
+                         charDef.element === "Electro" ? "text-purple-400 border-purple-500/20" :
+                         charDef.element === "Dendro" ? "text-emerald-400 border-emerald-500/20" :
+                         charDef.element === "Cryo" ? "text-cyan-300 border-cyan-500/20" :
+                         charDef.element === "Geo" ? "text-amber-400 border-amber-500/20" :
+                         "text-slate-300 border-slate-500/20"
+                       )}>
+                         {elementIcons[charDef.element] || <HelpCircle className="w-3.5 h-3.5" />}
+                         {elementNamesRU[charDef.element] || charDef.element}
+                       </span>
+                       {(() => {
+                         const tier = charRarity[selectedId] || "B";
+                         return (
+                           <span className={cn(
+                             "px-2.5 py-1 rounded text-xs font-black tracking-wider border bg-gray-900/80",
+                             tier === "S" ? "text-amber-400 border-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.1)]" :
+                             tier === "A" ? "text-purple-400 border-purple-500/25" :
+                             "text-slate-400 border-slate-500/25"
+                           )}>
+                             {tier}-Tier
+                           </span>
+                         );
+                       })()}
+                    </div>
                  </div>
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto">

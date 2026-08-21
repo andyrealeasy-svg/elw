@@ -1,55 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { PlayerProfile, Artifact } from '../types';
-import { Gem, Gift, Sparkles, CheckCircle, Flame, Coffee, Trophy, Compass, Swords, Zap, RefreshCw, Star } from 'lucide-react';
-import { generateArtifact } from '../data';
+import React, { useState } from 'react';
+import { PlayerProfile } from '../types';
+import { 
+  Gem, 
+  Sparkles, 
+  CheckCircle2, 
+  ShieldAlert, 
+  FlaskConical, 
+  Swords, 
+  Flame, 
+  Zap, 
+  Snowflake, 
+  Droplets, 
+  Trophy, 
+  ChevronRight, 
+  RefreshCw,
+  ZapOff,
+  Cpu,
+  Target
+} from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface Props {
   profile: PlayerProfile;
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
+  setRoute: (r: any) => void;
 }
 
-// Recipes for Drink A-Dreaming
-interface Recipe {
-  name: string;
-  ingredients: string[];
-  desc: string;
-}
+export default function EventsMenu({ profile, updateProfile, setRoute }: Props) {
+  const [subTab, setSubTab] = useState<'LOGIN' | 'BREACH' | 'ALCHEMY' | 'TRIALS'>('LOGIN');
 
-const RECIPES: Recipe[] = [
-  { name: "Библиотекарь", ingredients: ["Кофе", "Кофе", "Кофе"], desc: "Чистый насыщенный кофе для любителей крепкого вкуса." },
-  { name: "Карамельное Облако", ingredients: ["Чай", "Молоко", "Карамель"], desc: "Сладкий молочный чай с нежной карамелью." },
-  { name: "Бодрость Дендро", ingredients: ["Чай", "Мята", "Мята"], desc: "Освежающий чай с тройным ароматом горной мяты." },
-  { name: "Сумеречный Остров", ingredients: ["Какао", "Какао", "Шоколад"], desc: "Сверхнасыщенный шоколадный какао для праздничных вечеров." },
-  { name: "Звездный Латте", ingredients: ["Кофе", "Кофе", "Молоко"], desc: "Классический бодрящий кофе, разбавленный мягким молоком." },
-  { name: "Шоколадная Колыбель", ingredients: ["Какао", "Карамель", "Шоколад"], desc: "Райский десертный напиток с шоколадной крошкой и нугой." }
-];
+  // --- UPDATE 1.1 REWARD ---
+  const update11Claimed = profile.events.update11Claimed || false;
 
-const CUSTOMERS = [
-  { name: "Моян", avatarColor: "bg-blue-600", greeting: "Эх, спина ломит после руды... Сделай крепкий «Библиотекарь»!", wantedRecipe: "Библиотекарь" },
-  { name: "Аэлита", avatarColor: "bg-emerald-600", greeting: "Привет! Мне нужно что-то освежающее для концентрации, «Бодрость Дендро» подойдет?", wantedRecipe: "Бодрость Дендро" },
-  { name: "Копрофил", avatarColor: "bg-amber-700", greeting: "Слушай, хочу чего-то безумно сладкого! Намешай мне «Шоколадная Колыбель»!", wantedRecipe: "Шоколадная Колыбель" },
-  { name: "Готка", avatarColor: "bg-slate-800", greeting: "В соборе душно. Налей мне «Карамельное Облако»... Только быстрее.", wantedRecipe: "Карамельное Облако" },
-  { name: "Сельва", avatarColor: "bg-pink-600", greeting: "Ура! Вечеринка! Мне нужен самый вкусный «Сумеречный Остров»!", wantedRecipe: "Сумеречный Остров" }
-];
-
-export default function EventsMenu({ profile, updateProfile }: Props) {
-  const [subTab, setSubTab] = useState<'LOGIN' | 'BARTENDER' | 'LANTERN' | 'DUEL'>('LOGIN');
-
-  // --- COMPENSATION SECTION ---
-  const compensationClaimed = profile.events.compensationClaimed || false;
-  const artCompClaimed = profile.events.artCompClaimed || false;
-
-  // --- EVENT 1: LOGIN (Seizing the Day) ---
+  // --- EVENT 0: 7-DAY LOGIN ---
   const todayStr = new Date().toISOString().split('T')[0];
-  const lastLoginDate = profile.events.lastLoginDate || "";
-  const loginStreak = profile.events.loginStreak || 0;
+  const lastLoginDate = profile.events.initLastClaimDay || "";
+  const loginStreak = profile.events.initStreak || 0;
   const alreadyCheckedIn = lastLoginDate === todayStr;
 
   const handleCheckIn = () => {
     if (alreadyCheckedIn) return;
     const nextStreak = loginStreak >= 7 ? 1 : loginStreak + 1;
-    const rewardGems = nextStreak * 25;
-    const rewardGold = nextStreak * 1500;
+    const rewardGems = nextStreak * 60;
+    const rewardGold = nextStreak * 5000;
 
     updateProfile(p => ({
       ...p,
@@ -57,943 +50,542 @@ export default function EventsMenu({ profile, updateProfile }: Props) {
       gold: p.gold + rewardGold,
       events: {
         ...p.events,
-        loginStreak: nextStreak,
-        lastLoginDate: todayStr
+        initStreak: nextStreak,
+        initLastClaimDay: todayStr
       }
     }));
   };
 
-  // --- EVENT 2: BARTENDER (Of Drink A-Dreaming) ---
-  const [customerIndex, setCustomerIndex] = useState(0);
-  const [currentCup, setCurrentCup] = useState<string[]>([]);
-  const [isMixing, setIsMixing] = useState(false);
-  const [mixingSuccessMsg, setMixingSuccessMsg] = useState("");
-  const [bartenderLog, setBartenderLog] = useState<string[]>([]);
-  const activeCustomer = CUSTOMERS[customerIndex];
+  // --- EVENT 1: ANOMALY BREACH (Glitch Hunt) ---
+  const clearedSectors: number[] = profile.events.clearedSectors || [];
 
-  const addIngredient = (ing: string) => {
-    if (currentCup.length >= 3) return;
-    setCurrentCup([...currentCup, ing]);
-  };
+  const sectors = [
+    { id: 1, name: "Сектор Альфа-1: Взлом Протокола", threat: "★☆☆☆☆", enemy: "Глитч-Слайм", rewardGems: 100, rewardGold: 15000, desc: "Базовое искажение данных в периметре сети." },
+    { id: 2, name: "Сектор Бета-2: Патруль Дронов", threat: "★★☆☆☆", enemy: "Кибер-Дрон X9", rewardGems: 150, rewardGold: 25000, desc: "Автономные дроны сошли с ума от разрыва матрицы." },
+    { id: 3, name: "Сектор Гамма-3: Теневой Узел", threat: "★★★☆☆", enemy: "Фантом Пустоты", rewardGems: 200, rewardGold: 35000, desc: "Концентрированный сгусток темной материи." },
+    { id: 4, name: "Сектор Дельта-4: Вирусная Буря", threat: "★★★★☆", enemy: "Кодовый Паразит", rewardGems: 250, rewardGold: 50000, desc: "Опасная аномалия, поглощающая энергию отряда." },
+    { id: 5, name: "Сектор Эпсилон-5: Ядро Ядра", threat: "★★★★★", enemy: "Матричный Страж", rewardGems: 400, rewardGold: 100000, desc: "Центральный страж аномальной зоны Сервера Анубис." }
+  ];
 
-  const clearCup = () => {
-    setCurrentCup([]);
-    setMixingSuccessMsg("");
-  };
+  const handleAttackSector = (sectorId: number) => {
+    if (clearedSectors.includes(sectorId)) return;
+    
+    const sec = sectors.find(s => s.id === sectorId);
+    if (!sec) return;
 
-  const mixDrink = () => {
-    if (currentCup.length < 3) {
-      alert("Добавьте ровно 3 ингредиента, чтобы приготовить напиток!");
-      return;
-    }
-    setIsMixing(true);
-    setMixingSuccessMsg("");
-
-    setTimeout(() => {
-      setIsMixing(false);
-      // Determine what drink was mixed
-      const sortedCup = [...currentCup].sort();
-      let matchedRecipeName = "Мутный состав";
-      
-      for (const recipe of RECIPES) {
-        if ([...recipe.ingredients].sort().join(',') === sortedCup.join(',')) {
-          matchedRecipeName = recipe.name;
-          break;
-        }
-      }
-
-      const isCorrect = matchedRecipeName === activeCustomer.wantedRecipe;
-
-      if (isCorrect) {
-        const rewardGems = 60;
-        const rewardGold = 2500;
-        const currentPoints = profile.events.bartenderPoints || 0;
-        const rewardPoints = 20;
-
-        updateProfile(p => ({
-          ...p,
-          gems: p.gems + rewardGems,
-          gold: p.gold + rewardGold,
-          events: {
-            ...p.events,
-            bartenderPoints: currentPoints + rewardPoints
-          }
-        }));
-
-        setMixingSuccessMsg(`Успех! Вы подали «${matchedRecipeName}». ${activeCustomer.name} в восторге! Получено +${rewardGems} 💎, +${rewardGold} G, +${rewardPoints} Очков Лихорадки!`);
-        setBartenderLog(prev => [`Подан правильный напиток для ${activeCustomer.name}!`, ...prev]);
-        
-        // Go to next customer after delay
-        setTimeout(() => {
-          setCustomerIndex((prev) => (prev + 1) % CUSTOMERS.length);
-          setCurrentCup([]);
-          setMixingSuccessMsg("");
-        }, 3000);
-      } else {
-        setMixingSuccessMsg(`Вы подали «${matchedRecipeName}», но ${activeCustomer.name} просил «${activeCustomer.wantedRecipe}». Попробуйте ещё раз!`);
-        setBartenderLog(prev => [`Неудачно приготовлен напиток для ${activeCustomer.name}`, ...prev]);
-      }
-    }, 1500);
-  };
-
-  // --- EVENT 3: LANTERN RITE (Lantern Crafting & Shop) ---
-  const lanternFever = profile.events.lanternRitePoints || 0;
-  const initialGiftsClaimedStr = profile.events.lanternGiftsClaimedDate || "";
-  const hasClaimedTodayGifts = initialGiftsClaimedStr === todayStr;
-
-  // Inventory of crafting parts kept in profile.events
-  const fiberCount = profile.events.lanternFibers || 0;
-  const wickCount = profile.events.lanternWicks || 0;
-  const oilCount = profile.events.lanternOils || 0;
-
-  const handleClaimDailyMaterials = () => {
-    if (hasClaimedTodayGifts) return;
-    updateProfile(p => ({
-      ...p,
-      events: {
-        ...p.events,
-        lanternFibers: (p.events.lanternFibers || 0) + 3,
-        lanternWicks: (p.events.lanternWicks || 0) + 3,
-        lanternOils: (p.events.lanternOils || 0) + 3,
-        lanternGiftsClaimedDate: todayStr
-      }
-    }));
-  };
-
-  const handleBuyMaterial = (type: 'fiber' | 'wick' | 'oil') => {
-    if (profile.gold < 800) {
-      alert("Недостаточно золота!");
-      return;
-    }
-    updateProfile(p => {
-      const currentFibers = p.events.lanternFibers || 0;
-      const currentWicks = p.events.lanternWicks || 0;
-      const currentOils = p.events.lanternOils || 0;
-
-      return {
-        ...p,
-        gold: p.gold - 800,
-        events: {
-          ...p.events,
-          lanternFibers: type === 'fiber' ? currentFibers + 1 : currentFibers,
-          lanternWicks: type === 'wick' ? currentWicks + 1 : currentWicks,
-          lanternOils: type === 'oil' ? currentOils + 1 : currentOils,
-        }
-      };
+    setRoute({
+      type: 'GLITCH_BATTLE',
+      sectorId: sectorId,
+      level: sec.id * 15 + 25, // Just for display/scaling if needed
+      name: sec.name,
+      rewardGems: sec.rewardGems,
+      rewardGold: sec.rewardGold
     });
   };
 
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [lanternLaunchedCount, setLanternLaunchedCount] = useState(0);
+  // --- EVENT 2: MATRIX ALCHEMY (Synthesis) ---
+  const [crucibleSlots, setCrucibleSlots] = useState<string[]>([]);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [lastRecipeResult, setLastRecipeResult] = useState<string | null>(null);
 
-  const handleCraftAndLaunch = () => {
-    if (fiberCount < 1 || wickCount < 1 || oilCount < 1) {
-      alert("Недостаточно компонентов для сборки Небесного Фонаря!");
-      return;
+  const alchemyDate = profile.events.alchemyDate || "";
+  const alchemyDailyAttempts = alchemyDate === todayStr ? (profile.events.alchemyDailyAttempts ?? 0) : 0;
+  const maxAlchemyAttempts = 3;
+  const alchemyAttemptsLeft = Math.max(0, maxAlchemyAttempts - alchemyDailyAttempts);
+
+  const addShard = (type: string) => {
+    if (crucibleSlots.length < 3) {
+      setCrucibleSlots([...crucibleSlots, type]);
     }
+  };
 
-    setIsLaunching(true);
-    updateProfile(p => ({
-      ...p,
-      events: {
-        ...p.events,
-        lanternFibers: (p.events.lanternFibers || 0) - 1,
-        lanternWicks: (p.events.lanternWicks || 0) - 1,
-        lanternOils: (p.events.lanternOils || 0) - 1,
-        lanternRitePoints: (p.events.lanternRitePoints || 0) + 30
-      }
-    }));
+  const clearCrucible = () => {
+    setCrucibleSlots([]);
+    setLastRecipeResult(null);
+  };
+
+  const handleSynthesize = () => {
+    if (crucibleSlots.length < 3 || isSynthesizing || alchemyAttemptsLeft <= 0) return;
+    setIsSynthesizing(true);
+    setLastRecipeResult("Запуск алхимического тигеля...");
 
     setTimeout(() => {
-      setIsLaunching(false);
-      setLanternLaunchedCount(prev => prev + 1);
+      setIsSynthesizing(false);
+      const countFlame = crucibleSlots.filter(s => s === 'Flame').length;
+      const countSurge = crucibleSlots.filter(s => s === 'Surge').length;
+      const countFrost = crucibleSlots.filter(s => s === 'Frost').length;
+
+      let rewardGems = 40;
+      let rewardGold = 5000;
+      let recipeName = "Стандартный Кристалл";
+
+      if (countFlame === 3) {
+        rewardGems = 120;
+        rewardGold = 20000;
+        recipeName = "🔥 Ядро Огненной Соли (120 Гемов + 20,000 Моры)";
+      } else if (countSurge === 3) {
+        rewardGems = 100;
+        rewardGold = 40000;
+        recipeName = "⚡ Электро-Матрица (100 Гемов + 40,000 Моры)";
+      } else if (countFrost === 3) {
+        rewardGems = 150;
+        recipeName = "❄️ Крио-Призма Сингулярности (150 Гемов)";
+      } else if (countFlame >= 1 && countSurge >= 1 && countFrost >= 1) {
+        rewardGems = 200;
+        rewardGold = 30000;
+        recipeName = "🌟 Квантовый Равновесный Кристалл (200 Гемов + 30,000 Моры)";
+      } else {
+        rewardGems = 60;
+        rewardGold = 10000;
+        recipeName = "💎 Гибридный Энергетический Сплав (60 Гемов + 10,000 Моры)";
+      }
+
+      updateProfile(p => ({
+        ...p,
+        gems: p.gems + rewardGems,
+        gold: p.gold + rewardGold,
+        events: {
+          ...p.events,
+          alchemyDate: todayStr,
+          alchemyDailyAttempts: (p.events.alchemyDate === todayStr ? (p.events.alchemyDailyAttempts || 0) : 0) + 1
+        }
+      }));
+
+      setLastRecipeResult(`Синтез завершен! Вы получили: ${recipeName}`);
+      setCrucibleSlots([]);
     }, 2000);
   };
 
-  const shopItems = [
-    { id: 'artifact_5s', title: '5★ Легендарный Артефакт', pointsCost: 100, desc: 'Дропает случайный крутой артефакт 5 ур.' },
-    { id: 'gems_300', title: '300 Примогемов', pointsCost: 40, desc: 'Бесплатные камни истока.' },
-    { id: 'gold_20k', title: '20,000 Золота моры', pointsCost: 20, desc: 'Кошелёк набитый золотом.' },
-    { id: 'hero_exp_large', title: 'Книга Опыта Героя (50к)', pointsCost: 30, desc: 'Дарует горы опыта вашему отряду.' }
+  // --- EVENT 3: AEGIS TACTICAL TRIALS ---
+  const completedTrials: number[] = profile.events.completedTrials || [];
+
+  const trials = [
+    { 
+      id: 1, 
+      title: "Симуляция №1: Грозовой Перегруз", 
+      modifier: "Электро-урон персонажей +100%. Враги атакуют на 15% быстрее.", 
+      recElement: "Electro", 
+      gems: 250, 
+      gold: 30000 
+    },
+    { 
+      id: 2, 
+      title: "Симуляция №2: Заморозка Времени", 
+      modifier: "Крио-реакции снижают защиту врагов на 50%.", 
+      recElement: "Cryo", 
+      gems: 300, 
+      gold: 50000 
+    },
+    { 
+      id: 3, 
+      title: "Симуляция №3: Зеркальное Эхо", 
+      modifier: "Реакция «Отражение» и Пиро-урон наносят удвоенный критический урон.", 
+      recElement: "Pyro", 
+      gems: 400, 
+      gold: 80000 
+    },
+    { 
+      id: 4, 
+      title: "Симуляция №4: Абсолютная Сингулярность", 
+      modifier: "Все типы урона ультимейтов усилены на 150%. Враги имеют повышенный запас HP.", 
+      recElement: "Any", 
+      gems: 600, 
+      gold: 150000 
+    }
   ];
 
-  const handleRedeem = (itemId: string, cost: number) => {
-    if (lanternFever < cost) {
-      alert("Недостаточно очков Праздничной Лихорадки!");
-      return;
-    }
+  const handleStartTrial = (trialId: number) => {
+    if (completedTrials.includes(trialId)) return;
+    
+    const tr = trials.find(t => t.id === trialId);
+    if (!tr) return;
 
-    updateProfile(p => {
-      let extraProps: Partial<PlayerProfile> = {};
-      if (itemId === 'artifact_5s') {
-        const art = generateArtifact("gladiator", 5); // gladiator set, 5★ Level
-        extraProps = { artifacts: [...p.artifacts, art] };
-        alert(`Вы выкупили легендарный артефакт: ${art.setName} (${art.slot})!`);
-      } else if (itemId === 'gems_300') {
-        extraProps = { gems: p.gems + 300 };
-        alert("Вы выкупили 300 камней истока!");
-      } else if (itemId === 'gold_20k') {
-        extraProps = { gold: p.gold + 20000 };
-        alert("Вы получили 20,000 золота!");
-      } else if (itemId === 'hero_exp_large') {
-        extraProps = { heroExp: p.heroExp + 50000 };
-        alert("Вы получили 50,000 ед. опыта!");
-      }
-
-      return {
-        ...p,
-        ...extraProps,
-        events: {
-          ...p.events,
-          lanternRitePoints: (p.events.lanternRitePoints || 0) - cost
-        }
-      };
+    setRoute({
+      type: 'TRIAL_BATTLE',
+      trialId: trialId,
+      title: tr.title,
+      rewardGems: tr.gems,
+      rewardGold: tr.gold
     });
   };
 
-  // --- EVENT 4: WARRIOR'S DUEL (Parry reflex mini-game) ---
-  const [duelActive, setDuelActive] = useState(false);
-  const [playerHp, setPlayerHp] = useState(2000);
-  const [bossHp, setBossHp] = useState(5000);
-  const [roundTimer, setRoundTimer] = useState(0); // in percent
-  const [duelLog, setDuelLog] = useState<string[]>([]);
-  const [gameState, setGameState] = useState<'IDLE' | 'CHARGING' | 'WIN' | 'LOSE'>('IDLE');
-  const [parryWindow, setParryWindow] = useState({ start: 0, end: 18 }); // active interval in roundTimer (18% left down to 0%)
-  const [strikeName, setStrikeName] = useState("");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Refs to avoid stale closures in timeouts/asynchronous functions
-  const gameStateRef = useRef(gameState);
-  const playerHpRef = useRef(playerHp);
-  const bossHpRef = useRef(bossHp);
-
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
-
-  useEffect(() => {
-    playerHpRef.current = playerHp;
-  }, [playerHp]);
-
-  useEffect(() => {
-    bossHpRef.current = bossHp;
-  }, [bossHp]);
-
-  const startNewDuel = () => {
-    setPlayerHp(2000);
-    setBossHp(5000);
-    setDuelLog(["Дуэль началась! Дождитесь атаки Гладиатора и нажмите КНОПКУ ПАРИРОВАНИЯ когда полоска дойдет до зеленой зоны!"]);
-    setGameState('IDLE');
-    setDuelActive(true);
-    
-    // Schedule first attack cleanly
-    setTimeout(() => {
-      triggerBossAttack();
-    }, 100);
-  };
-
-  const triggerBossAttack = () => {
-    if (gameStateRef.current === 'WIN' || gameStateRef.current === 'LOSE') return;
-
-    // Wait a random time before charging
-    const typesOfStrikes = [
-      { name: "Сильный взмах", speed: 18, pWindow: { start: 16, end: 0 } },
-      { name: "Выпад копьем", speed: 28, pWindow: { start: 20, end: 0 } },
-      { name: "Быстрый рубящий удар", speed: 40, pWindow: { start: 24, end: 0 } }
-    ];
-
-    const chosenStrike = typesOfStrikes[Math.floor(Math.random() * typesOfStrikes.length)];
-    setStrikeName(chosenStrike.name);
-    setParryWindow(chosenStrike.pWindow);
-    setRoundTimer(100);
-    setGameState('CHARGING');
-  };
-
-  // Run the charging loop
-  useEffect(() => {
-    if (!duelActive || gameState !== 'CHARGING') return;
-
-    let speedMultiplier = 1.0;
-    if (strikeName === "Быстрый рубящий удар") speedMultiplier = 2.4;
-    else if (strikeName === "Выпад копьем") speedMultiplier = 1.6;
-    else speedMultiplier = 0.9;
-
-    timerRef.current = setInterval(() => {
-      setRoundTimer(prev => {
-        const next = prev - (1.5 * speedMultiplier);
-        if (next <= 0) {
-          clearInterval(timerRef.current!);
-          return 0;
-        }
-        return next;
-      });
-    }, 20);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [duelActive, gameState, strikeName]);
-
-  // Handle hit if timer reaches 0
-  useEffect(() => {
-    if (duelActive && gameState === 'CHARGING' && roundTimer === 0) {
-      // Prevent further ticks by changing gameState to IDLE
-      setGameState('IDLE');
-
-      const dmg = 450;
-      const nextPlayerHp = Math.max(0, playerHpRef.current - dmg);
-      setPlayerHp(nextPlayerHp);
-
-      if (nextPlayerHp <= 0) {
-        setGameState('LOSE');
-        setDuelLog(prev => ["Вы пали в бою. Тренируйтесь дальше!", ...prev]);
-      } else {
-        setDuelLog(prev => [`ПРОМАХ! ${strikeName} попал по вам! Нанесено ${dmg} урона.`, ...prev]);
-        setTimeout(() => {
-          triggerBossAttack();
-        }, 1500);
-      }
-    }
-  }, [roundTimer, gameState, duelActive, strikeName]);
-
-  const handleParryClick = () => {
-    if (gameState !== 'CHARGING') return;
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    const pVal = roundTimer;
-    const cleanParry = pVal <= parryWindow.start && pVal >= parryWindow.end;
-
-    if (cleanParry) {
-      // Success counter-attack
-      const nextBossHp = Math.max(0, bossHpRef.current - 1250);
-      setBossHp(nextBossHp);
-
-      if (nextBossHp <= 0) {
-        setGameState('WIN');
-        setDuelLog(prev => ["ПОБЕДА! Вы сразили Гладиатора идеальным контратакующим парированием!", ...prev]);
-        // Grant rewards
-        updateProfile(p => ({
-          ...p,
-          gems: p.gems + 250,
-          gold: p.gold + 5000,
-          events: {
-            ...p.events,
-            parryHighScore: Math.max(p.events.parryHighScore || 0, 1)
-          }
-        }));
-      } else {
-        setDuelLog(prev => ["ВЕЛИКОЛЕПНОЕ ПАРИРОВАНИЕ! Вы отразили удар и провели контратаку на 1250 урона!", ...prev]);
-        setTimeout(() => {
-          triggerBossAttack();
-        }, 1500);
-      }
-    } else {
-      // Failed parry (too early or too late)
-      const dmg = pVal > parryWindow.start ? 300 : 450;
-      const nextPlayerHp = Math.max(0, playerHpRef.current - dmg);
-      setPlayerHp(nextPlayerHp);
-
-      if (nextPlayerHp <= 0) {
-        setGameState('LOSE');
-        setDuelLog(prev => ["Вы пали в бою. Парируйте точнее во время зеленой фазы!", ...prev]);
-      } else {
-        setDuelLog(prev => [
-          pVal > parryWindow.start 
-            ? `СЛИШКОМ РАНО! Парируйте позже. Получено ${dmg} урона.` 
-            : `СЛИШКОМ ПОЗДНО! Щит не успел раскрыться. Получено ${dmg} урона.`,
-          ...prev
-        ]);
-        setTimeout(() => {
-          triggerBossAttack();
-        }, 1500);
-      }
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Event Tabs Navigation */}
-      <div className="flex bg-slate-900/60 p-1.5 rounded-lg border border-slate-800 text-xs sm:text-sm overflow-x-auto gap-1">
+    <div className="space-y-6 font-sans text-white">
+      {/* Top Navigation Tabs */}
+      <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 text-xs sm:text-sm overflow-x-auto gap-1">
         <button 
           onClick={() => setSubTab('LOGIN')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold transition shrink-0 ${
-            subTab === 'LOGIN' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'LOGIN' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
         >
-          <Sparkles className="w-4 h-4" /> Семидневка входа
+          <Sparkles className="w-4 h-4 text-amber-400" /> Проект: Инициализация
         </button>
         <button 
-          onClick={() => setSubTab('BARTENDER')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold transition shrink-0 ${
-            subTab === 'BARTENDER' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
+          onClick={() => setSubTab('BREACH')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'BREACH' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
         >
-          <Coffee className="w-4 h-4" /> Глоток пьянящей мечты
+          <ShieldAlert className="w-4 h-4 text-red-400" /> Охота на Глитчи
         </button>
         <button 
-          onClick={() => setSubTab('LANTERN')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold transition shrink-0 ${
-            subTab === 'LANTERN' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
+          onClick={() => setSubTab('ALCHEMY')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'ALCHEMY' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
         >
-          <Flame className="w-4 h-4" /> Праздник фонарей
+          <FlaskConical className="w-4 h-4 text-emerald-400" /> Синтез Матрицы
         </button>
         <button 
-          onClick={() => setSubTab('DUEL')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold transition shrink-0 ${
-            subTab === 'DUEL' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
+          onClick={() => setSubTab('TRIALS')}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'TRIALS' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          )}
         >
-          <Trophy className="w-4 h-4" /> Дуэль на мечах
+          <Swords className="w-4 h-4 text-cyan-400" /> Боевые Испытания
         </button>
       </div>
 
-      {/* COMPENSATION FOR WIP CLAIM BAR - STAY AT TOP OF EVENT SECTIONS IF UNCLAIMED */}
-      {!compensationClaimed && (
-        <div className="bg-gradient-to-r from-red-950/40 to-pink-950/40 border border-pink-500/50 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* UPDATE 1.1 REWARD BAR */}
+      {!update11Claimed && (
+        <div className="bg-gradient-to-r from-emerald-950/60 to-green-950/60 border border-green-500/50 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
           <div>
-            <span className="text-xs font-bold text-pink-400 uppercase tracking-widest border border-pink-500/30 px-2 py-0.5 rounded-md bg-pink-500/10">КОМПЕНСАЦИЯ ЗА ВАЙП</span>
-            <p className="text-sm text-slate-300 mt-2 font-sans">
-              Приносим свои извинения за недавнее сохранение файлов. Вот ваш быстрый стартовый бонус!
+            <span className="text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/30 px-2.5 py-1 rounded-md bg-green-500/10">
+              ОБНОВЛЕНИЕ 1.1
+            </span>
+            <p className="text-sm text-slate-200 mt-2 font-medium">
+              Празднуем выход крупного обновления 1.1! Заберите специальный подарок за вход.
             </p>
-            <div className="flex gap-4 mt-2.5 text-xs font-mono">
-              <span className="text-pink-400 font-bold">💎 +10,000 Гемов</span>
-              <span className="text-yellow-500 font-bold">🪙 +100,000 Моры</span>
+            <div className="flex gap-4 mt-2 text-xs font-mono">
+              <span className="text-green-400 font-bold flex items-center gap-1">
+                <Gem className="w-3.5 h-3.5" /> +600 Гемов
+              </span>
             </div>
           </div>
           <button 
             onClick={() => {
               updateProfile(p => ({
                 ...p,
-                gems: p.gems + 10000,
-                gold: p.gold + 100000,
-                events: { ...p.events, compensationClaimed: true }
+                gems: p.gems + 600,
+                events: { ...p.events, update11Claimed: true }
               }));
-              alert("Вы забрали компенсацию!");
+              alert("Награда за обновление 1.1 получена!");
             }}
-            className="w-full sm:w-auto px-5 py-2.5 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold tracking-wider rounded-lg uppercase transition-all"
+            className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-500 text-white text-xs font-bold tracking-wider rounded-xl uppercase transition-all shadow-lg min-h-[44px]"
           >
-            Восстановить отряд
+            Забрать 600 Гемов
           </button>
         </div>
       )}
 
-      {/* ARTIFACT BALANCE COMPENSATION */}
-      {!artCompClaimed && (
-        <div className="bg-gradient-to-r from-blue-950/40 to-cyan-950/40 border border-cyan-500/50 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest border border-cyan-500/30 px-2 py-0.5 rounded-md bg-cyan-500/10">БАЛАНС АРТЕФАКТОВ</span>
-            <p className="text-sm text-slate-300 mt-2 font-sans">
-              Максимальный уровень артефактов теперь ограничен 20. Мы ценим ваши прошлые достижения!
-            </p>
-            <div className="flex gap-4 mt-2.5 text-xs font-mono">
-              <span className="text-cyan-400 font-bold">💎 +1,600 Гемов</span>
-              <span className="text-yellow-500 font-bold">🪙 +500,000 Моры</span>
-            </div>
-          </div>
-          <button 
-            onClick={() => {
-              updateProfile(p => ({
-                ...p,
-                gems: p.gems + 1600,
-                gold: p.gold + 500000,
-                events: { ...p.events, artCompClaimed: true }
-              }));
-              alert("Компенсация за ребаланс получена!");
-            }}
-            className="w-full sm:w-auto px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold tracking-wider rounded-lg uppercase transition-all"
-          >
-            Забрать награду
-          </button>
-        </div>
-      )}
-
-      {/* TAB CONTENTS */}
-
-      {/* 1. SEIZING THE DAY (DAILY LOGIN) */}
+      {/* TAB 0: DAILY LOGIN */}
       {subTab === 'LOGIN' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-          <div className="h-28 bg-gradient-to-r from-purple-900 via-violet-900 to-indigo-950 p-6 flex flex-col justify-end">
-            <h3 className="text-xl sm:text-2xl font-black italic text-white uppercase tracking-tight">ВРЕМЯ ПРИКЛЮЧЕНИЙ</h3>
-            <p className="text-xs text-purple-200 uppercase font-mono tracking-wider">Ежедневный вход в затерянный мир</p>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden relative p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-indigo-400 uppercase tracking-tight flex items-center gap-2">
+              <Sparkles className="w-5 h-5" /> Проект: Инициализация (7 Дней Входа)
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Синхронизируйтесь с сетью ежедневно, чтобы открывать фрагменты памяти и получать ценные камни истока.
+            </p>
           </div>
-          <div className="p-4 sm:p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
-              <div>
-                <span className="text-xs text-slate-400 font-mono">Серия входов: <strong className="text-purple-400">{loginStreak} дн.</strong></span>
-                <p className="text-xs text-slate-500 mt-1">Отмечайтесь ежедневно, получая всё больше камней истока и золота.</p>
-              </div>
-              <button 
-                onClick={handleCheckIn}
-                disabled={alreadyCheckedIn}
-                className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 font-bold rounded uppercase tracking-wider text-xs transition"
-              >
-                {alreadyCheckedIn ? 'Отмечено' : 'Отметиться сегодня'}
-              </button>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+              const isClaimed = day <= loginStreak;
+              const isToday = day === loginStreak + 1;
+
+              return (
+                <div
+                  key={day}
+                  className={cn(
+                    "p-3 rounded-xl border flex flex-col items-center text-center relative transition-all min-h-[120px] justify-between",
+                    isClaimed
+                      ? "bg-indigo-950/40 border-indigo-500/50"
+                      : isToday && !alreadyCheckedIn
+                        ? "bg-slate-800 border-indigo-400 ring-2 ring-indigo-500/40 shadow-lg"
+                        : "bg-slate-950/60 border-slate-800 opacity-60"
+                  )}
+                >
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    День {day}
+                  </span>
+
+                  <div className="my-2 p-2 rounded-full bg-slate-900">
+                    <Gem className={cn("w-6 h-6", isClaimed ? "text-indigo-400" : "text-slate-500")} />
+                  </div>
+
+                  <div className="text-xs font-mono font-bold text-slate-200">
+                    +{day * 60} 💎
+                  </div>
+                  <div className="text-[9px] font-mono text-slate-400">
+                    +{day * 5000} 🪙
+                  </div>
+
+                  {isClaimed && (
+                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] rounded-xl flex items-center justify-center">
+                      <CheckCircle2 className="w-7 h-7 text-indigo-400" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span className="text-xs font-mono text-slate-300">
+              Текущая серия входов: <strong className="text-indigo-400">{loginStreak} / 7</strong> дней
+            </span>
+
+            <button
+              onClick={handleCheckIn}
+              disabled={alreadyCheckedIn}
+              className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 font-bold rounded-xl uppercase text-xs tracking-wider transition min-h-[44px]"
+            >
+              {alreadyCheckedIn ? "Награда за сегодня получена" : "Синхронизироваться и забрать"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1: ANOMALY BREACH */}
+      {subTab === 'BREACH' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-red-400 uppercase tracking-tight flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5" /> Аномальный Прорыв: Охота на Глитчи
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Зачищайте зараженные вирусом виртуальные сектора. Каждая зачистка уничтожает аномалию и приносит гемы.
+            </p>
+          </div>
+
+          {/* (Breach Log was here) */}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sectors.map((sec) => {
+              const isCleared = clearedSectors.includes(sec.id);
+
+              return (
+                <div
+                  key={sec.id}
+                  className={cn(
+                    "p-4 rounded-xl border flex flex-col justify-between space-y-3 transition-all",
+                    isCleared
+                      ? "bg-slate-950/60 border-slate-800 opacity-60"
+                      : "bg-slate-950 border-red-900/40 hover:border-red-500/50 shadow-md"
+                  )}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-mono text-red-400 font-bold block">
+                        Угроза: {sec.threat}
+                      </span>
+                      <h3 className="text-sm font-black uppercase text-slate-100">
+                        {sec.name}
+                      </h3>
+                    </div>
+                    {isCleared && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded">
+                        Зачищено
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-400 font-medium">
+                    {sec.desc}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      <span className="text-indigo-400 font-bold">💎 +{sec.rewardGems}</span>
+                      <span className="text-amber-400 font-bold">🪙 +{sec.rewardGold}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleAttackSector(sec.id)}
+                      disabled={isCleared}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition min-h-[36px]"
+                    >
+                      {isCleared ? "Зачищено" : "Атаковать"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: MATRIX ALCHEMY */}
+      {subTab === 'ALCHEMY' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-emerald-400 uppercase tracking-tight flex items-center gap-2">
+              <FlaskConical className="w-5 h-5" /> Алхимия Матрицы: Синтез Кристаллов
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Поместите 3 стихийных осколка в тигель, чтобы переплавить их в чистые гемы и ресурсы.
+            </p>
+          </div>
+
+          {/* Crucible Altar */}
+          <div className="bg-slate-950 border border-emerald-900/40 p-6 rounded-2xl flex flex-col items-center justify-center space-y-4">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs font-mono uppercase tracking-widest text-emerald-400">
+                Алхимический Тигель (Выбрано {crucibleSlots.length} / 3)
+              </span>
+              <span className={cn(
+                "text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border",
+                alchemyAttemptsLeft > 0 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                  : "bg-red-500/10 border-red-500/30 text-red-400"
+              )}>
+                Попыток синтеза сегодня: {alchemyAttemptsLeft} / {maxAlchemyAttempts}
+              </span>
             </div>
 
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2.5">
-              {[1, 2, 3, 4, 5, 6, 7].map(day => {
-                const isClaimedPast = loginStreak >= day;
-                const isCurrentToday = (loginStreak + 1 === day || (loginStreak === 7 && day === 1)) && !alreadyCheckedIn;
-                
+            <div className="flex gap-3 my-2">
+              {[0, 1, 2].map((slotIdx) => {
+                const shard = crucibleSlots[slotIdx];
                 return (
-                  <div 
-                    key={day} 
-                    className={`p-2 rounded-xl border-2 flex flex-col items-center justify-center text-center relative ${
-                      isClaimedPast 
-                        ? 'border-green-600/50 bg-green-900/10' 
-                        : isCurrentToday 
-                        ? 'border-purple-500 bg-purple-950/30 animate-pulse' 
-                        : 'border-slate-800 bg-slate-950'
-                    }`}
+                  <div
+                    key={slotIdx}
+                    className={cn(
+                      "w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 flex items-center justify-center transition-all shadow-inner",
+                      shard === 'Flame'
+                        ? "bg-red-950/60 border-red-500 text-red-400"
+                        : shard === 'Surge'
+                          ? "bg-purple-950/60 border-purple-500 text-purple-400"
+                          : shard === 'Frost'
+                            ? "bg-cyan-950/60 border-cyan-500 text-cyan-400"
+                            : "bg-slate-900 border-slate-800 border-dashed text-slate-600"
+                    )}
                   >
-                    <div className="text-[10px] font-mono text-slate-500 mb-1">ДЕНЬ {day}</div>
-                    <Gem className={`w-4 h-4 ${isClaimedPast ? 'text-green-400' : 'text-slate-600'}`} />
-                    <div className="text-[11px] font-bold mt-1.5 text-slate-300">+{day * 25}</div>
-                    <div className="text-[8px] font-mono text-slate-500">+{day * 1500}G</div>
-                    {isClaimedPast && <CheckCircle className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 text-green-500 bg-slate-950 rounded-full" />}
+                    {shard === 'Flame' && <Flame className="w-8 h-8 animate-bounce" />}
+                    {shard === 'Surge' && <Zap className="w-8 h-8 animate-pulse" />}
+                    {shard === 'Frost' && <Snowflake className="w-8 h-8 animate-pulse" />}
+                    {!shard && <span className="text-xs font-mono opacity-50">Слот {slotIdx + 1}</span>}
                   </div>
                 );
               })}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* 2. DRINK A-DREAMING (BARTENDER MIXING) */}
-      {subTab === 'BARTENDER' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl grid grid-cols-1 md:grid-cols-3">
-          
-          {/* Main preparation counter */}
-          <div className="md:col-span-2 p-5 border-r border-slate-800 space-y-4">
-            <div className="h-24 bg-gradient-to-r from-amber-950 to-orange-950 p-4 rounded-xl flex items-center gap-3">
-              <div className="p-2.5 bg-orange-900/20 border border-orange-500/30 rounded-lg text-amber-400">
-                <Coffee className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-bold text-white text-base">Глоток пьянящей мечты</h4>
-                <p className="text-xs text-orange-200 font-sans mt-1">Смешайте любимый коктейль гостей, соблюдая точные рецепты!</p>
-              </div>
+            {/* Shard Selection Controls */}
+            <div className="flex gap-2 flex-wrap justify-center">
+              <button
+                onClick={() => addShard('Flame')}
+                disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
+                className="px-4 py-2 bg-red-950/50 hover:bg-red-800 text-red-400 border border-red-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+              >
+                <Flame className="w-4 h-4" /> + Огненный Осколок
+              </button>
+              <button
+                onClick={() => addShard('Surge')}
+                disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
+                className="px-4 py-2 bg-purple-950/50 hover:bg-purple-800 text-purple-400 border border-purple-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+              >
+                <Zap className="w-4 h-4" /> + Импульсный Осколок
+              </button>
+              <button
+                onClick={() => addShard('Frost')}
+                disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
+                className="px-4 py-2 bg-cyan-950/50 hover:bg-cyan-800 text-cyan-400 border border-cyan-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+              >
+                <Snowflake className="w-4 h-4" /> + Крио Осколок
+              </button>
             </div>
 
-            {/* Guest request dialog */}
-            <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl flex items-start gap-4">
-              <div className={`w-12 h-12 ${activeCustomer.avatarColor} rounded-full shrink-0 flex items-center justify-center font-black text-white text-lg shadow-inner`}>
-                {activeCustomer.name[0]}
-              </div>
-              <div className="space-y-1 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-200 text-sm">{activeCustomer.name}</span>
-                  <span className="text-[10px] font-mono uppercase bg-orange-600/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded-md">
-                    Заказ: {activeCustomer.wantedRecipe}
-                  </span>
-                </div>
-                <p className="text-xs italic text-slate-300">"{activeCustomer.greeting}"</p>
-              </div>
+            {/* Actions */}
+            <div className="flex gap-3 w-full max-w-xs pt-2">
+              <button
+                onClick={clearCrucible}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs uppercase tracking-wider transition min-h-[40px]"
+              >
+                Очистить
+              </button>
+              <button
+                onClick={handleSynthesize}
+                disabled={crucibleSlots.length < 3 || isSynthesizing || alchemyAttemptsLeft <= 0}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-950/50 min-h-[40px]"
+              >
+                {isSynthesizing ? "Синтез..." : alchemyAttemptsLeft <= 0 ? "Лимит исчерпан" : "Синтезировать"}
+              </button>
             </div>
 
-            {/* Mixing container / current cup inventory */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <span className="text-[10px] font-mono text-slate-500 uppercase">Шейкер для напитков</span>
-              
-              <div className="h-20 flex items-center justify-center gap-3 border-y border-slate-900 my-2">
-                {currentCup.length === 0 ? (
-                  <span className="text-xs text-slate-500 italic">Шейкер пуст. Выберите ингредиенты ниже...</span>
-                ) : (
-                  currentCup.map((ing, idx) => (
-                    <div key={idx} className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 text-orange-200 shadow-sm">
-                      ☕ {ing}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="flex justify-between items-center text-xs">
-                <button 
-                  onClick={clearCup}
-                  className="px-3 py-1.5 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-md transition"
-                >
-                  Очистить
-                </button>
-                <button 
-                  onClick={mixDrink}
-                  disabled={currentCup.length < 3 || isMixing}
-                  className="px-5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:opacity-30 text-white font-bold rounded-md uppercase tracking-wider transition shadow-md shadow-amber-900/30"
-                >
-                  {isMixing ? 'Взбалтывание...' : 'Взболтать и Подать'}
-                </button>
-              </div>
-            </div>
-
-            {/* Feedback alert */}
-            {mixingSuccessMsg && (
-              <div className="p-3 bg-purple-950/50 border border-purple-500/50 rounded-xl text-xs font-sans text-purple-200 text-center animate-bounce">
-                {mixingSuccessMsg}
+            {lastRecipeResult && (
+              <div className="mt-2 text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-xl text-center w-full max-w-md">
+                {lastRecipeResult}
               </div>
             )}
-
-            {/* Control Ingredient Shelf */}
-            <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block mb-2">Ингредиенты (Выберите 3 шт)</span>
-              
-              <div className="space-y-3">
-                {/* Bases */}
-                <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold mb-1.5">База:</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["Кофе", "Чай", "Какао"].map(b => (
-                      <button 
-                        key={b}
-                        onClick={() => addIngredient(b)}
-                        className="py-2 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold rounded-lg text-xs transition"
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Fillers */}
-                <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold mb-1.5">Топпинги:</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {["Молоко", "Карамель", "Мята", "Шоколад"].map(f => (
-                      <button 
-                        key={f}
-                        onClick={() => addIngredient(f)}
-                        className="py-1.5 px-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-medium rounded-lg text-xs transition"
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recipes side column */}
-          <div className="p-5 bg-slate-950/40 font-sans space-y-4">
-            <div>
-              <h5 className="font-bold text-orange-400 text-sm flex items-center gap-1"><BookOpen className="w-4 h-4"/> Книга Рецептов</h5>
-              <p className="text-[11px] text-slate-500">Подбирайте точные пропорции, чтобы угодить посетителям таверны.</p>
-            </div>
-            
-            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-              {RECIPES.map(recipe => (
-                <div key={recipe.name} className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg space-y-1">
-                  <div className="flex justify-between items-center gap-1">
-                    <span className="font-bold text-slate-300 text-xs">{recipe.name}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {recipe.ingredients.map((ing, i) => (
-                      <span key={i} className="text-[8px] bg-slate-850 px-1 py-0.5 rounded text-orange-200 border border-slate-800 font-mono">
-                        {ing}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-serif leading-tight">{recipe.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-3 border-t border-slate-800 font-mono text-center text-xs">
-              <span className="text-slate-500">Набрано очков бартендера: </span>
-              <div className="text-lg font-bold text-orange-400">{profile.events.bartenderPoints || 0} ФП</div>
-            </div>
           </div>
         </div>
       )}
 
-      {/* 3. LANTERN RITE (FESTIVAL PROGRESS & SHOP) */}
-      {subTab === 'LANTERN' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            
-            <HeaderImageSection />
-
-            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Left crafting column */}
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-bold text-slate-200 text-base">Стол Сборки Фонарей</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">Собирайте из волокон, фитилей и масел небесные фонари и запускайте их в небо ради очков лихорадки.</p>
-                </div>
-
-                {/* Material claims */}
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs text-slate-300 font-bold block">Ежедневный набор материалов</span>
-                    <span className="text-[10px] text-slate-500">Заберите бесплатную партию руды и волокна: +3 ко всему</span>
-                  </div>
-                  <button 
-                    onClick={handleClaimDailyMaterials}
-                    disabled={hasClaimedTodayGifts}
-                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-amber-600 disabled:opacity-40 disabled:from-slate-800 text-white font-bold rounded-lg uppercase tracking-wider text-[10px] transition"
-                  >
-                    {hasClaimedTodayGifts ? 'Забрано' : 'Забрать'}
-                  </button>
-                </div>
-
-                {/* Materials Count */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-slate-950 p-2 text-center rounded-xl border border-slate-800 space-y-1 relative group">
-                    <span className="text-[10px] text-slate-500 font-sans block uppercase">Волокно Плио</span>
-                    <strong className="text-base text-amber-100">{fiberCount} шт</strong>
-                    <button onClick={() => handleBuyMaterial('fiber')} className="w-full mt-1.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-[9px] text-amber-300 rounded font-bold transition">купить 800G</button>
-                  </div>
-                  <div className="bg-slate-950 p-2 text-center rounded-xl border border-slate-800 space-y-1 relative group">
-                    <span className="text-[10px] text-slate-500 font-sans block uppercase">Фитиль Удачи</span>
-                    <strong className="text-base text-orange-200">{wickCount} шт</strong>
-                    <button onClick={() => handleBuyMaterial('wick')} className="w-full mt-1.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-[9px] text-orange-300 rounded font-bold transition">купить 800G</button>
-                  </div>
-                  <div className="bg-slate-950 p-2 text-center rounded-xl border border-slate-800 space-y-1 relative group">
-                    <span className="text-[10px] text-slate-500 font-sans block uppercase">Флуор. Масло</span>
-                    <strong className="text-base text-red-200">{oilCount} шт</strong>
-                    <button onClick={() => handleBuyMaterial('oil')} className="w-full mt-1.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-[9px] text-red-300 rounded font-bold transition">купить 800G</button>
-                  </div>
-                </div>
-
-                {/* Crafting Button action */}
-                <button 
-                  onClick={handleCraftAndLaunch}
-                  disabled={isLaunching || fiberCount < 1 || wickCount < 1 || oilCount < 1}
-                  className="w-full p-4 bg-gradient-to-r from-red-700 to-amber-700 hover:from-red-600 hover:to-amber-600 disabled:opacity-30 disabled:from-slate-800 font-black text-white text-xs tracking-widest rounded-xl uppercase transition shadow-lg shadow-red-900/30"
-                >
-                  {isLaunching ? 'СБОРКА И ЗАПУСК ФОНАРЯ...' : 'СОЗДАТЬ И ЗАПУСТИТЬ ФОНАРЬ (+30 Очков)'}
-                </button>
-
-                {lanternLaunchedCount > 0 && (
-                  <p className="text-xs text-center text-amber-400 font-serif italic">Вы успешно запустили небесный фонарь #{lanternLaunchedCount} в ночное небо Ли Юэ!</p>
-                )}
-              </div>
-
-              {/* Right Souvenir Shop exchange board */}
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-bold text-slate-200 text-base">Сувенирная Награда Ли Юэ</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">ВЫБЕРИТЕ ПРИЗЫ И ИСПОЛЬЗУЙТЕ СВОЮ НАКОПЛЕННУЮ ПРАЗДНИЧНУЮ ЛИХОРАДКУ.</p>
-                </div>
-
-                <div className="space-y-3.5 bg-slate-950 p-4 border border-slate-850 rounded-xl max-h-[300px] overflow-y-auto">
-                  {shopItems.map(item => (
-                    <div key={item.id} className="p-3 bg-slate-900/80 border border-slate-800 rounded-lg flex items-center justify-between gap-3 text-left">
-                      <div>
-                        <span className="text-xs font-bold text-slate-200 block uppercase font-mono">{item.title}</span>
-                        <span className="text-[10px] text-slate-500 mt-0.5 block font-sans">{item.desc}</span>
-                      </div>
-                      <button 
-                        onClick={() => handleRedeem(item.id, item.pointsCost)}
-                        className="px-3 py-1.5 shrink-0 bg-amber-650 hover:bg-amber-600 text-[10px] font-mono font-bold text-slate-900 rounded-md transition"
-                      >
-                        За {item.pointsCost} Очков
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-3 bg-slate-950 border border-amber-900/30 rounded-xl font-mono text-center flex items-center justify-between text-xs px-5">
-                  <span className="text-slate-500">Ваша Лихорадка:</span>
-                  <strong className="text-amber-400 font-black text-sm flex items-center gap-1">🌟 {lanternFever} Очков</strong>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. WARRIOR'S DUEL (PARRY PRACTICE MINI GAME) */}
-      {subTab === 'DUEL' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-          <div className="h-28 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-950 p-6 flex flex-col justify-end relative">
-            <h3 className="text-xl sm:text-2xl font-black italic text-white uppercase tracking-tight">ДУЭЛЬ ВОИНОВ: ИСКУССТВО ПАРИРОВАНИЯ</h3>
-            <p className="text-xs text-blue-200 uppercase font-mono tracking-wider">Отражайте стремительные выпады противника идеальным блоком</p>
+      {/* TAB 3: TACTICAL TRIALS */}
+      {subTab === 'TRIALS' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-cyan-400 uppercase tracking-tight flex items-center gap-2">
+              <Swords className="w-5 h-5" /> Тактические Испытания Эгиды
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Боевые симуляции с элементальными аномалиями поля боя. Испытайте свой отряд!
+            </p>
           </div>
 
-          <div className="p-4 sm:p-6 space-y-6">
-            {!duelActive ? (
-              <div className="text-center py-8 space-y-4 max-w-md mx-auto">
-                <div className="w-16 h-16 bg-blue-900/20 border border-blue-500/30 rounded-full flex items-center justify-center mx-auto text-blue-400">
-                  <Swords className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-200 text-sm">Готовы бросить вызов Громовому Гладиатору?</h4>
-                  <p className="text-xs text-slate-400">Парируйте атаки именно во время зеленой фазы (когда шкала опустится к самому левому краю). Идеальный контрудар наносит титанический урон!</p>
-                </div>
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-300 font-serif">
-                   Награда за победу: 💎 250 Примогемов, 🪙 5,000 Моры
-                </div>
-                <button 
-                  onClick={startNewDuel}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl uppercase text-xs tracking-wider transition w-full"
-                >
-                  Сразиться!
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                
-                {/* Visual Fight Arena Bars */}
-                <div className="grid grid-cols-2 gap-4">
-                  
-                  {/* Player HP */}
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
-                    <div className="flex justify-between items-center text-xs font-mono mb-1.5">
-                      <span className="text-slate-400">Путешественник (Вы)</span>
-                      <strong className="text-emerald-400">{playerHp} HP</strong>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-emerald-500 transition-all duration-300" 
-                        style={{ width: `${(playerHp / 2000) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 gap-4">
+            {trials.map((tr) => {
+              const isCompleted = completedTrials.includes(tr.id);
 
-                  {/* Robot Gladiator HP */}
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-850 text-right">
-                    <div className="flex justify-between items-center text-xs font-mono mb-1.5">
-                      <strong className="text-red-400">{bossHp} HP</strong>
-                      <span className="text-slate-400">Громовой Гладиатор</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-red-500 transition-all duration-300 ml-auto" 
-                        style={{ width: `${(bossHp / 5000) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Central charge-bar animation container */}
-                <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-4">
-                  
-                  {gameState === 'CHARGING' ? (
-                    <div className="space-y-3 animate-pulse">
-                      <span className="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-900 px-3 py-1 rounded-full">
-                        Враг готовит: <span className="font-extrabold">{strikeName}</span>!
-                      </span>
-
-                      {/* Bar indicator */}
-                      <div className="w-full max-w-xl mx-auto h-6 bg-slate-900 rounded-lg relative overflow-hidden border border-slate-800">
-                        {/* Parry perfect marker band zone at the left end (from 0 to 18%) */}
-                        <div 
-                          className="absolute h-full bg-teal-500/50" 
-                          style={{ left: '0%', width: '18%' }}
-                        />
-                        <div 
-                          className="absolute h-full bg-red-600 transition-all duration-75 text-[10px] font-mono font-black text-white flex items-center justify-end pr-2"
-                          style={{ left: '0%', width: `${roundTimer}%` }}
-                        >
-                           {roundTimer > 18 ? '...' : 'ПАРИРУЙТЕ!'}
-                        </div>
-                      </div>
-
-                      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex justify-between max-w-xl mx-auto px-1">
-                        <span>ИДЕАЛЬНАЯ ЗОНА</span>
-                        <span>ПОДГОТОВКА УДАРА</span>
-                      </div>
-
-                      <button 
-                        onClick={handleParryClick}
-                        className="px-8 py-4 bg-teal-500 hover:bg-teal-400 active:scale-95 text-slate-950 font-black rounded-xl uppercase text-sm tracking-widest transition-all w-full max-w-sm mt-3 shadow-lg shadow-teal-500/20"
-                      >
-                        ⚡ ПАРИРОВАТЬ!
-                      </button>
-                    </div>
-                  ) : gameState === 'WIN' ? (
-                    <div className="py-6 space-y-4 font-serif">
-                      <span className="text-3xl">🏆</span>
-                      <h4 className="text-xl font-bold text-teal-400 uppercase tracking-wide">Испытание Пройдено!</h4>
-                      <p className="text-xs text-slate-300 max-w-xs mx-auto">Вы мастерски овладели дуэльным оружием и добыли щедрые сокровища.</p>
-                      
-                      <div className="p-3 bg-teal-900/10 border border-teal-500/20 rounded-xl text-xs text-teal-300 max-w-xs mx-auto font-mono">
-                         Поздравляем! Начислено в инвентарь: 250 гемов, 5,000 моры.
-                      </div>
-                      <button 
-                        onClick={startNewDuel}
-                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-lg text-xs tracking-wider"
-                      >
-                        Пройти повторно
-                      </button>
-                    </div>
-                  ) : gameState === 'LOSE' ? (
-                    <div className="py-6 space-y-4">
-                      <span className="text-4xl">💀</span>
-                      <h4 className="text-xl font-bold text-red-500">Поражение</h4>
-                      <p className="text-xs text-slate-400 max-w-xs mx-auto">Удар Гладиатора был слишком стремителен. Тренируйте реакцию в зеленом коридоре.</p>
-                      <button 
-                        onClick={startNewDuel}
-                        className="px-6 py-2.5 bg-red-600 hover:bg-red-505 text-white font-bold rounded-lg text-xs uppercase"
-                      >
-                        Попробовать снова
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="py-4 font-bold text-slate-500 text-xs uppercase">Ожидание...</div>
+              return (
+                <div
+                  key={tr.id}
+                  className={cn(
+                    "p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all",
+                    isCompleted
+                      ? "bg-slate-950/60 border-slate-800 opacity-60"
+                      : "bg-slate-950 border-slate-800 hover:border-cyan-500/40"
                   )}
-
-                </div>
-
-                {/* Duell logs of combat actions */}
-                <div className="bg-slate-950 p-4 border border-slate-850 rounded-xl space-y-2">
-                  <span className="text-[10px] font-mono text-slate-500 uppercase">Лог сражения</span>
-                  <div className="space-y-1.5 max-h-[140px] overflow-y-auto font-mono text-xs text-left">
-                    {duelLog.map((log_line, index) => (
-                      <div key={index} className="text-slate-300 border-l-2 border-slate-800 pl-2">
-                         {log_line}
-                      </div>
-                    ))}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase text-cyan-400">
+                        {tr.title}
+                      </span>
+                      {isCompleted && (
+                        <span className="text-[9px] font-bold px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded">
+                          Пройдено
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-300 font-medium">
+                      Модификатор: <span className="text-amber-400">{tr.modifier}</span>
+                    </p>
+                    <div className="flex items-center gap-3 text-xs font-mono pt-1">
+                      <span className="text-indigo-400 font-bold">💎 +{tr.gems} Гемов</span>
+                      <span className="text-amber-400 font-bold">🪙 +{tr.gold} Моры</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Exit duel option */}
-                <div className="text-right">
-                  <button 
-                    onClick={() => setDuelActive(false)}
-                    className="text-xs text-slate-500 hover:text-slate-300 underline"
+                  <button
+                    onClick={() => handleStartTrial(tr.id)}
+                    disabled={isCompleted}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition min-h-[44px]"
                   >
-                    Закончить дуэль
+                    {isCompleted ? "Пройдено" : "Начать испытание"}
                   </button>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         </div>
       )}
-
-    </div>
-  );
-}
-
-// Subordinate SVG or visual parts to manage file size & neat look
-function BookOpen(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props} className={props.className}>
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
-  );
-}
-
-function HeaderImageSection() {
-  return (
-    <div className="h-32 bg-gradient-to-r from-red-900 via-yellow-950 to-amber-900 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent"></div>
-      
-      {/* Absolute decorative absolute elements representing flying lanterns */}
-      <div className="absolute top-2 left-1/4 w-3.5 h-5 bg-orange-500/80 rounded-t-lg animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.7)] rotate-6"></div>
-      <div className="absolute top-6 left-1/2 w-4.5 h-6 bg-amber-400/85 rounded-t-lg animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.8)] -rotate-12 duration-1000"></div>
-      <div className="absolute top-4 right-1/4 w-3 h-4 bg-orange-400/70 rounded-t-lg animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.6)] rotate-12 duration-700"></div>
-
-      <div className="absolute bottom-4 left-6">
-        <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">ПРАЗДНИК МОРСКИХ ФОНАРЕЙ</h3>
-        <p className="text-xs text-amber-200 uppercase font-mono tracking-wider">Грандиозный весенний фестиваль в Ли Юэ</p>
-      </div>
     </div>
   );
 }

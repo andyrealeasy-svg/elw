@@ -68,6 +68,8 @@ export interface Combatant {
     hpBoost?: number;
     hpFreeze?: number;
     smolderLink?: number;
+    voltage?: number; // Specific to Volta (S-tier Electro Sustain)
+    conductionCircuit?: number; // Specific to Volta's Conduction Circuit mark
     duelMark?: number;
     isolationMark?: number;
     defIgnoreBoost?: number;
@@ -86,7 +88,7 @@ export interface BattleState {
   damageDealt: Record<string, number>; // uid -> total damage
 }
 
-export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] };
+export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number };
 
 export type ArtifactSlot = "flower" | "plume" | "sands" | "goblet" | "circlet";
 export type StatType = "hp" | "atk" | "def" | "spd";
@@ -131,6 +133,12 @@ export interface CharData {
   level: number;
   constellation: number;
   artifacts?: Record<ArtifactSlot, string | null>;
+}
+
+export interface ConstellationInfo {
+  level: number;
+  name: string;
+  description: string;
 }
 
 export interface Expedition {
@@ -183,6 +191,7 @@ export interface PlayerProfile {
   bpClaimedLevels: number[];
   bpClaimedLevelsPremium: number[];
   hasGoldenPass: boolean;
+  bossRushClaimed?: boolean; // Rewards for Boss Rush claimable once per update
   lunarAbyssClaimed: number[]; // floors 9-12
   lunarAbyssResetTime: number; 
   achievements: Record<string, boolean>; // id -> claimed

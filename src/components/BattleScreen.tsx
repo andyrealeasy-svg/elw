@@ -123,8 +123,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           
           setCurrentWave(nextWaveIndex);
           setEnemies(nextEnemies);
-          setPlayers(prev => prev.map(p => ({ ...p, atb: Math.min(p.atb, 50) }))); // Reset ATB partially
-          addLog(`Волна ${nextWaveIndex + 1} приближается!`);
+          setPlayers(prev => prev.map(p => ({
+             ...p,
+             stats: { ...p.stats, hp: p.stats.maxHp }, // Restore HP fully
+             cooldowns: {}, // Reset all skill cooldowns
+             atb: Math.min(p.atb, 50) // Reset ATB partially
+          })));
+          addLog(`Волна ${nextWaveIndex + 1} приближается! ХП восстановлено, навыки готовы!`);
           
           // Clear active state if any
           setActiveUnitId(null);
@@ -261,6 +266,10 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                modifiedE.buffs.isolationMark--;
             }
 
+            if (modifiedE.buffs.critOvercool && modifiedE.buffs.critOvercool > 0) {
+               modifiedE.buffs.critOvercool--;
+            }
+
             // Pick random alive player
             const alivePlayers = newPlayers.filter(p => p.stats.hp > 0);
             const target = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
@@ -387,21 +396,68 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         }}
         onClick={() => !isDead && handleTargetSelect(unit, isPlayer)}
         className={cn(
-          "relative flex flex-col p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all cursor-pointer flex-1 min-w-[65px] sm:min-w-[70px] max-w-[85px] sm:max-w-[120px] shadow-lg group",
+          "relative flex flex-col p-0 rounded-lg sm:rounded-xl border-2 transition-all cursor-pointer flex-1 min-w-[65px] sm:min-w-[70px] max-w-[85px] sm:max-w-[120px] shadow-lg group bg-slate-950",
           unit.color,
           isActive ? "ring-2 sm:ring-4 ring-yellow-400 ring-offset-2 sm:ring-offset-4 ring-offset-gray-950 border-white shadow-[0_0_25px_rgba(250,204,21,0.4)]" : "border-white/10 opacity-90",
           isDead ? "opacity-30 grayscale cursor-not-allowed contrast-75 brightness-50" : "hover:scale-105 hover:opacity-100",
           isTargetable && !isDead ? "animate-pulse cursor-crosshair border-white ring-2 ring-white ring-offset-2 ring-offset-gray-900" : ""
         )}
       >
-        {/* Background Image Portrait */}
-        {unit.image && (
-          <div className="absolute inset-0 z-0 opacity-50 group-hover:opacity-70 transition-opacity rounded-[10px] overflow-hidden">
-            <img src={unit.image} alt={unit.name} className={cn("w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-700", unit.name.includes("БОСС") && "brightness-125 contrast-125")} />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
-            {unit.name.includes("БОСС") && <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay animate-pulse" />}
+        {/* Upper Splashart Wrapper */}
+        <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-slate-900/60 flex-shrink-0">
+          {unit.image ? (
+            <img 
+              src={unit.image} 
+              alt={unit.name} 
+              className={cn(
+                "w-full h-full object-cover scale-105 group-hover:scale-120 transition-transform duration-700 opacity-95 group-hover:opacity-100", 
+                unit.name.includes("БОСС") && "brightness-125 contrast-125"
+              )} 
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl bg-slate-800">
+              ⚔️
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
+          {unit.name.includes("БОСС") && <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay animate-pulse" />}
+
+          {/* Buff Icons & Aura inside Splashart Wrapper for clean layout */}
+          <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end z-30">
+             <AnimatePresence>
+               {unit.aura && (
+                  <motion.div 
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    className={cn(
+                      "w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-[8px] sm:text-[10px] text-white font-black rounded border border-white/40 uppercase shadow-lg",
+                      unit.aura === "Hydro" ? "bg-blue-600" :
+                      unit.aura === "Pyro" ? "bg-red-600" :
+                      unit.aura === "Dendro" ? "bg-green-600" :
+                      unit.aura === "Electro" ? "bg-purple-600" :
+                      unit.aura === "Cryo" ? "bg-cyan-500" :
+                      unit.aura === "Geo" ? "bg-orange-600" : "bg-gray-500"
+                    )}
+                  >
+                    {unit.aura.substring(0, 1)}
+                  </motion.div>
+               )}
+             </AnimatePresence>
+             <div className="flex gap-0.5 flex-wrap justify-end max-w-[40px]">
+               {unit.buffs.duelMark > 0 && <div className="absolute -top-3 sm:-top-5 -right-3 text-lg sm:text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,1)] animate-bounce font-black text-red-500 z-50">🎯</div>}
+               {unit.buffs.shield > 0 && <Shield className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-300 drop-shadow-md" />}
+               {unit.buffs.puppets > 0 && <div className="text-[7px] bg-red-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🎭{unit.buffs.puppets}</div>}
+               {unit.buffs.frenzyStacks > 0 && <div className="text-[7px] bg-amber-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">🔥{unit.buffs.frenzyStacks}</div>}
+               {unit.buffs.joyStacks > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">✨{unit.buffs.joyStacks}</div>}
+               {unit.buffs.thorns > 0 && <div className="text-[7px] bg-emerald-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🌿{unit.buffs.thorns}</div>}
+               {unit.buffs.roseEmbers > 0 && <div className="text-[7px] bg-rose-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🌹{unit.buffs.roseEmbers}</div>}
+               {unit.buffs.trapStacks > 0 && <div className="text-[7px] bg-orange-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">💣{unit.buffs.trapStacks}</div>}
+               {unit.buffs.isolationMark > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-purple-400 font-bold">🎯{unit.buffs.isolationMark}</div>}
+               {(unit.buffs.voltage ?? 0) > 0 && <div className="text-[7px] bg-violet-600 text-yellow-300 font-bold rounded-sm px-0.5 border border-yellow-400/40">⚡{unit.buffs.voltage}</div>}
+               {(unit.buffs.conductionCircuit ?? 0) > 0 && <div className="text-[7px] bg-cyan-600 text-white font-bold rounded-sm px-0.5 border border-cyan-300/40">🔄{unit.buffs.conductionCircuit}</div>}
+             </div>
           </div>
-        )}
+        </div>
 
         {isActive && (
           <motion.div 
@@ -416,77 +472,47 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           </motion.div>
         )}
 
-        <div className={cn(
-          "relative z-10 text-white font-black text-[10px] sm:text-xs uppercase tracking-tight text-center truncate mb-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]",
-          unit.name.includes("БОСС") && "text-red-400 sm:text-sm"
-        )}>
-          {unit.name}
-        </div>
-        
-        {/* Buff Icons & Aura */}
-        <div className="absolute -top-2 -right-2 flex flex-col gap-0.5 items-end z-30">
-           <AnimatePresence>
-             {unit.aura && (
-                <motion.div 
-                  initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                  className={cn(
-                    "w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[10px] sm:text-[11px] text-white font-black rounded-lg border-2 border-white/40 uppercase shadow-lg",
-                    unit.aura === "Hydro" ? "bg-blue-600" :
-                    unit.aura === "Pyro" ? "bg-red-600" :
-                    unit.aura === "Dendro" ? "bg-green-600" :
-                    unit.aura === "Electro" ? "bg-purple-600" :
-                    unit.aura === "Cryo" ? "bg-cyan-500" :
-                    unit.aura === "Geo" ? "bg-orange-600" : "bg-gray-500"
-                  )}
-                >
-                  {unit.aura.substring(0, 1)}
-                </motion.div>
-             )}
-           </AnimatePresence>
-           <div className="flex gap-0.5 flex-wrap justify-end max-w-[40px]">
-             {unit.buffs.duelMark > 0 && <div className="absolute -top-3 sm:-top-5 -right-3 text-lg sm:text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,1)] animate-bounce font-black text-red-500 z-50">🎯</div>}
-             {unit.buffs.shield > 0 && <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-300 drop-shadow-md" />}
-             {unit.buffs.puppets > 0 && <div className="text-[8px] bg-red-700 text-white rounded-sm px-1 border border-white/20">🎭{unit.buffs.puppets}</div>}
-             {unit.buffs.frenzyStacks > 0 && <div className="text-[8px] bg-amber-600 text-white rounded-sm px-1 border border-white/20">🔥{unit.buffs.frenzyStacks}</div>}
-             {unit.buffs.joyStacks > 0 && <div className="text-[8px] bg-purple-600 text-white rounded-sm px-1 border border-white/20">✨{unit.buffs.joyStacks}</div>}
-             {unit.buffs.thorns > 0 && <div className="text-[8px] bg-emerald-700 text-white rounded-sm px-1 border border-white/20">🌿{unit.buffs.thorns}</div>}
-             {unit.buffs.roseEmbers > 0 && <div className="text-[8px] bg-rose-700 text-white rounded-sm px-1 border border-white/20">🌹{unit.buffs.roseEmbers}</div>}
-             {unit.buffs.trapStacks > 0 && <div className="text-[8px] bg-orange-700 text-white rounded-sm px-1 border border-white/20">💣{unit.buffs.trapStacks}</div>}
-             {unit.buffs.isolationMark > 0 && <div className="text-[8px] bg-purple-600 text-white rounded-sm px-1 border border-purple-400">🎯{unit.buffs.isolationMark}</div>}
-           </div>
-        </div>
-
-        {/* HP Bar */}
-        <div className="relative z-10 w-full bg-black/60 h-2.5 sm:h-3 rounded-full mt-auto overflow-hidden border border-white/10 shadow-inner">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${hpPercent}%` }}
-            className={cn(
-              "h-full transition-all duration-300 relative rounded-full",
-              hpPercent > 50 ? "bg-gradient-to-r from-green-600 to-green-400" : hpPercent > 20 ? "bg-gradient-to-r from-yellow-600 to-yellow-400" : "bg-gradient-to-r from-red-600 to-red-400"
-            )}
-          >
-            <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
-          </motion.div>
-        </div>
-        <div className="relative z-10 flex justify-between items-center text-[7px] sm:text-[9px] mt-1 font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)] uppercase">
-           <span className="opacity-70">HP</span>
-           <span className="tabular-nums">
-             {unit.stats.maxHp >= 1000000 
-               ? `${(unit.stats.hp / 1000000).toFixed(2)}M / ${(unit.stats.maxHp / 1000000).toFixed(2)}M`
-               : unit.stats.maxHp >= 10000 
-                 ? `${(unit.stats.hp / 1000).toFixed(1)}k / ${(unit.stats.maxHp / 1000).toFixed(1)}k`
-                 : `${Math.floor(unit.stats.hp)} / ${unit.stats.maxHp}`
-             }
-           </span>
-        </div>
-        
-        {/* ATB Bar */}
-        <div className="relative z-10 w-full bg-black/40 h-1 sm:h-1.5 rounded-full mt-1.5 overflow-hidden border border-white/5 shadow-inner">
-          <div 
-            className="bg-yellow-400 h-full shadow-[0_0_8px_rgba(250,204,21,0.6)] rounded-full" 
-            style={{ width: `${unit.atb}%` }} 
-          />
+        {/* Lower Info Wrapper */}
+        <div className="p-1.5 sm:p-2 flex flex-col gap-1 sm:gap-1.5 bg-slate-950/95 rounded-b-[6px] sm:rounded-b-[10px] flex-grow">
+          <div className={cn(
+            "text-white font-black text-[9px] sm:text-xs uppercase tracking-tight text-center truncate drop-shadow-md",
+            unit.name.includes("БОСС") && "text-red-400 sm:text-sm font-black"
+          )}>
+            {unit.name}
+          </div>
+          
+          {/* HP Bar */}
+          <div className="relative w-full bg-black/60 h-2 sm:h-2.5 rounded-full overflow-hidden border border-white/10 shadow-inner">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${hpPercent}%` }}
+              className={cn(
+                "h-full transition-all duration-300 relative rounded-full",
+                hpPercent > 50 ? "bg-gradient-to-r from-green-600 to-green-400" : hpPercent > 20 ? "bg-gradient-to-r from-yellow-600 to-yellow-400" : "bg-gradient-to-r from-red-600 to-red-400"
+              )}
+            >
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
+            </motion.div>
+          </div>
+          <div className="flex justify-between items-center text-[7px] sm:text-[9px] font-black text-slate-300 uppercase leading-none">
+             <span className="opacity-75">HP</span>
+             <span className="tabular-nums">
+               {unit.stats.maxHp >= 1000000 
+                 ? `${(unit.stats.hp / 1000000).toFixed(2)}M / ${(unit.stats.maxHp / 1000000).toFixed(2)}M`
+                 : unit.stats.maxHp >= 10000 
+                   ? `${(unit.stats.hp / 1000).toFixed(1)}k / ${(unit.stats.maxHp / 1000).toFixed(1)}k`
+                   : `${Math.floor(unit.stats.hp)} / ${unit.stats.maxHp}`
+               }
+             </span>
+          </div>
+          
+          {/* ATB Bar */}
+          <div className="w-full bg-black/40 h-1 sm:h-1.5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+            <div 
+              className="bg-yellow-400 h-full shadow-[0_0_8px_rgba(250,204,21,0.6)] rounded-full" 
+              style={{ width: `${unit.atb}%` }} 
+            />
+          </div>
         </div>
 
         {/* Visual Effects */}

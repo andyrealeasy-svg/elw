@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Sparkles, Trophy, Clock, Swords, Flame, Zap, Mountain, ChevronRight, Shield, Book, ArrowRight, RotateCcw } from 'lucide-react';
+import { Crown, Sparkles, Trophy, Clock, Swords, Sword, Flame, Zap, Mountain, ChevronRight, Shield, Book, ArrowRight, RotateCcw } from 'lucide-react';
 import BattleScreen from './components/BattleScreen';
 import CharacterMenu from './components/CharacterMenu';
 import HubMenu from './components/HubMenu';
@@ -10,10 +10,11 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, getCharSplash } from './data';
+import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, createGlitchSectorEnemy, createTrialEnemy, getCharSplash } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage } from './types';
 import ArtifactDungeon from './components/ArtifactDungeon';
 import WorldMap from './components/WorldMap';
+import { getNextThursdayResetTime } from './lib/utils';
 
 export interface BossRushStageResult {
   stage: number;
@@ -47,7 +48,8 @@ const defaultProfile: PlayerProfile = {
   bpClaimedLevelsPremium: [],
   hasGoldenPass: false,
   lunarAbyssClaimed: [],
-  lunarAbyssResetTime: Date.now() + 3600000, // 1 hour from now
+  lunarAbyssResetTime: getNextThursdayResetTime(),
+  bossRushClaimed: false,
   achievements: {},
   expeditions: [],
   events: {
@@ -78,9 +80,11 @@ const defaultProfile: PlayerProfile = {
 
 export default function App() {
   const [route, setRoute] = useState<GameRoute | 
-    { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT' } |
+    { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT', runs?: number } |
     { type: 'ABYSS_FLOOR', level: number, floorId: number } |
-    { type: 'STORY_STAGE', stage: StoryStage }
+    { type: 'STORY_STAGE', stage: StoryStage } |
+    { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } |
+    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number }
   >('HUB');
   const [profile, setProfile] = useState<PlayerProfile>(() => {
     try {
@@ -124,7 +128,7 @@ export default function App() {
         let resetProfile = { ...parsed };
         if (lastReset < startOfDay) {
            resetProfile = {
-              ...parsed,
+              ...resetProfile,
               bpExp: 0,
               bpClaimedLevels: [],
               bpClaimedLevelsPremium: [],
@@ -142,6 +146,13 @@ export default function App() {
                  lastLoginDay: startOfDay
               }
            };
+        }
+
+        // Weekly Thursday Reset for Abyss
+        const abyssResetTime = parsed.lunarAbyssResetTime || 0;
+        if (now.getTime() >= abyssResetTime) {
+          resetProfile.lunarAbyssClaimed = [];
+          resetProfile.lunarAbyssResetTime = getNextThursdayResetTime();
         }
 
         return { 
@@ -247,10 +258,10 @@ export default function App() {
     if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
       const stageParty = getPartyFromIds(route.teams[route.stage]);
       const bossConfig = [
-        { name: '«Испепелитель»', element: 'Pyro', title: 'Этап 1: «Испепелитель» (Pyro)' },
-        { name: '«Абсолютный Ноль»', element: 'Cryo', title: 'Этап 2: «Абсолютный Ноль» (Cryo)' },
-        { name: '«Кристальный Титан»', element: 'Geo', title: 'Этап 3: «Кристальный Титан» (Geo)' }
-      ][route.stage] || { name: 'Босс', element: 'Pyro', title: `Этап ${route.stage + 1}` };
+        { name: '«Сверхпроводящий Коллос»', element: 'Electro', title: 'Этап 1: «Сверхпроводящий Коллос» (Electro)' },
+        { name: '«Ледяной Исполин»', element: 'Cryo', title: 'Этап 2: «Ледяной Исполин» (Cryo)' },
+        { name: '«Призма Пустоты»', element: 'Electro', title: 'Этап 3: «Призма Пустоты» (Electro)' }
+      ][route.stage] || { name: 'Босс', element: 'Electro', title: `Этап ${route.stage + 1}` };
 
       const totalDmg = stageParty.reduce((sum, p) => sum + (stats[p.uid] || 0), 0);
       const stageResult: BossRushStageResult = {
@@ -279,13 +290,15 @@ export default function App() {
       setLastDamageDealt(stats);
       setLastBattleParty(stageParty);
 
-      const expReward = 20000;
-      const goldReward = 50000;
-      const gemsDrop = 200;
-      const droppedArtifacts = [generateArtifact("gladiator", 5), generateArtifact("noblesse", 5)];
+      const alreadyClaimed = !!profile.bossRushClaimed;
+      const expReward = alreadyClaimed ? 5000 : 20000;
+      const goldReward = alreadyClaimed ? 10000 : 50000;
+      const gemsDrop = alreadyClaimed ? 0 : 200;
+      const droppedArtifacts = alreadyClaimed ? [] : [generateArtifact("gladiator", 5), generateArtifact("noblesse", 5)];
       
       setProfile(p => ({
          ...p,
+         bossRushClaimed: true,
          gems: p.gems + gemsDrop,
          gold: p.gold + goldReward,
          heroExp: p.heroExp + expReward,
@@ -303,11 +316,63 @@ export default function App() {
 
     const isAbyss = typeof route === 'object' && route.type === 'ABYSS_FLOOR';
     const isStory = typeof route === 'object' && route.type === 'STORY_STAGE';
-    const dungeonLevel = typeof route === 'object' ? (route.type === 'STORY_STAGE' ? route.stage.level : route.level) : 1;
-    const dungeonType = typeof route === 'object' && route.type === 'DUNGEON' ? route.dungeonType : 'EXP';
+    const isGlitch = typeof route === 'object' && route.type === 'GLITCH_BATTLE';
+    const isTrial = typeof route === 'object' && route.type === 'TRIAL_BATTLE';
     
-    let expReward = dungeonLevel * 1000;
-    let goldReward = dungeonLevel * 4000;
+    if (isGlitch && typeof route === 'object' && route.type === 'GLITCH_BATTLE') {
+      const rewardGems = route.rewardGems;
+      const rewardGold = route.rewardGold;
+      const sectorId = route.sectorId;
+
+      setProfile(p => ({
+        ...p,
+        gems: p.gems + rewardGems,
+        gold: p.gold + rewardGold,
+        events: {
+          ...p.events,
+          clearedSectors: [...(p.events.clearedSectors || []), sectorId]
+        },
+        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 }
+      }));
+
+      setLastDrops({ exp: 0, gold: rewardGold, gems: rewardGems, artifacts: [] });
+      setLastDamageDealt(stats);
+      setRoute('VICTORY');
+      return;
+    }
+
+    if (isTrial && typeof route === 'object' && route.type === 'TRIAL_BATTLE') {
+      const rewardGems = route.rewardGems;
+      const rewardGold = route.rewardGold;
+      const trialId = route.trialId;
+
+      setProfile(p => ({
+        ...p,
+        gems: p.gems + rewardGems,
+        gold: p.gold + rewardGold,
+        events: {
+          ...p.events,
+          completedTrials: [...(p.events.completedTrials || []), trialId]
+        },
+        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 }
+      }));
+
+      setLastDrops({ exp: 0, gold: rewardGold, gems: rewardGems, artifacts: [] });
+      setLastDamageDealt(stats);
+      setRoute('VICTORY');
+      return;
+    }
+
+    const dungeonLevel = typeof route === 'object' ? (route.type === 'STORY_STAGE' ? route.stage.level : (route as any).level || 1) : 1;
+    const dungeonType = typeof route === 'object' && route.type === 'DUNGEON' ? route.dungeonType : 'EXP';
+    const dungeonRuns = (typeof route === 'object' && route.type === 'DUNGEON' && route.runs) ? route.runs : 1;
+    
+    // Tiered rewards for dungeons (1-6)
+    const goldTiers = [6000, 12000, 20000, 32000, 45000, 65000];
+    const expTiers = [3000, 6000, 10000, 15000, 20000, 30000];
+
+    let expReward = dungeonLevel <= 6 ? (expTiers[dungeonLevel - 1] || dungeonLevel * 4000) : dungeonLevel * 1000;
+    let goldReward = dungeonLevel <= 6 ? (goldTiers[dungeonLevel - 1] || dungeonLevel * 8000) : dungeonLevel * 4000;
     let artifactDropChance = 0.5;
     let gemsDrop = Math.random() > 0.5 ? Math.floor(Math.random() * 5 * dungeonLevel) + 1 : 0;
     let abyssGems = 0;
@@ -317,7 +382,7 @@ export default function App() {
     if (isAbyss && typeof route === 'object' && route.type === 'ABYSS_FLOOR') {
       const floorId = route.floorId;
       if (floorId >= 9) {
-         // Lunar Abyss (Resettable)
+         // Lunar Abyss (Weekly Thursday Reset)
          if (!profile.lunarAbyssClaimed.includes(floorId)) {
             const lunarRewards = [1600, 2400, 3200, 5000];
             abyssGems = lunarRewards[floorId - 9];
@@ -332,17 +397,16 @@ export default function App() {
       goldReward = dungeonLevel * 5000;
       artifactDropChance = 0.8;
     } else if (dungeonType === 'GOLD') {
-       goldReward *= 3;
+       const goldSpecialTiers = [15000, 35000, 65000, 110000, 180000, 300000];
+       goldReward = dungeonLevel <= 6 ? (goldSpecialTiers[dungeonLevel - 1] || dungeonLevel * 50000) : dungeonLevel * 50000;
        expReward = Math.floor(expReward * 0.3);
        artifactDropChance = 0.2;
     } else if (dungeonType === 'EXP') {
-       expReward *= 3;
+       const expSpecialTiers = [8000, 18000, 35000, 60000, 100000, 160000];
+       expReward = dungeonLevel <= 6 ? (expSpecialTiers[dungeonLevel - 1] || dungeonLevel * 25000) : dungeonLevel * 25000;
        goldReward = Math.floor(goldReward * 0.3);
        artifactDropChance = 0.2;
     } else if (dungeonType === 'ARTIFACT') {
-       artifactDropChance = Math.min(1.0, 0.4 + (dungeonLevel * 0.1));
-       goldReward = Math.floor(goldReward * 0.5);
-       expReward = Math.floor(expReward * 0.5);
        const dung = ARTIFACT_DUNGEONS.find(d => (route as any).dungeonId === d.id);
        if (dung) possibleSets = dung.rewardSets;
     } else if (isStory && typeof route === 'object' && route.type === 'STORY_STAGE') {
@@ -352,19 +416,67 @@ export default function App() {
        gemsDrop = stage.reward.gems || 0;
     }
     
+    // Multiply rewards for multi-run dungeons
+    if (typeof route === 'object' && route.type === 'DUNGEON') {
+       expReward *= dungeonRuns;
+       goldReward *= dungeonRuns;
+       gemsDrop *= dungeonRuns;
+    }
+
     const droppedArtifacts: Artifact[] = [];
-    const rollAttempts = dungeonType === 'ARTIFACT' ? Math.floor(dungeonLevel / 2) + 1 : 1;
-    for (let i = 0; i < rollAttempts; i++) {
-       if (Math.random() < artifactDropChance) {
-          const setName = possibleSets[Math.floor(Math.random() * possibleSets.length)];
-          droppedArtifacts.push(generateArtifact(setName, Math.min(5, Math.floor(dungeonLevel / 10))));
+    const getRandomSet = () => possibleSets[Math.floor(Math.random() * possibleSets.length)];
+
+    for (let runIdx = 0; runIdx < dungeonRuns; runIdx++) {
+       if (dungeonType === 'ARTIFACT') {
+          if (dungeonLevel === 1) {
+             const count = 1 + (Math.random() > 0.5 ? 1 : 0);
+             for (let i = 0; i < count; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), Math.random() > 0.6 ? 3 : 2));
+             }
+          } else if (dungeonLevel === 2) {
+             const count = 1 + (Math.random() > 0.4 ? 1 : 0);
+             for (let i = 0; i < count; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), Math.random() > 0.7 ? 4 : 3));
+             }
+          } else if (dungeonLevel === 3) {
+             const count = 1 + (Math.random() > 0.3 ? 1 : 0);
+             for (let i = 0; i < count; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), Math.random() > 0.8 ? 5 : 4));
+             }
+          } else if (dungeonLevel === 4) {
+             for (let i = 0; i < 2; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), Math.random() > 0.5 ? 5 : 4));
+             }
+          } else if (dungeonLevel === 5) {
+             const count = 1 + (Math.random() > 0.5 ? 1 : 0);
+             for (let i = 0; i < count; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), 5));
+             }
+          } else if (dungeonLevel >= 6) {
+             const count = 2 + (Math.random() > 0.5 ? 1 : 0);
+             for (let i = 0; i < count; i++) {
+                droppedArtifacts.push(generateArtifact(getRandomSet(), 5));
+             }
+          }
+       } else if (!isAbyss && !isStory) {
+          const rollAttempts = Math.floor(dungeonLevel / 2) + 1;
+          for (let i = 0; i < rollAttempts; i++) {
+             if (Math.random() < artifactDropChance) {
+                const setName = getRandomSet();
+                droppedArtifacts.push(generateArtifact(setName, Math.min(5, Math.max(1, Math.floor(dungeonLevel / 2)))));
+             }
+          }
        }
     }
-    
-    // Guarantee at least 1 artifact on lvl 5 and 6 of ARTIFACT dungeon type
-    if (dungeonType === 'ARTIFACT' && dungeonLevel >= 5 && droppedArtifacts.length === 0) {
-       const setName = possibleSets[Math.floor(Math.random() * possibleSets.length)];
-       droppedArtifacts.push(generateArtifact(setName, Math.min(5, Math.floor(dungeonLevel / 10))));
+
+    if (isAbyss) {
+       const rollAttempts = Math.floor(dungeonLevel / 2) + 1;
+       for (let i = 0; i < rollAttempts; i++) {
+          if (Math.random() < artifactDropChance) {
+             const setName = getRandomSet();
+             droppedArtifacts.push(generateArtifact(setName, Math.min(5, Math.max(1, Math.floor(dungeonLevel / 2)))));
+          }
+       }
     }
 
     const currentStoryStage = (isStory && typeof route === 'object' && route.type === 'STORY_STAGE') ? route.stage : null;
@@ -381,14 +493,11 @@ export default function App() {
         const unlockedChapters = new Set(storyProgress.unlockedChapters || ['chap1']);
         unlockedChapters.add('chap1');
 
-        const chap1 = STORY_CHAPTERS.find(c => c.id === 'chap1');
-        if (chap1 && chap1.stages.every(s => completedStages.includes(s.id))) {
-          unlockedChapters.add('chap2');
-        }
-        const chap2 = STORY_CHAPTERS.find(c => c.id === 'chap2');
-        if (chap2 && chap2.stages.every(s => completedStages.includes(s.id))) {
-          unlockedChapters.add('chap3');
-        }
+        STORY_CHAPTERS.forEach((c, idx) => {
+          if (c.stages.every(s => completedStages.includes(s.id)) && STORY_CHAPTERS[idx + 1]) {
+            unlockedChapters.add(STORY_CHAPTERS[idx + 1].id);
+          }
+        });
 
         storyProgress = {
           unlockedChapters: Array.from(unlockedChapters),
@@ -413,8 +522,8 @@ export default function App() {
         gems: p.gems + gemsDrop + abyssGems,
         clearedAbyssFloor: Math.max(p.clearedAbyssFloor, newFloorCleared),
         artifacts: [...p.artifacts, ...droppedArtifacts],
-        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 },
-        bpExp: p.bpExp + (dungeonLevel * 100),
+        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + dungeonRuns },
+        bpExp: p.bpExp + (dungeonLevel * 100 * dungeonRuns),
         storyProgress,
         mapState
       };
@@ -468,7 +577,7 @@ export default function App() {
         <BattlePass profile={profile} updateProfile={setProfile} onBack={() => setRoute('HUB')} />
       )}
 
-      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
+      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || currentRouteName === 'GLITCH_BATTLE' || currentRouteName === 'TRIAL_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
         <BattleScreen 
           key={
             route.type === 'BOSS_RUSH_BATTLE'
@@ -477,7 +586,11 @@ export default function App() {
                 ? `abyss_floor_${route.floorId}_${route.level}`
                 : route.type === 'DUNGEON'
                   ? `dungeon_${route.dungeonType}_${route.level}`
-                  : `story_stage_${(route as any).stage?.id || 'stage'}`
+                  : route.type === 'GLITCH_BATTLE'
+                    ? `glitch_hunt_${route.sectorId}`
+                    : route.type === 'TRIAL_BATTLE'
+                      ? `trial_${route.trialId}`
+                      : `story_stage_${(route as any).stage?.id || 'stage'}`
           }
           playerParty={playerParty} 
           stageTitle={
@@ -485,7 +598,11 @@ export default function App() {
               ? `ТЕНЕВОЙ НАТИСК • ЭТАП ${route.stage + 1} / 3`
               : route.type === 'STORY_STAGE'
                 ? `СЮЖЕТ: ${route.stage.name.toUpperCase()}${route.stage.isBoss ? ' • [БОСС]' : ''}`
-                : undefined
+                : route.type === 'GLITCH_BATTLE'
+                  ? `ОХОТА НА ГЛИТЧИ: ${route.name.toUpperCase()}`
+                  : route.type === 'TRIAL_BATTLE'
+                    ? `БОЕВОЕ ИСПЫТАНИЕ: ${route.title.toUpperCase()}`
+                    : undefined
           }
           battleBuff={route.type === 'ABYSS_FLOOR' ? currentBlessing : undefined}
           enemyWaves={
@@ -493,13 +610,21 @@ export default function App() {
               ? generateAbyssWaves(route.floorId, route.level)
               : route.type === 'BOSS_RUSH_BATTLE'
                 ? [[createBossRushEnemy(route.stage)]]
-                : [
-                    route.type === 'DUNGEON' && route.dungeonType === 'ARTIFACT' && (route as any).dungeonId
-                      ? ARTIFACT_DUNGEONS.find(d => d.id === (route as any).dungeonId)?.enemyTeam.map(id => createBasicEnemy(route.level, id)) || getEnemies(route.level)
-                      : route.type === 'STORY_STAGE' && route.stage.enemyBlueprintIds
-                        ? route.stage.enemyBlueprintIds.map(id => createBasicEnemy(route.stage.level, id, false, route.stage.isBoss || false))
+                : route.type === 'GLITCH_BATTLE'
+                  ? [[createGlitchSectorEnemy(route.sectorId)]]
+                : route.type === 'TRIAL_BATTLE'
+                  ? [[createTrialEnemy(route.trialId)]]
+                : route.type === 'DUNGEON'
+                  ? Array.from({ length: route.runs || 1 }).map(() => (
+                      route.dungeonType === 'ARTIFACT' && (route as any).dungeonId
+                        ? ARTIFACT_DUNGEONS.find(d => d.id === (route as any).dungeonId)?.enemyTeam.map(id => createBasicEnemy(route.level, id)) || getEnemies(route.level)
                         : getEnemies(route.level)
-                  ]
+                    ))
+                  : [
+                      route.type === 'STORY_STAGE' && (route as any).stage.enemyBlueprintIds
+                        ? (route as any).stage.enemyBlueprintIds.map((id: string) => createBasicEnemy((route as any).stage.level, id, false, (route as any).stage.isBoss || false))
+                        : getEnemies((route as any).level || 1)
+                    ]
           } 
           onDefeat={handleDefeat} 
           onVictory={handleVictory}
@@ -533,6 +658,7 @@ export default function App() {
       {currentRouteName === 'ARTIFACT_DUNGEON_SELECTOR' && (
         <ArtifactDungeon 
           profile={profile} 
+          updateProfile={setProfile}
           setRoute={setRoute} 
           onBack={() => setRoute('HUB')} 
         />
@@ -678,9 +804,9 @@ export default function App() {
                   <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> Все 3 боя
                 </button>
                 {bossRushResults.map((st, idx) => {
-                  const icons = [Flame, Zap, Mountain];
+                  const icons = [Zap, Zap, Sword];
                   const Icon = icons[idx] || Swords;
-                  const colors = ['text-red-400', 'text-cyan-400', 'text-amber-400'];
+                  const colors = ['text-purple-400', 'text-cyan-400', 'text-indigo-400'];
                   return (
                     <button
                       key={idx}
@@ -703,11 +829,11 @@ export default function App() {
                 <div className="space-y-3">
                   {bossRushResults.map((stageRes, sIdx) => {
                     const bossColors = [
-                      'border-red-500/30 bg-red-950/10',
+                      'border-purple-500/30 bg-purple-950/10',
                       'border-cyan-500/30 bg-cyan-950/10',
-                      'border-amber-500/30 bg-amber-950/10'
+                      'border-indigo-500/30 bg-indigo-950/10'
                     ];
-                    const elementIcons = [Flame, Zap, Mountain];
+                    const elementIcons = [Zap, Zap, Sword];
                     const ElementIcon = elementIcons[sIdx] || Swords;
                     const maxPartyDmg = Math.max(1, ...stageRes.party.map(p => stageRes.stats[p.uid] || 0));
                     const stageDps = Math.floor(stageRes.totalDamage / stageRes.duration);

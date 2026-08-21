@@ -32,10 +32,10 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
     { id: 6, name: "Ядро системы", level: 95, reward: { type: 'crystals', amount: 600 }, description: "Последний рубеж перед полным стиранием." },
     { id: 7, name: "Нулевой указатель", level: 110, reward: { type: 'artifacts', amount: 5 }, description: "Ошибка, ставшая реальностью." },
     { id: 8, name: "Сингулярность кода", level: 130, reward: { type: 'crystals', amount: 1600 }, description: "Точка невозврата." },
-    { id: 9, name: "Лунная инстанция I", level: 150, reward: { type: 'crystals', amount: 1600 }, description: "Изменчивое пространство, подвластное циклам.", isLunar: true },
-    { id: 10, name: "Лунная инстанция II", level: 170, reward: { type: 'crystals', amount: 2400 }, description: "Гармония хаоса и порядка.", isLunar: true },
-    { id: 11, name: "Лунная инстанция III", level: 190, reward: { type: 'crystals', amount: 3200 }, description: "Отражение невозможного будущего.", isLunar: true },
-    { id: 12, name: "Горизонт событий", level: 220, reward: { type: 'crystals', amount: 5000 }, description: "Где данные обретают сознание.", isLunar: true },
+    { id: 9, name: "Лунная инстанция I", level: 150, reward: { type: 'crystals', amount: 500 }, description: "Изменчивое пространство, подвластное циклам.", isLunar: true },
+    { id: 10, name: "Лунная инстанция II", level: 170, reward: { type: 'crystals', amount: 600 }, description: "Гармония хаоса и порядка.", isLunar: true },
+    { id: 11, name: "Лунная инстанция III", level: 190, reward: { type: 'crystals', amount: 700 }, description: "Отражение невозможного будущего.", isLunar: true },
+    { id: 12, name: "Горизонт событий", level: 220, reward: { type: 'crystals', amount: 800 }, description: "Где данные обретают сознание.", isLunar: true },
   ];
 
   const [selectedFloor, setSelectedFloor] = useState<AbyssFloor | null>(null);
@@ -52,12 +52,18 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
     const updateTimer = () => {
       const diff = resetTime - Date.now();
       if (diff <= 0) {
-        setTimeLeft("00:00");
+        setTimeLeft("00:00:00");
         return;
       }
-      const mins = Math.floor(diff / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+      if (days > 0) {
+        setTimeLeft(`${days}д ${hours}ч ${mins}м`);
+      } else {
+        setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+      }
     };
 
     const timer = setInterval(updateTimer, 1000);
@@ -98,7 +104,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
           </button>
           <div className="truncate">
             <h1 className="text-base sm:text-2xl font-black uppercase tracking-tighter italic leading-none truncate text-white">Цифровая Бездна</h1>
-            <p className="text-[7px] sm:text-[10px] text-indigo-400 font-black uppercase tracking-widest leading-none mt-1">Lunar Spiral Update</p>
+            <p className="text-[7px] sm:text-[10px] text-indigo-400 font-black uppercase tracking-widest leading-none mt-1">Сброс: каждый четверг</p>
           </div>
         </div>
 
@@ -107,7 +113,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
              <div className="flex items-center gap-1 sm:gap-2 text-[8px] sm:text-[9px] font-black uppercase text-amber-500 bg-amber-500/10 px-1.5 sm:px-2 py-0.5 rounded border border-amber-500/20 mb-1">
                <History className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> <span className="hidden xs:inline">Сброс:</span> {timeLeft}
              </div>
-             <div className="text-[7px] sm:text-[9px] text-white/30 uppercase font-black">Ротация</div>
+             <div className="text-[7px] sm:text-[9px] text-white/30 uppercase font-black">Каждый четверг</div>
           </div>
           <div className="text-right shrink-0">
              <div className="text-[7px] sm:text-[10px] text-white/30 uppercase font-black">Прогресс</div>

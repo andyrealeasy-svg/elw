@@ -133,6 +133,7 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
 
   const tierList: Record<string, TierEntry[]> = {
     'T0': [
+      { id: 'volta' },
       { id: 'ineffa' },
       { id: 'zephyr' },
       { id: 'aurum' },
@@ -156,6 +157,7 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
     'T1': [
       { id: 'rix' },
       { id: 'gotka' },
+      { id: 'snezhana' },
       { id: 'echo', c: 6 },
       { id: 'viper', c: 6 },
       { id: 'blaze' },
@@ -197,6 +199,12 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   };
 
   const recommendedTeams: TeamComposition[] = [
+    {
+      name: "Биоэлектрическая Цепь",
+      description: "Ультимативный энергосустейн от Вольты. Вольта закрывает команду «Проводящим контуром», преобразуя любой урон в исцеление и щиты, пока Зефир и Маэстро разгоняют шкалу ходов и сокрушают врагов.",
+      members: ['volta', 'zephyr', 'maestro', 'pulse'],
+      tags: ["SUSTAIN", "ELECTRO", "VOLTAGE", "T0"]
+    },
     {
       name: "Идеальное Отражение",
       description: "Ультимативная сборка для максимизации Отражения. Зефир и Аурум разгоняют урон реакции и дают колоссальный бафф, Рикс лечит и ускоряет, а Инеффа стирает врагов с лица земли.",
@@ -246,6 +254,12 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
        tags: ["CONTROL", "CRYO", "ATB"]
     },
     {
+       name: "Криогенное Переохлаждение",
+       description: "Ультимативный контроль и снижение защиты. Снежана накладывает стаки «Переохлаждения», урезая DEF врагов на 50% и увеличивая входящий урон на 60%. Крона и Глетчер замораживают противников под действием «Критического переохлаждения», а Моян обеспечивает непрерывное исцеление.",
+       members: ['snezhana', 'krona', 'glacier', 'moyan'],
+       tags: ["CRYO", "OVERCOOL", "FREEZE", "T1"]
+    },
+    {
       name: "Дуэльный Клуб",
       description: "Команда полностью посвящена усилению Сайруса. Моян дает защиту, Эгида баффает выживаемость, Нова помогает пробивать мелких врагов.",
       members: ['cyrus', 'nova', 'moyan', 'aegis'],
@@ -280,13 +294,10 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   const getElementColor = (charId: string) => {
     // This is a bit redundant but helps with custom styling inside the component
     const char = charId.toLowerCase();
-    if (['gotka', 'selina', 'blaze'].includes(char)) return 'text-red-400 border-red-500/20 bg-red-500/5';
-    if (['cyrus', 'nova', 'kamikaze'].includes(char)) return 'text-rose-400 border-rose-500/20 bg-rose-500/5';
-    if (['volosatinya', 'echo', 'tide'].includes(char)) return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
-    if (['kopro', 'aelita', 'viper', 'patch', 'gaia', 'fenris'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
-    if (['selva', 'neuron', 'spark', 'pulse', 'raven'].includes(char)) return 'text-purple-400 border-purple-500/20 bg-purple-500/5';
-    if (['moyan', 'claymore', 'aegis'].includes(char)) return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
-    if (['krona', 'glacier'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
+    if (['selva', 'neuron', 'spark', 'pulse', 'raven', 'volta', 'zephyr', 'maestro', 'rix'].includes(char)) return 'text-purple-400 border-purple-500/20 bg-purple-500/5';
+    if (['moyan', 'claymore', 'aegis', 'aurum'].includes(char)) return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
+    if (['gotka', 'selina', 'blaze', 'ineffa'].includes(char)) return 'text-red-400 border-red-500/20 bg-red-500/5';
+    if (['krona', 'glacier', 'snezhana'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
     return 'text-white border-white/10 bg-white/5';
   };
 
@@ -402,8 +413,17 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
                               </div>
                             )}
                             
-                            <div className="relative z-10 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-900/80 border border-white/10 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl mb-2 shadow-xl group-hover:scale-110 transition-transform">
-                              {getCharEmoji(entry.id)}
+                            <div className="relative z-10 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-900/80 border border-white/10 backdrop-blur-sm flex items-center justify-center overflow-hidden mb-2 shadow-xl group-hover:scale-110 transition-transform">
+                              {getCharSplash(entry.id) ? (
+                                <img 
+                                  src={getCharSplash(entry.id) || ''} 
+                                  alt={entry.id} 
+                                  className="w-full h-full object-cover object-top"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold uppercase text-white/80">{entry.id.slice(0, 2)}</span>
+                              )}
                             </div>
                             <div className="relative z-10 text-[10px] font-black uppercase tracking-tighter truncate w-full text-white/80 drop-shadow-md">{entry.id}</div>
                           </motion.div>
@@ -457,10 +477,19 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
                       {team.members.map((memberId) => (
                         <div key={memberId} className="flex flex-col items-center gap-2">
                            <div className={cn(
-                             "w-full aspect-square rounded-2xl flex items-center justify-center text-2xl border-2",
+                             "w-full aspect-square rounded-2xl flex items-center justify-center overflow-hidden border-2 relative group/card shadow-md bg-slate-900",
                              getElementColor(memberId)
                            )}>
-                             {getCharEmoji(memberId)}
+                             {getCharSplash(memberId) ? (
+                               <img 
+                                 src={getCharSplash(memberId) || ''} 
+                                 alt={memberId} 
+                                 className="w-full h-full object-cover object-top group-hover/card:scale-110 transition-transform duration-300"
+                                 referrerPolicy="no-referrer"
+                               />
+                             ) : (
+                               <span className="text-xs font-bold uppercase text-white/80">{memberId.slice(0, 2)}</span>
+                             )}
                            </div>
                            <div className="text-[8px] font-black uppercase text-white/30 truncate w-full text-center">{memberId}</div>
                         </div>

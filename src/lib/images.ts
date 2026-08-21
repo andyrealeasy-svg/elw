@@ -30,6 +30,11 @@ import fenris from '../assets/images/fenris_splash_1779481345678_png_17794861758
 import asher from '../assets/images/asher_splash_1779520118601.png';
 import ineffa from '../assets/images/ineffa_splash_1787173046669.jpg';
 import maestro from '../assets/images/maestro_splash_1782143804586.jpg';
+import volta from '../assets/images/volta_solo_splash_1787244366177.jpg';
+import snezhana from '../assets/images/snezhana_splash_1787261918213.jpg';
+import boss_colossus from '../assets/images/superconducting_colossus_splash_1787271405487.jpg';
+import boss_frost_giant from '../assets/images/frost_giant_splash_1787271418988.jpg';
+import boss_void_prism from '../assets/images/void_prism_splash_1787271428090.jpg';
 
 export const SPLASH_IMAGES: Record<string, string> = {
   zephyr,
@@ -63,4 +68,9 @@ export const SPLASH_IMAGES: Record<string, string> = {
   asher,
   ineffa,
   maestro,
+  volta,
+  snezhana,
+  boss_colossus,
+  boss_frost_giant,
+  boss_void_prism,
 };

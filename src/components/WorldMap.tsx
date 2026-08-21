@@ -93,7 +93,8 @@ const REGIONS: MapRegion[] = [
     glowColor: "shadow-cyan-400/20",
     coords: { x: 50, y: 35 },
     dungeons: [
-      { id: "domain_frost", name: "Шпиль Времени", desc: "Добыча сетов 'Замёрзшее Время' и 'Знать'" }
+      { id: "domain_frost", name: "Шпиль Времени", desc: "Добыча сетов 'Замёрзшее Время' и 'Знать'" },
+      { id: "domain_cryothunder", name: "Шпиль Сверхпроводимости", desc: "Сеты 'Проводящий Контур' и 'Абсолютный Ноль'" }
     ],
     chests: [
       { id: "chest_frost_1", name: "Хрустальный Ларь", cost: 0, gems: 30, gold: 4000, condition: "Свободен для открытия" },

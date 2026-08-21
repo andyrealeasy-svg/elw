@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlayerProfile } from '../types';
-import { ArrowLeft, Gift, Star, Gem, Lock, Crown, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Gift, Star, Gem, Lock, Crown, CheckCircle2, Coins, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface Props {
@@ -9,29 +9,38 @@ interface Props {
   onBack: () => void;
 }
 
+interface BPReward {
+  gems: number;
+  gold?: number;
+  heroExp?: number;
+}
+
 export default function BattlePass({ profile, updateProfile, onBack }: Props) {
   const [viewMode, setViewMode] = useState<'FREE' | 'PREMIUM'>('FREE');
-  const [summaryGems, setSummaryGems] = useState<number | null>(null);
+  const [summaryReward, setSummaryReward] = useState<BPReward | null>(null);
   const MAX_LEVELS = 100;
-  const EXP_PER_LEVEL = 1000;
+  const EXP_PER_LEVEL = 7500;
   const GOLDEN_PASS_COST = 1000;
   
   const currentLevel = Math.floor(profile.bpExp / EXP_PER_LEVEL);
   const currentExpInLevel = profile.bpExp % EXP_PER_LEVEL;
   
-  const getFreeReward = (level: number) => {
-     if (level === 100) return 3200;
-     if (level % 10 === 0) return 800;
-     if (level % 5 === 0) return 400;
-     return 160;
+  const getFreeReward = (level: number): BPReward => {
+     const isOdd = level % 2 === 1;
+     return {
+       gems: 5,
+       gold: isOdd ? 500 + level * 20 : undefined,
+       heroExp: !isOdd ? 250 + level * 10 : undefined
+     };
   };
 
-  const getPremiumReward = (level: number) => {
-     // Premium rewards are generally better or additional
-     if (level === 100) return 6400;
-     if (level % 10 === 0) return 1600;
-     if (level % 5 === 0) return 800;
-     return 320;
+  const getPremiumReward = (level: number): BPReward => {
+     const isOdd = level % 2 === 1;
+     return {
+       gems: 10,
+       gold: isOdd ? 1500 + level * 50 : undefined,
+       heroExp: !isOdd ? 800 + level * 25 : undefined
+     };
   };
 
   const claimReward = (level: number, isPremium: boolean) => {
@@ -43,37 +52,49 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
         
         return {
            ...p,
-           gems: p.gems + reward,
+           gems: p.gems + reward.gems,
+           gold: p.gold + (reward.gold || 0),
+           heroExp: p.heroExp + (reward.heroExp || 0),
            [isPremium ? 'bpClaimedLevelsPremium' : 'bpClaimedLevels']: [...claimedArray, level]
         };
      });
-     setSummaryGems(reward);
+     setSummaryReward(reward);
   };
 
   const claimAll = () => {
     let totalGems = 0;
+    let totalGold = 0;
+    let totalExp = 0;
     const newFreeClaims: number[] = [];
     const newPremiumClaims: number[] = [];
 
     for (let l = 1; l <= currentLevel; l++) {
       if (!profile.bpClaimedLevels.includes(l)) {
-        totalGems += getFreeReward(l);
+        const r = getFreeReward(l);
+        totalGems += r.gems;
+        totalGold += r.gold || 0;
+        totalExp += r.heroExp || 0;
         newFreeClaims.push(l);
       }
       if (profile.hasGoldenPass && !profile.bpClaimedLevelsPremium.includes(l)) {
-        totalGems += getPremiumReward(l);
+        const r = getPremiumReward(l);
+        totalGems += r.gems;
+        totalGold += r.gold || 0;
+        totalExp += r.heroExp || 0;
         newPremiumClaims.push(l);
       }
     }
 
-    if (totalGems > 0) {
+    if (totalGems > 0 || totalGold > 0 || totalExp > 0) {
       updateProfile(p => ({
         ...p,
         gems: p.gems + totalGems,
+        gold: p.gold + totalGold,
+        heroExp: p.heroExp + totalExp,
         bpClaimedLevels: [...p.bpClaimedLevels, ...newFreeClaims],
         bpClaimedLevelsPremium: [...p.bpClaimedLevelsPremium, ...newPremiumClaims]
       }));
-      setSummaryGems(totalGems);
+      setSummaryReward({ gems: totalGems, gold: totalGold, heroExp: totalExp });
     }
   };
 
@@ -110,7 +131,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
           <button 
             onClick={buyGoldenPass}
             disabled={profile.gems < GOLDEN_PASS_COST}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-50 to-orange-400 disabled:opacity-50 disabled:grayscale transition-all rounded-lg shadow-lg shadow-amber-500/20 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 disabled:opacity-50 disabled:grayscale transition-all rounded-lg shadow-lg shadow-amber-500/20 active:scale-95"
           >
             <Crown className="w-4 h-4 text-white" />
             <div className="text-left leading-none">
@@ -145,7 +166,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                   />
                </div>
                <p className="mt-3 text-[10px] font-medium text-slate-600 uppercase tracking-tight text-center sm:text-left">
-                  Зарабатывайте EXP Боевого Пропуска, выполняя Ежедневные Поручения. Весь прогресс сбрасывается ежедневно.
+                  Зарабатывайте EXP Боевого Пропуска за Ежедневные Поручения. 5 гемов на каждом уровне с чередованием Золота и Опыта Героя!
                </p>
             </div>
             
@@ -190,7 +211,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                const isPremium = viewMode === 'PREMIUM';
                const claimedArray = isPremium ? profile.bpClaimedLevelsPremium : profile.bpClaimedLevels;
                const isClaimed = claimedArray.includes(level);
-               const rewardAmount = isPremium ? getPremiumReward(level) : getFreeReward(level);
+               const reward = isPremium ? getPremiumReward(level) : getFreeReward(level);
                const locked = isPremium && !profile.hasGoldenPass;
 
                return (
@@ -217,13 +238,29 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                               </span>
                               {isClaimed && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                            </div>
-                           <div className="flex items-center gap-2">
-                               <Gem className={cn(
-                                 "w-5 h-5",
-                                 isPremium ? "text-amber-400" : "text-pink-400",
-                                 isUnlocked && !isClaimed && "animate-pulse"
-                               )} />
-                               <span className="font-black text-xl text-slate-100 italic tracking-tighter">{rewardAmount}</span>
+                           <div className="flex flex-wrap items-center gap-3">
+                               <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                                 <Gem className={cn(
+                                   "w-4 h-4",
+                                   isPremium ? "text-amber-400" : "text-pink-400",
+                                   isUnlocked && !isClaimed && "animate-pulse"
+                                 )} />
+                                 <span className="font-black text-sm text-slate-100 italic tracking-tighter">+{reward.gems}</span>
+                               </div>
+
+                               {reward.gold !== undefined && (
+                                 <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                                   <Coins className="w-4 h-4 text-yellow-400" />
+                                   <span className="font-black text-xs text-yellow-300">+{reward.gold.toLocaleString()} G</span>
+                                 </div>
+                                )}
+
+                               {reward.heroExp !== undefined && (
+                                 <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                                   <Sparkles className="w-4 h-4 text-emerald-400" />
+                                   <span className="font-black text-xs text-emerald-300">+{reward.heroExp.toLocaleString()} EXP</span>
+                                 </div>
+                               )}
                            </div>
                         </div>
                      </div>
@@ -249,42 +286,55 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                         )}
                      </div>
                   </div>
-               )
+               );
             })}
          </div>
       </div>
 
       {/* Rewards Summary Overlay */}
-      {summaryGems !== null && (
+      {summaryReward !== null && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md cursor-pointer"
-          onClick={() => setSummaryGems(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md cursor-pointer p-4"
+          onClick={() => setSummaryReward(null)}
         >
-          <div className="flex flex-col items-center gap-12 animate-in fade-in zoom-in-95 duration-300">
-            <h2 className="text-4xl md:text-5xl font-black italic text-white uppercase tracking-tighter drop-shadow-lg">Получено наград</h2>
+          <div className="flex flex-col items-center gap-6 max-w-md w-full bg-slate-900 border-2 border-indigo-500/40 p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            <h2 className="text-3xl md:text-4xl font-black italic text-white uppercase tracking-tighter text-center">
+              Получено наград
+            </h2>
             
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-32 h-32 md:w-48 md:h-48 bg-slate-900 rounded-[40px] border-4 border-amber-500/50 flex items-center justify-center shadow-2xl shadow-amber-500/20 relative group">
-                 <div className="absolute inset-0 bg-amber-500 opacity-10 blur-2xl rounded-full animate-pulse" />
-                 <Gem className="w-20 h-20 md:w-32 md:h-32 text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]" />
-                 <div className="absolute -bottom-4 bg-slate-950 border-2 border-slate-800 px-6 py-2 rounded-2xl font-black text-2xl md:text-3xl text-white italic">
-                   +{summaryGems}
+            <div className="w-full flex flex-col gap-3 my-2">
+              <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+                 <div className="flex items-center gap-3">
+                   <Gem className="w-7 h-7 text-pink-400" />
+                   <span className="font-bold text-slate-300 text-sm">Гемы</span>
                  </div>
+                 <span className="font-black text-xl text-pink-300">+{summaryReward.gems}</span>
               </div>
-              <p className="text-amber-400 font-black uppercase tracking-[0.4em] text-sm animate-pulse mt-4">Нажмите, чтобы закрыть</p>
+
+              {(summaryReward.gold || 0) > 0 && (
+                <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+                   <div className="flex items-center gap-3">
+                     <Coins className="w-7 h-7 text-yellow-400" />
+                     <span className="font-bold text-slate-300 text-sm">Золото (Мора)</span>
+                   </div>
+                   <span className="font-black text-xl text-yellow-300">+{(summaryReward.gold || 0).toLocaleString()}</span>
+                </div>
+              )}
+
+              {(summaryReward.heroExp || 0) > 0 && (
+                <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+                   <div className="flex items-center gap-3">
+                     <Sparkles className="w-7 h-7 text-emerald-400" />
+                     <span className="font-bold text-slate-300 text-sm">Опыт героя</span>
+                   </div>
+                   <span className="font-black text-xl text-emerald-300">+{(summaryReward.heroExp || 0).toLocaleString()}</span>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-8">
-               <div className="w-px h-16 bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-               <div className="text-center">
-                  <p className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-1">Ваш баланс</p>
-                  <p className="text-2xl font-black text-white flex items-center gap-2">
-                    <Gem className="w-5 h-5 text-pink-400" />
-                    {profile.gems}
-                  </p>
-               </div>
-               <div className="w-px h-16 bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-            </div>
+            <p className="text-indigo-400 font-bold uppercase tracking-[0.2em] text-xs animate-pulse text-center">
+              Нажмите в любое место, чтобы закрыть
+            </p>
           </div>
         </div>
       )}

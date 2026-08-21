@@ -89,14 +89,11 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
       const unlockedChapters = new Set(progress.unlockedChapters || ['chap1']);
       unlockedChapters.add('chap1');
 
-      const chap1 = STORY_CHAPTERS.find(c => c.id === 'chap1');
-      if (chap1 && chap1.stages.every(s => completedStages.includes(s.id))) {
-        unlockedChapters.add('chap2');
-      }
-      const chap2 = STORY_CHAPTERS.find(c => c.id === 'chap2');
-      if (chap2 && chap2.stages.every(s => completedStages.includes(s.id))) {
-        unlockedChapters.add('chap3');
-      }
+      STORY_CHAPTERS.forEach((c, idx) => {
+        if (c.stages.every(s => completedStages.includes(s.id)) && STORY_CHAPTERS[idx + 1]) {
+          unlockedChapters.add(STORY_CHAPTERS[idx + 1].id);
+        }
+      });
 
       return {
         ...p,
@@ -125,7 +122,16 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
 
   // Helper for speaker aura color & char mapping
   const getSpeakerMetadata = (speakerName: string, charId?: string) => {
-    const id = charId || speakerName.toLowerCase();
+    const nameMap: Record<string, string> = {
+      'мо янь': 'moyan',
+      'копро': 'kopro',
+      'ашер': 'asher',
+      'сельва': 'selva',
+      'нейрон': 'neuron',
+      'неизвестный голос': 'neuron',
+    };
+    const normalizedName = speakerName.trim().toLowerCase();
+    const id = charId || nameMap[normalizedName] || normalizedName;
     const splash = getCharSplash(id);
     const emoji = getCharEmoji(id);
 
@@ -180,7 +186,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
         <div className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r border-slate-900 bg-slate-900/30 p-3 sm:p-4 overflow-y-auto shrink-0 max-h-[35vh] md:max-h-none space-y-3">
           <div className="flex items-center justify-between px-1 mb-1">
             <h3 className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest">Хроники и Главы</h3>
-            <span className="text-[10px] font-mono text-amber-500">3 ГЛАВЫ</span>
+            <span className="text-[10px] font-mono text-amber-500">{STORY_CHAPTERS.length} {STORY_CHAPTERS.length === 1 ? 'ГЛАВА' : 'ГЛАВЫ'}</span>
           </div>
 
           <div className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">
@@ -483,6 +489,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                             <div className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
                               {meta.splash ? (
                                 <img 
+                                  key={`${currentLine.speaker}-${dialogueIndex}`}
                                   src={meta.splash} 
                                   alt={currentLine.speaker} 
                                   className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-amber-500/40 shadow-md shrink-0" 

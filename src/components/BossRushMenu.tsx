@@ -12,9 +12,9 @@ interface BossRushMenuProps {
 }
 
 const BOSSES = [
-  { id: 'asher', name: 'Испепелитель', level: 65, hpText: '220k HP', element: 'Pyro', desc: 'Наносит Пиро-урон и накладывает Горение. Восстанавливает здоровье.', icon: Flame, color: 'text-red-500' },
-  { id: 'glacier', name: 'Абсолютный Ноль', level: 70, hpText: '320k HP', element: 'Cryo', desc: 'Замедляет отряд и срезает ATB. Обладает ледяным щитом.', icon: Zap, color: 'text-cyan-400' },
-  { id: 'aegis', name: 'Кристальный Титан', level: 75, hpText: '450k HP', element: 'Geo', desc: 'Увеличенный запас здоровья и брони. Применяет сотрясение земной коры.', icon: Mountain, color: 'text-amber-500' }
+  { id: 'colossus', name: 'Сверхпроводящий Коллос', level: 80, hpText: '350k HP', element: 'Electro', desc: 'Наносит огромный Электро-урон. Требует сильного исцеления и смягчения урона (под Вольту).', icon: Zap, color: 'text-purple-400' },
+  { id: 'frost_giant', name: 'Ледяной Исполин', level: 85, hpText: '500k HP', element: 'Cryo', desc: 'Защищен мощным ледяным щитом. Уязвим к Горению и огненным атакам (под Селину и Ашера).', icon: Zap, color: 'text-cyan-400' },
+  { id: 'void_prism', name: 'Призма Пустоты', level: 90, hpText: '750k HP', element: 'Electro', desc: 'Обладает высочайшим сопротивлением. Получает критический урон от реакции Отражение (под Инеффу).', icon: Sword, color: 'text-indigo-400' }
 ];
 
 export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onStartRush }) => {
@@ -59,16 +59,29 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
             <ChevronLeft className="w-5 h-5 text-white" />
           </button>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-wider flex items-center gap-2">
-              <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск
-            </h1>
-            <p className="text-xs text-slate-400 font-medium">Соберите 3 уникальных отряда для 3 боссов</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-wider flex items-center gap-2 text-white">
+                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск
+              </h1>
+              {profile.bossRushClaimed ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  ✓ Награда получена (1/1)
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 animate-pulse">
+                  🎁 Награда: 200 💎 + 2x 5★
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 font-medium">
+              Соберите 3 уникальных отряда для 3 боссов • {profile.bossRushClaimed ? 'Награды выдаются 1 раз за сезон' : 'Однократная награда за зачистку всех 3 боссов'}
+            </p>
           </div>
         </div>
         <button 
           onClick={() => isReady && onStartRush(teams)}
           disabled={!isReady}
-          className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-lg tracking-widest uppercase transition-all"
+          className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-lg tracking-widest uppercase transition-all shadow-lg shadow-fuchsia-600/20"
         >
           Начать
         </button>
@@ -107,34 +120,35 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                     const isActive = activeSlot?.teamIdx === tIdx && activeSlot?.charIdx === cIdx;
                     
                     return (
-                      <div 
-                        key={cIdx}
-                        onClick={() => setActiveSlot({ teamIdx: tIdx, charIdx: cIdx })}
-                        className={cn(
-                          "aspect-square rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden group flex items-center justify-center",
-                          charId ? "border-fuchsia-500/30 bg-slate-800" : isActive ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-white/5 bg-slate-900/50 hover:border-white/20"
-                        )}
-                      >
-                        {charId ? (
-                          <>
-                            {charInfo?.image ? (
-                              <img src={charInfo.image} className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:opacity-100 transition-opacity" alt="" referrerPolicy="no-referrer" />
-                            ) : (
-                              <span className="text-2xl drop-shadow">⚔️</span>
-                            )}
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-1 pt-3 text-center">
-                              <span className="text-[9px] font-black uppercase truncate block text-white">{charInfo?.name}</span>
-                            </div>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleRemoveChar(tIdx, cIdx); }}
-                              className="absolute top-1 right-1 p-1 bg-black/80 rounded-full hover:bg-red-500 text-white transition-colors opacity-80 sm:opacity-0 group-hover:opacity-100"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-2xl font-light text-white/10 group-hover:text-white/30">+</span>
-                        )}
+                      <div key={cIdx} className="w-full relative pb-[100%]">
+                        <div 
+                          onClick={() => setActiveSlot({ teamIdx: tIdx, charIdx: cIdx })}
+                          className={cn(
+                            "absolute inset-0 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden group flex items-center justify-center",
+                            charId ? "border-fuchsia-500/30 bg-slate-800" : isActive ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-white/5 bg-slate-900/50 hover:border-white/20"
+                          )}
+                        >
+                          {charId ? (
+                            <>
+                              {charInfo?.image ? (
+                                <img src={charInfo.image} className="absolute inset-0 w-full h-full object-cover opacity-75 group-hover:opacity-100 transition-opacity" alt="" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className="text-2xl drop-shadow">⚔️</span>
+                              )}
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-1 pt-3 text-center">
+                                <span className="text-[9px] font-black uppercase truncate block text-white">{charInfo?.name}</span>
+                              </div>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleRemoveChar(tIdx, cIdx); }}
+                                className="absolute top-1 right-1 p-1 bg-black/80 rounded-full hover:bg-red-500 text-white transition-colors opacity-80 sm:opacity-0 group-hover:opacity-100"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-2xl font-light text-white/10 group-hover:text-white/30">+</span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -165,28 +179,29 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                 if (!info) return null;
                 
                 return (
-                  <div 
-                    key={charId}
-                    onClick={() => !isUsed && handleSelectChar(charId)}
-                    className={cn(
-                      "aspect-square rounded-xl border relative overflow-hidden transition-all flex items-center justify-center p-2 text-center",
-                      isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 hover:border-fuchsia-500 hover:scale-105 bg-slate-900"
-                    )}
-                  >
-                    {info.image ? (
-                      <img src={info.image} className="absolute inset-0 w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-3xl">{getCharSplash(charId) ? '⚔️' : '👤'}</span>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 text-center">
-                      <span className="text-[9px] font-black uppercase truncate block text-white">{info.name}</span>
-                      <span className="text-[7px] text-fuchsia-300 font-mono">LVL {charData?.level || 1}</span>
-                    </div>
-                    {isUsed && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-red-400 rotate-[-15deg]">Занят</span>
+                  <div key={charId} className="w-full relative pb-[100%]">
+                    <div 
+                      onClick={() => !isUsed && handleSelectChar(charId)}
+                      className={cn(
+                        "absolute inset-0 rounded-xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
+                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 hover:border-fuchsia-500 hover:scale-105 bg-slate-900"
+                      )}
+                    >
+                      {info.image ? (
+                        <img src={info.image} className="absolute inset-0 w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-3xl">{getCharSplash(charId) ? '⚔️' : '👤'}</span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 text-center">
+                        <span className="text-[9px] font-black uppercase truncate block text-white">{info.name}</span>
+                        <span className="text-[7px] text-fuchsia-300 font-mono">LVL {charData?.level || 1}</span>
                       </div>
-                    )}
+                      {isUsed && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-400 rotate-[-15deg]">Занят</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -211,28 +226,29 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                 if (!info) return null;
                 
                 return (
-                  <div 
-                    key={charId}
-                    onClick={() => !isUsed && handleSelectChar(charId)}
-                    className={cn(
-                      "aspect-square rounded-xl border relative overflow-hidden transition-all flex items-center justify-center p-2 text-center",
-                      isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 active:border-fuchsia-500 bg-slate-900"
-                    )}
-                  >
-                    {info.image ? (
-                      <img src={info.image} className="absolute inset-0 w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className="text-3xl">⚔️</span>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 text-center">
-                      <span className="text-[9px] font-black uppercase truncate block text-white">{info.name}</span>
-                      <span className="text-[7px] text-fuchsia-300 font-mono">LVL {charData?.level || 1}</span>
-                    </div>
-                    {isUsed && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-red-400 rotate-[-15deg]">Занят</span>
+                  <div key={charId} className="w-full relative pb-[100%]">
+                    <div 
+                      onClick={() => !isUsed && handleSelectChar(charId)}
+                      className={cn(
+                        "absolute inset-0 rounded-xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
+                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 active:border-fuchsia-500 bg-slate-900"
+                      )}
+                    >
+                      {info.image ? (
+                        <img src={info.image} className="absolute inset-0 w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-3xl">⚔️</span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 text-center">
+                        <span className="text-[9px] font-black uppercase truncate block text-white">{info.name}</span>
+                        <span className="text-[7px] text-fuchsia-300 font-mono">LVL {charData?.level || 1}</span>
                       </div>
-                    )}
+                      {isUsed && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-red-400 rotate-[-15deg]">Занят</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
