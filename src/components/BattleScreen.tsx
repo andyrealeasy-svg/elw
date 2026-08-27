@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Combatant, BattleState, TargetType, Skill } from '../types';
 import { Shovel, Shield, Volume2, VolumeX, Sword, Zap, Sparkles, Target, Info, Activity } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
+import { EffectsOverlay, EffectsOverlayRef } from './EffectsOverlay';
+import { motion } from 'motion/react';
 import { dealDamage } from '../data';
 import { playNormalAttackSound, playElementalSkillSound, playUltimateBurstSound, playVictorySound, getSoundMuteState, setSoundMuteState } from '../lib/sound';
 
@@ -44,8 +45,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>(["Бой начался!"]);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [floatingTexts, setFloatingTexts] = useState<{ id: string, targetUid: string, text: string, color: string }[]>([]);
-  const [visualEffects, setVisualEffects] = useState<{ id: string, targetUid: string, type: string }[]>([]);
+  
+  
   const [attackingUnitId, setAttackingUnitId] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
@@ -62,33 +63,27 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     isRunning: true,
     addFloatText: null as any,
     playEffect: null as any,
-    damageDealt: damageDealtRef.current
+    damageDealt: damageDealtRef.current,
+    effectsRefs: {} as Record<string, EffectsOverlayRef>,
+    lastChecksum: 0
   });
 
   const addFloatText = React.useCallback((targetUid: string, text: string, color: string) => {
-    const id = Math.random().toString();
-    setFloatingTexts(prev => [...prev, { id, targetUid, text, color }]);
-    setTimeout(() => {
-      setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
-    }, 1500);
+    if (stateRef.current.effectsRefs[targetUid]) {
+      stateRef.current.effectsRefs[targetUid].addFloatText(targetUid, text, color);
+    }
   }, []);
 
   const playEffect = React.useCallback((targetUid: string, type: string) => {
     if (type === "shake" || type === "ultimate_aoe") triggerShake();
-    
-    const id = Math.random().toString();
-    setVisualEffects(prev => [...prev, { id, targetUid, type }]);
-    
-    // Duration depends on effect type
-    const duration = type.includes("ultimate") ? 2000 : 1000;
-    
-    setTimeout(() => {
-      setVisualEffects(prev => prev.filter(ve => ve.id !== id));
-    }, duration);
+    if (stateRef.current.effectsRefs[targetUid]) {
+      stateRef.current.effectsRefs[targetUid].playEffect(targetUid, type);
+    }
   }, [triggerShake]);
 
   useEffect(() => {
     stateRef.current = { 
+      ...stateRef.current,
       players, 
       enemies, 
       activeUnitId, 
@@ -96,6 +91,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       addFloatText, 
       playEffect,
       damageDealt: damageDealtRef.current,
+      lastChecksum: 0,
       isAutoBattle
     };
   }, [players, enemies, activeUnitId, addFloatText, playEffect, isAutoBattle]);
@@ -143,10 +139,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         }
       }
 
+      const currentChecksum = currPlayers.reduce((sum, p) => sum + p.stats.hp + p.atb, 0) + currEnemies.reduce((sum, e) => sum + e.stats.hp + e.atb, 0);
       if (!stateRef.current.isRunning) {
-        // Even if paused, force React to update HP bars from delayed hits
-        setPlayers([...currPlayers]);
-        setEnemies([...currEnemies]);
+        if (stateRef.current.lastChecksum !== currentChecksum) {
+          setPlayers([...currPlayers]);
+          setEnemies([...currEnemies]);
+          stateRef.current.lastChecksum = currentChecksum;
+        }
         return;
       }
 
@@ -190,7 +189,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
          else if (skill.target === "Self") targets = [p];
 
          if (targets.length > 0) {
-            const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: p, logs: [], damageDealt: damageDealtRef.current };
+            const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: p, logs: [], damageDealt: damageDealtRef.current,
+    lastChecksum: 0 };
             setAttackingUnitId(p.uid);
             setTimeout(() => setAttackingUnitId(null), 500);
 
@@ -234,7 +234,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                 turnQueue: [], 
                 activeUnit: source, 
                 logs: [], 
-                damageDealt: damageDealtRef.current 
+                damageDealt: damageDealtRef.current,
+    lastChecksum: 0 
               };
 
               // Trigger explosion
@@ -277,7 +278,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
             if (target) {
                // Execute random skill (currently just 1)
                const skill = modifiedE.skills[0];
-               const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: modifiedE, logs: [], damageDealt: damageDealtRef.current };
+               const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: modifiedE, logs: [], damageDealt: damageDealtRef.current,
+    lastChecksum: 0 };
                
                // Visual jump for enemy
                setAttackingUnitId(modifiedE.uid);
@@ -325,7 +327,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     setTimeout(() => setAttackingUnitId(null), 600);
 
     // Execute
-    const fakeState = { playerParty: players, enemyParty: enemies, turnQueue: [], activeUnit: activeUnit, logs: [], damageDealt: damageDealtRef.current };
+    const fakeState = { playerParty: players, enemyParty: enemies, turnQueue: [], activeUnit: activeUnit, logs: [], damageDealt: damageDealtRef.current,
+    lastChecksum: 0 };
     selectedSkill.execute(activeUnit, targets, fakeState, addLog, addFloatText, playEffect);
     
     // Play sound matching skill type
@@ -383,8 +386,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ 
           opacity: 1, 
-          scale: isActive ? 1.05 : 1, 
-          y: isAttacking ? (isPlayer ? -40 : 40) : 0,
+          scale: isActive ? 1.1 : 1, 
+          y: isAttacking ? (isPlayer ? -40 : 40) : (isActive ? -8 : 0),
           x: isAttacking ? (isPlayer ? 20 : -20) : 0,
           rotate: isAttacking ? (isPlayer ? 5 : -5) : 0,
           zIndex: isAttacking || isActive ? 50 : 1
@@ -396,15 +399,15 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         }}
         onClick={() => !isDead && handleTargetSelect(unit, isPlayer)}
         className={cn(
-          "relative flex flex-col p-0 rounded-lg sm:rounded-xl border-2 transition-all cursor-pointer flex-1 min-w-[65px] sm:min-w-[70px] max-w-[85px] sm:max-w-[120px] shadow-lg group bg-slate-950",
+          "relative flex flex-col p-0 rounded-xl sm:rounded-2xl border-2 cursor-pointer flex-1 min-w-[70px] sm:min-w-[80px] max-w-[95px] sm:max-w-[120px] shadow-lg group bg-[#0a0a0a]",
           unit.color,
-          isActive ? "ring-2 sm:ring-4 ring-yellow-400 ring-offset-2 sm:ring-offset-4 ring-offset-gray-950 border-white shadow-[0_0_25px_rgba(250,204,21,0.4)]" : "border-white/10 opacity-90",
+          isActive ? "ring-2 sm:ring-4 ring-yellow-400 ring-offset-2 sm:ring-offset-4 ring-offset-gray-950 border-white shadow-md" : "border-white/10 opacity-90",
           isDead ? "opacity-30 grayscale cursor-not-allowed contrast-75 brightness-50" : "hover:scale-105 hover:opacity-100",
           isTargetable && !isDead ? "animate-pulse cursor-crosshair border-white ring-2 ring-white ring-offset-2 ring-offset-gray-900" : ""
         )}
       >
         {/* Upper Splashart Wrapper */}
-        <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-slate-900/60 flex-shrink-0">
+        <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-[#111111]/60 flex-shrink-0">
           {unit.image ? (
             <img 
               src={unit.image} 
@@ -416,19 +419,19 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl bg-slate-800">
+            <div className="w-full h-full flex items-center justify-center text-2xl bg-[#1a1a1a]">
               ⚔️
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/40 via-transparent to-transparent" />
           {unit.name.includes("БОСС") && <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay animate-pulse" />}
 
           {/* Buff Icons & Aura inside Splashart Wrapper for clean layout */}
           <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end z-30">
-             <AnimatePresence>
+             
                {unit.aura && (
                   <motion.div 
-                    initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} 
                     className={cn(
                       "w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-[8px] sm:text-[10px] text-white font-black rounded border border-white/40 uppercase shadow-lg",
                       unit.aura === "Hydro" ? "bg-blue-600" :
@@ -442,10 +445,10 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                     {unit.aura.substring(0, 1)}
                   </motion.div>
                )}
-             </AnimatePresence>
+             
              <div className="flex gap-0.5 flex-wrap justify-end max-w-[40px]">
-               {unit.buffs.duelMark > 0 && <div className="absolute -top-3 sm:-top-5 -right-3 text-lg sm:text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,1)] animate-bounce font-black text-red-500 z-50">🎯</div>}
-               {unit.buffs.shield > 0 && <Shield className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-300 drop-shadow-md" />}
+               {unit.buffs.duelMark > 0 && <div className="absolute -top-3 sm:-top-5 -right-3 text-lg sm:text-2xl  animate-bounce font-black text-red-500 z-50">🎯</div>}
+               {unit.buffs.shield > 0 && <Shield className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-300 shadow-sm" />}
                {unit.buffs.puppets > 0 && <div className="text-[7px] bg-red-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🎭{unit.buffs.puppets}</div>}
                {unit.buffs.frenzyStacks > 0 && <div className="text-[7px] bg-amber-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">🔥{unit.buffs.frenzyStacks}</div>}
                {unit.buffs.joyStacks > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">✨{unit.buffs.joyStacks}</div>}
@@ -465,17 +468,17 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
             animate={{ opacity: 1, y: 0 }}
             className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-[100]"
           >
-            <div className={cn("w-2 h-2 rounded-full shadow-[0_0_12px_white] animate-pulse", unit.name.includes("БОСС") ? "bg-red-500" : "bg-yellow-400")} />
-            <div className={cn("text-[10px] font-black uppercase text-white px-2 py-0.5 rounded-full tracking-widest drop-shadow-lg whitespace-nowrap shadow-2xl", unit.name.includes("БОСС") ? "bg-red-600" : "bg-yellow-500")}>
+            <div className={cn("w-2 h-2 rounded-full shadow-sm animate-pulse", unit.name.includes("БОСС") ? "bg-red-500" : "bg-yellow-400")} />
+            <div className={cn("text-[10px] font-black uppercase text-white px-2 py-0.5 rounded-full tracking-widest shadow-md whitespace-nowrap shadow-2xl", unit.name.includes("БОСС") ? "bg-red-600" : "bg-yellow-500")}>
               {unit.name.includes("БОСС") ? "БОСС" : "Ходит"}
             </div>
           </motion.div>
         )}
 
         {/* Lower Info Wrapper */}
-        <div className="p-1.5 sm:p-2 flex flex-col gap-1 sm:gap-1.5 bg-slate-950/95 rounded-b-[6px] sm:rounded-b-[10px] flex-grow">
+        <div className="p-1.5 sm:p-2 flex flex-col gap-1 sm:gap-1.5 bg-[#0a0a0a]/95 rounded-b-[6px] sm:rounded-b-[10px] flex-grow">
           <div className={cn(
-            "text-white font-black text-[9px] sm:text-xs uppercase tracking-tight text-center truncate drop-shadow-md",
+            "text-white font-black text-[9px] sm:text-xs uppercase tracking-tight text-center truncate shadow-sm",
             unit.name.includes("БОСС") && "text-red-400 sm:text-sm font-black"
           )}>
             {unit.name}
@@ -484,19 +487,21 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           {/* HP Bar */}
           <div className="relative w-full bg-black/60 h-2 sm:h-2.5 rounded-full overflow-hidden border border-white/10 shadow-inner">
             <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${hpPercent}%` }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: hpPercent / 100 }}
+              style={{ originX: 0 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
               className={cn(
-                "h-full transition-all duration-300 relative rounded-full",
+                "h-full relative rounded-full",
                 hpPercent > 50 ? "bg-gradient-to-r from-green-600 to-green-400" : hpPercent > 20 ? "bg-gradient-to-r from-yellow-600 to-yellow-400" : "bg-gradient-to-r from-red-600 to-red-400"
               )}
             >
               <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
             </motion.div>
           </div>
-          <div className="flex justify-between items-center text-[7px] sm:text-[9px] font-black text-slate-300 uppercase leading-none">
-             <span className="opacity-75">HP</span>
-             <span className="tabular-nums">
+          <div className="flex justify-between items-center text-[8px] sm:text-[10px] font-black text-white uppercase leading-none mt-0.5">
+             <span className="text-white/50">HP</span>
+             <span className="tabular-nums tracking-tight">
                {unit.stats.maxHp >= 1000000 
                  ? `${(unit.stats.hp / 1000000).toFixed(2)}M / ${(unit.stats.maxHp / 1000000).toFixed(2)}M`
                  : unit.stats.maxHp >= 10000 
@@ -509,78 +514,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           {/* ATB Bar */}
           <div className="w-full bg-black/40 h-1 sm:h-1.5 rounded-full overflow-hidden border border-white/5 shadow-inner">
             <div 
-              className="bg-yellow-400 h-full shadow-[0_0_8px_rgba(250,204,21,0.6)] rounded-full" 
-              style={{ width: `${unit.atb}%` }} 
+              className="bg-yellow-400 h-full  rounded-full" 
+              style={{ transform: `scaleX(${unit.atb / 100})`, transformOrigin: 'left' }} 
             />
           </div>
         </div>
 
-        {/* Visual Effects */}
-        <div className="absolute inset-0 pointer-events-none flex justify-center items-center z-40 overflow-visible">
-           {visualEffects.filter(ve => ve.targetUid === unit.uid).map((ve) => (
-              <React.Fragment key={ve.id}>
-                {ve.type === "Physical" && <motion.div initial={{scale:0, rotate: -45}} animate={{scale:[0, 2, 0], opacity:[1,1,0]}} transition={{duration: 0.4}} className="absolute text-4xl">⚔️</motion.div>}
-                {ve.type === "Hydro" && <motion.div initial={{scale:0}} animate={{scale:[0, 3, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-blue-500 text-6xl opacity-80 blur-[1px]">🌊</motion.div>}
-                {ve.type === "Pyro" && <motion.div initial={{scale:0}} animate={{scale:[0.5, 3.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-red-500 text-7xl drop-shadow-[0_0_20px_rgba(239,68,68,1)]">🔥</motion.div>}
-                {ve.type === "Electro" && <motion.div initial={{scale:0, rotate: 15}} animate={{scale:[1, 4.5, 1.5], opacity:[0,1,0]}} transition={{duration: 0.4}} className="absolute text-purple-400 text-7xl drop-shadow-[0_0_25px_rgba(168,85,247,1)] filter brightness-125">⚡</motion.div>}
-                {ve.type === "Cryo" && <motion.div initial={{scale:0, rotate: -25}} animate={{scale:[1, 3.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-cyan-200 text-6xl drop-shadow-[0_0_25px_rgba(34,211,238,1)]">❄️</motion.div>}
-                {ve.type === "Dendro" && <motion.div initial={{scale:0}} animate={{scale:[0, 2.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-green-400 text-6xl">🌿</motion.div>}
-                {ve.type === "Geo" && <motion.div initial={{y:-100, opacity:0}} animate={{y:0, opacity:[0, 1, 0], scale:[1,1, 2]}} transition={{duration: 0.6}} className="absolute text-orange-500 text-8xl drop-shadow-[0_0_20px_rgba(234,179,8,0.9)]">☄️</motion.div>}
-                
-                {/* Special Character Effects */}
-                {ve.type === "selina_rose" && (
-                  <motion.div initial={{ scale: 0, rotate: 180 }} animate={{ scale: [0, 4, 3, 0], rotate: [180, 0, -10, 0], opacity: [0, 1, 1, 0] }} transition={{ duration: 1.2 }} className="absolute flex items-center justify-center">
-                    <span className="text-8xl drop-shadow-[0_0_20px_rgba(225,29,72,0.8)] filter hue-rotate-15">🌹</span>
-                    <motion.div animate={{ scale: [1, 2], opacity: [0, 0.5, 0] }} transition={{ duration: 0.6, repeat: 2 }} className="absolute w-32 h-32 rounded-full border-4 border-rose-500/30 blur-sm" />
-                  </motion.div>
-                )}
-                {ve.type === "asher_nature" && (
-                   <motion.div className="absolute flex items-center justify-center">
-                      <motion.div initial={{ scale: 0, y: 50 }} animate={{ scale: [0, 5, 0], y: [50, 0, -20] }} transition={{ duration: 0.8 }} className="absolute text-8xl grayscale brightness-150 contrast-125 opacity-20">⚒️</motion.div>
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 4, 0], rotate: 360 }} transition={{ duration: 1 }} className="absolute text-7xl">🌳</motion.div>
-                      {[...Array(4)].map((_, i) => (
-                        <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: (Math.random() - 0.5) * 180, y: (Math.random() - 0.5) * 180, opacity: [1, 0], scale: [1, 0] }} transition={{ duration: 0.6, delay: i * 0.05 }} className="absolute text-xl">🌱</motion.div>
-                      ))}
-                   </motion.div>
-                )}
-                {ve.type === "krona_ice" && (
-                   <motion.div className="absolute flex items-center justify-center">
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 6, 4.5, 0], rotate: 45 }} transition={{ duration: 1 }} className="absolute text-8xl drop-shadow-[0_0_30px_rgba(34,211,238,0.5)]">❄️</motion.div>
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.4, 0], scale: [1, 2] }} transition={{ duration: 0.5 }} className="absolute w-40 h-40 bg-cyan-400/20 rounded-full blur-2xl" />
-                      {[...Array(6)].map((_, i) => (
-                        <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: (Math.random() - 0.5) * 220, y: (Math.random() - 0.5) * 220, opacity: [1, 0], scale: [1.2, 0.5], rotate: 180 }} transition={{ duration: 0.7, delay: i * 0.05 }} className="absolute text-lg">💎</motion.div>
-                      ))}
-                   </motion.div>
-                )}
-                {ve.type === "ultimate_aoe" && (
-                  <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 10, 15], opacity: [0, 0.4, 0] }} transition={{ duration: 1 }} className="absolute w-20 h-20 bg-white rounded-full blur-[40px] z-[60]" />
-                )}
-
-                {ve.type === "heal" && <motion.div initial={{y:20, opacity:0}} animate={{y:-50, opacity:[0, 1, 0]}} transition={{duration: 0.8}} className="absolute text-6xl">💚</motion.div>}
-                {ve.type === "shield" && <motion.div initial={{scale:0.5, opacity:0}} animate={{scale:2.5, opacity:[0, 0.8, 0]}} transition={{duration: 0.5}} className="absolute text-emerald-300 text-7xl opacity-50">🛡️</motion.div>}
-                {ve.type === "buff" && <motion.div initial={{scale:0.8, opacity:0}} animate={{scale:2, opacity:[0, 1, 0]}} transition={{duration: 0.6}} className="absolute text-yellow-300 text-6xl">✨</motion.div>}
-                {ve.type === "hit" && <motion.div initial={{ scale: 1 }} animate={{ scale: [1, 2, 0], opacity: [1, 1, 0] }} transition={{ duration: 0.3 }} className="absolute text-6xl">💥</motion.div>}
-              </React.Fragment>
-           ))}
-        </div>
-
-        {/* Floating texts */}
-        <div className="absolute inset-0 pointer-events-none flex justify-center items-center z-50">
-           <AnimatePresence>
-            {floatingTexts.filter(ft => ft.targetUid === unit.uid).map((ft) => (
-               <motion.div 
-                  key={ft.id} 
-                  initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                  animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1, 0.9], y: [10, -20, -40, -60] }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2, times: [0, 0.1, 0.8, 1], ease: "easeOut" }}
-                  className={cn("absolute font-black text-lg sm:text-2xl drop-shadow-[0_0_12px_rgba(0,0,0,1)] whitespace-nowrap", ft.color)} 
-                  style={{ textShadow: "0 4px 6px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1)" }}>
-                  {ft.text}
-               </motion.div>
-            ))}
-           </AnimatePresence>
-        </div>
+        <EffectsOverlay unitId={unit.uid} ref={el => { if(el) stateRef.current.effectsRefs[unit.uid] = el; }} />
       </motion.div>
     );
   };
@@ -597,11 +537,11 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     <motion.div 
       variants={containerVariants}
       animate={shake ? "shake" : ""}
-      className="w-full max-w-6xl h-[100dvh] md:h-[85dvh] flex flex-col bg-gray-950 md:rounded-3xl overflow-hidden md:border-8 border-gray-900 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] font-sans text-gray-200 ring-1 ring-white/10"
+      className="w-full max-w-6xl h-[100dvh] md:h-[85dvh] flex flex-col bg-[#0a0a0a] md:rounded-3xl overflow-hidden md:border-8 border-white/5 shadow-2xl font-sans text-white/90 ring-1 ring-white/10"
     >
       
       {/* Top Half: Arena */}
-      <div className="flex-1 relative bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 p-4 sm:p-8 flex flex-col justify-between overflow-hidden">
+      <div className="flex-1 relative bg-gradient-to-br from-[#111111] via-[#0a0a0a] to-[#111111] p-4 sm:p-8 flex flex-col justify-between overflow-hidden">
         
         {/* Background Decorative elements */}
         <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
@@ -614,14 +554,14 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           <div className="flex gap-2">
             <button 
               onClick={toggleMute}
-              className="group relative bg-gray-900/40 backdrop-blur-md hover:bg-white/10 border border-white/5 p-2 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl text-white/50 hover:text-white transition-all duration-300 flex items-center gap-2 text-xs font-bold"
+              className="group relative bg-[#111111]/40  hover:bg-white/10 border border-white/5 p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl text-white/50 hover:text-white transition-all duration-300 flex items-center gap-2 text-xs font-bold"
             >
               {muted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
               <span className="hidden sm:inline uppercase tracking-tighter">Звук</span>
             </button>
             <button 
               onClick={() => setIsAutoBattle(!isAutoBattle)}
-              className={cn("group relative bg-gray-900/40 backdrop-blur-md hover:bg-white/10 border p-2 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center gap-2 text-xs font-bold", isAutoBattle ? "text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10" : "text-white/50 hover:text-white border-white/5")}
+              className={cn("group relative bg-[#111111]/40  hover:bg-white/10 border p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl transition-all duration-300 flex items-center gap-2 text-xs font-bold", isAutoBattle ? "text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10" : "text-white/50 hover:text-white border-white/5")}
             >
               <Sword className={cn("w-4 h-4", isAutoBattle ? "opacity-100" : "opacity-50")} />
               <span className="hidden sm:inline uppercase tracking-tighter">Авто</span>
@@ -630,43 +570,45 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
 
           <div className="flex flex-col items-end gap-1 scale-90 sm:scale-100 origin-right">
              {stageTitle ? (
-               <div className="bg-fuchsia-950/80 border border-fuchsia-500/50 backdrop-blur px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-black text-fuchsia-300 shadow-[0_0_15px_rgba(217,70,239,0.3)] flex items-center gap-1.5">
+               <div className="bg-fuchsia-950/80 border border-fuchsia-500/50 px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-black text-fuchsia-300 shadow-sm flex items-center gap-1.5">
                  <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-ping" />
                  {stageTitle}
                </div>
              ) : (
                <>
                  <div className="text-[8px] sm:text-[10px] text-white/30 uppercase tracking-[0.2em] font-black">Волна {currentWave + 1} из {enemyWaves.length}</div>
-                 <div className="bg-white/5 border border-white/10 backdrop-blur px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-bold text-white/80">Узел-7</div>
+                 <div className="bg-white/5 border border-white/10 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-bold text-white/80">Узел-7</div>
                </>
              )}
           </div>
         </div>
 
-        {/* Enemies Row */}
-        <div className="flex flex-wrap justify-center md:justify-end gap-2 sm:gap-8 mb-6 sm:mb-16 mt-14 sm:mt-20 w-full overflow-visible px-2 sm:px-4">
-          <AnimatePresence>
-            {enemies.map(e => renderUnit(e, false))}
-          </AnimatePresence>
-        </div>
+        <div className="flex flex-col flex-1 justify-center gap-8 sm:gap-14 mt-12 sm:mt-10">
+          {/* Enemies Row */}
+          <div className="flex flex-wrap justify-center md:justify-end gap-2 sm:gap-6 w-full overflow-visible px-2 sm:px-4">
+            
+              {enemies.map(e => renderUnit(e, false))}
+            
+          </div>
 
-        {/* Players Row */}
-        <div className="flex flex-wrap justify-center md:justify-start gap-2 sm:gap-6 mb-2 sm:mb-4 z-10 w-full overflow-visible px-2 sm:px-4">
-          <AnimatePresence>
-            {players.map(p => renderUnit(p, true))}
-          </AnimatePresence>
+          {/* Players Row */}
+          <div className="flex flex-wrap justify-center md:justify-start gap-2 sm:gap-6 z-10 w-full overflow-visible px-2 sm:px-4">
+            
+              {players.map(p => renderUnit(p, true))}
+            
+          </div>
         </div>
 
       </div>
 
       {/* Bottom Half: Command Menu UI */}
-      <div className="flex flex-col md:flex-row h-auto md:h-56 bg-[#0a0c10] border-t border-white/10 relative overflow-hidden backdrop-blur-3xl shadow-[0_-20px_50px_rgba(0,0,0,0.5)] shrink-0">
+      <div className="flex flex-col md:flex-row h-auto md:h-48 bg-[#0a0c10] border-t border-white/10 relative overflow-hidden  shadow-2xl shrink-0">
         
         {/* Subtle glow behind active player panel */}
-        <div className="absolute left-0 top-0 w-1/3 h-full bg-indigo-500/5 blur-[100px] pointer-events-none" />
+        <div className="absolute left-0 top-0 w-1/3 h-full bg-indigo-500/5  pointer-events-none" />
 
         {/* Unit Info & Portrait */}
-        <div className="w-full md:w-1/3 flex border-b md:border-b-0 md:border-r border-white/5 p-3 sm:p-6 shrink-0 relative bg-gradient-to-r from-black/20 to-transparent">
+        <div className="w-full md:w-1/3 flex border-b md:border-b-0 md:border-r border-white/5 p-3 sm:p-4 shrink-0 relative bg-gradient-to-r from-black/20 to-transparent">
             {activePlayer ? (
                 <motion.div 
                   initial={{ x: -20, opacity: 0 }}
@@ -674,11 +616,11 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                   className="flex flex-row md:flex-col h-full w-full items-center md:items-start justify-between md:justify-center gap-3"
                 >
                     <div className="flex items-center md:items-start gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-xl sm:text-2xl shadow-inner">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl sm:rounded-3xl bg-white/5 border border-white/10 text-xl sm:text-2xl shadow-inner">
                         <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400/80" />
                       </div>
                       <div>
-                        <h2 className="text-lg sm:text-2xl font-black text-white tracking-tighter uppercase drop-shadow-sm leading-none">{activePlayer.name}</h2>
+                        <h2 className="text-lg sm:text-2xl font-black text-white tracking-tighter uppercase shadow-sm leading-none">{activePlayer.name}</h2>
                         <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
                           <div className={cn("px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-black uppercase text-white/90 shadow-sm", activePlayer.color)}>
                             {activePlayer.element}
@@ -687,11 +629,11 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                       </div>
                     </div>
 
-                    <div className="flex md:grid md:grid-cols-2 gap-2 mt-0 md:mt-2">
-                        <div className="bg-white/5 border border-white/5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl flex items-center gap-2 md:justify-between">
-                          <span className="text-white/40 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest">ATK</span>
-                          <span className="text-xs sm:text-sm font-black text-white tabular-nums">
-                            {activePlayer.buffs.atk ? <span className="text-green-400">{activePlayer.stats.atk + activePlayer.buffs.atk}</span> : activePlayer.stats.atk}
+                    <div className="flex w-full gap-2 mt-1 md:mt-3">
+                        <div className="bg-[#111111] border border-white/10 px-3 py-2 rounded-2xl flex items-center justify-between flex-1">
+                          <span className="text-white/40 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">Атака (ATK)</span>
+                          <span className="text-sm sm:text-base font-black text-white tabular-nums">
+                            {activePlayer.buffs.atk ? <span className="text-emerald-400">{activePlayer.stats.atk + activePlayer.buffs.atk}</span> : activePlayer.stats.atk}
                           </span>
                         </div>
                     </div>
@@ -705,7 +647,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         </div>
 
         {/* Skills Panel */}
-        <div className="w-full md:w-2/3 p-4 sm:p-6 min-h-[160px] md:min-h-0 md:overflow-y-auto relative bg-gradient-to-l from-black/40 via-transparent to-transparent">
+        <div className="w-full md:w-2/3 p-3 sm:p-4 min-h-[140px] md:min-h-0 md:overflow-y-auto relative bg-gradient-to-l from-black/40 via-transparent to-transparent">
             {activePlayer ? (
                 <div className="h-full flex flex-col gap-4">
                     <div className="flex items-center justify-between">
@@ -729,7 +671,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                             };
 
                             const getTheme = () => {
-                              if (isSelected) return "border-yellow-400 bg-white/10 text-white shadow-[0_0_20px_rgba(250,204,21,0.2)] scale-[0.98]";
+                              if (isSelected) return "border-yellow-400 bg-white/10 text-white shadow-sm scale-[0.98]";
                               if (isCoolingDown) return "bg-black/40 border-white/5 opacity-40 grayscale cursor-not-allowed text-white/50";
                               return "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30 hover:-translate-y-1 active:scale-95 text-white/70 hover:text-white";
                             };
@@ -740,17 +682,17 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                                     disabled={isCoolingDown}
                                     onClick={() => handleSkillSelect(skill)}
                                     className={cn(
-                                        "relative flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 min-h-[56px] sm:min-h-[80px]",
+                                        "relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 min-h-[64px] sm:min-h-[90px]",
                                         getTheme()
                                     )}
                                 >
                                     {getIcon()}
-                                    <span className="font-black text-[8px] sm:text-[11px] uppercase tracking-tighter text-center leading-none truncate w-full px-1">
+                                    <span className="font-black text-[9px] sm:text-[11px] uppercase tracking-tighter text-center leading-tight whitespace-normal break-words line-clamp-2 w-full px-1">
                                       {skill.name}
                                     </span>
                                     {isCoolingDown && (
-                                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl sm:rounded-2xl">
-                                        <span className="text-rose-500 font-black text-xl sm:text-2xl drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl sm:rounded-3xl">
+                                        <span className="text-rose-500 font-black text-xl sm:text-2xl ">
                                           {activePlayer.cooldowns[skill.id]}
                                         </span>
                                       </div>
@@ -760,13 +702,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                         })}
                     </div>
                     
-                    <AnimatePresence>
+                    
                       {selectedSkill && (
                           <motion.div 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 5 }}
-                            className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-2xl flex gap-3 items-center backdrop-blur-sm shadow-xl"
+                            className="bg-indigo-600/10 border border-indigo-500/20 p-3 rounded-3xl flex gap-3 items-center backdrop- shadow-xl"
                           >
                               <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
                                 <Target className="w-4 h-4 text-indigo-400 animate-pulse" />
@@ -783,7 +725,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                               </div>
                           </motion.div>
                       )}
-                    </AnimatePresence>
+                    
                 </div>
             ) : (
                 <div className="h-full w-full flex flex-col justify-center items-center opacity-20 gap-4">

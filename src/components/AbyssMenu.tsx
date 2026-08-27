@@ -85,7 +85,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-gray-950 flex flex-col font-sans text-white overflow-hidden"
+      className="fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col font-sans text-white overflow-hidden"
     >
       {/* Background Decor */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -94,7 +94,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between p-4 sm:p-6 border-b border-white/5 bg-gray-900/50 backdrop-blur-xl shrink-0">
+      <div className="relative z-10 flex items-center justify-between p-4 sm:p-6 border-b border-white/5 bg-[#111111]/50 backdrop-blur-xl shrink-0">
         <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
           <button 
             onClick={onBack}
@@ -119,14 +119,14 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
              <div className="text-[7px] sm:text-[10px] text-white/30 uppercase font-black">Прогресс</div>
              <div className="text-sm sm:text-lg font-black tabular-nums">{clearedFloor} <span className="text-white/20 sm:mx-1">/</span> 8 <span className="text-indigo-400 text-[10px] sm:text-sm">+{lunarClaimed.length}</span></div>
           </div>
-          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
             <Layers className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-400" />
           </div>
         </div>
       </div>
 
       {/* Mode Switcher Banner / Endgame Navigation */}
-      <div className="relative z-10 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-fuchsia-950/60 via-purple-900/40 to-slate-900/60 flex items-center justify-between border-b border-fuchsia-500/20">
+      <div className="relative z-10 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-fuchsia-950/60 via-purple-900/40 to-[#111111]/60 flex items-center justify-between border-b border-fuchsia-500/20">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-ping" />
           <span className="text-[11px] sm:text-xs font-bold text-fuchsia-200">
@@ -136,7 +136,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
         {onOpenBossRush && (
           <button
             onClick={onOpenBossRush}
-            className="flex items-center gap-1.5 px-3 py-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-fuchsia-600/30 active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-fuchsia-600/30 active:scale-95 shrink-0"
           >
             <Skull className="w-3.5 h-3.5" />
             <span>Перейти к боссам</span>
@@ -178,7 +178,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
                   onClick={() => !isLocked && setSelectedFloor(floor)}
                   className={cn(
                     "relative h-48 rounded-3xl border-2 p-6 flex flex-col justify-between transition-all duration-300 overflow-hidden text-left",
-                    isLocked ? "bg-gray-900/20 border-white/5 grayscale" : 
+                    isLocked ? "bg-[#111111]/20 border-white/5 grayscale" : 
                     isCleared ? "bg-emerald-500/10 border-emerald-500/30" :
                     isCurrent ? "bg-indigo-600/20 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]" : 
                     floor.isLunar ? "bg-amber-500/5 border-amber-500/20" : "bg-white/5 border-white/10",
@@ -192,7 +192,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
 
                    <div className="flex justify-between items-start relative z-10">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center font-black",
+                        "w-10 h-10 rounded-2xl flex items-center justify-center font-black",
                         isLocked ? "bg-white/5" : isCleared ? "bg-emerald-500/20 text-emerald-400" : "bg-indigo-500/20 text-indigo-400",
                         floor.isLunar && !isCleared && !isLocked && "text-amber-500 bg-amber-500/20"
                       )}>
@@ -226,7 +226,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed lg:absolute inset-0 lg:left-auto lg:right-0 w-full lg:w-[450px] bg-gray-950 lg:bg-gray-900/90 backdrop-blur-3xl flex flex-col z-[150] lg:z-50 shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-white/5"
+              className="fixed lg:absolute inset-0 lg:left-auto lg:right-0 w-full lg:w-[450px] bg-[#0a0a0a] lg:bg-[#111111]/90 backdrop-blur-3xl flex flex-col z-[150] lg:z-50 shadow-[-20px_0_50px_rgba(0,0,0,0.5)] border-l border-white/5"
             >
               {/* Header for Mobile */}
               <div className="flex items-center justify-between p-6 border-b border-white/5 lg:hidden">
@@ -276,7 +276,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
                   <div className="bg-indigo-600/10 border-2 border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden group hover:border-indigo-500/40 transition-all">
                     <div className="absolute top-0 right-0 w-48 h-full bg-indigo-500/5 rotate-12 blur-3xl group-hover:bg-indigo-500/10 transition-all pointer-events-none" />
                     <div className="relative z-10 flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-950 border border-white/5 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">
+                      <div className="w-16 h-16 rounded-3xl bg-indigo-950 border border-white/5 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">
                         {selectedFloor.reward.type === 'crystals' ? '💎' : selectedFloor.reward.type === 'artifacts' ? '🎭' : '⭐️'}
                       </div>
                       <div>
@@ -289,7 +289,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
               </div>
 
               {/* Fixed Bottom Actions */}
-              <div className="p-6 lg:p-10 border-t border-white/5 bg-gray-900/95 backdrop-blur-2xl fixed lg:relative bottom-0 inset-x-0 z-50">
+              <div className="p-6 lg:p-10 border-t border-white/5 bg-[#111111]/95 backdrop-blur-2xl fixed lg:relative bottom-0 inset-x-0 z-50">
                 <button 
                   onClick={() => handleEnterFloor(selectedFloor)}
                   className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black uppercase tracking-[0.2em] rounded-3xl transition-all shadow-[0_20px_50px_-10px_rgba(79,70,229,0.5)] active:scale-[0.98] flex items-center justify-center gap-4 relative overflow-hidden group"

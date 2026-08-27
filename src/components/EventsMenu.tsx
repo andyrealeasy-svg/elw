@@ -30,7 +30,8 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   const [subTab, setSubTab] = useState<'LOGIN' | 'BREACH' | 'ALCHEMY' | 'TRIALS'>('LOGIN');
 
   // --- UPDATE 1.1 REWARD ---
-  const update11Claimed = profile.events.update11Claimed || false;
+  const update11aClaimed = profile.events.update11aClaimed || false;
+  const designCompensationClaimed = profile.events.designCompensationClaimed || false;
 
   // --- EVENT 0: 7-DAY LOGIN ---
   const todayStr = new Date().toISOString().split('T')[0];
@@ -212,12 +213,12 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   return (
     <div className="space-y-6 font-sans text-white">
       {/* Top Navigation Tabs */}
-      <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 text-xs sm:text-sm overflow-x-auto gap-1">
+      <div className="flex bg-[#111111]/80 p-1.5 rounded-2xl border border-white/5 text-xs sm:text-sm overflow-x-auto gap-1">
         <button 
           onClick={() => setSubTab('LOGIN')}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
-            subTab === 'LOGIN' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'LOGIN' ? "bg-indigo-600 text-white shadow-lg" : "text-white/50 hover:text-white/90 hover:bg-[#1a1a1a]/50"
           )}
         >
           <Sparkles className="w-4 h-4 text-amber-400" /> Проект: Инициализация
@@ -225,8 +226,8 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
         <button 
           onClick={() => setSubTab('BREACH')}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
-            subTab === 'BREACH' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'BREACH' ? "bg-indigo-600 text-white shadow-lg" : "text-white/50 hover:text-white/90 hover:bg-[#1a1a1a]/50"
           )}
         >
           <ShieldAlert className="w-4 h-4 text-red-400" /> Охота на Глитчи
@@ -234,8 +235,8 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
         <button 
           onClick={() => setSubTab('ALCHEMY')}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
-            subTab === 'ALCHEMY' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'ALCHEMY' ? "bg-indigo-600 text-white shadow-lg" : "text-white/50 hover:text-white/90 hover:bg-[#1a1a1a]/50"
           )}
         >
           <FlaskConical className="w-4 h-4 text-emerald-400" /> Синтез Матрицы
@@ -243,23 +244,23 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
         <button 
           onClick={() => setSubTab('TRIALS')}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold transition shrink-0 min-h-[40px]",
-            subTab === 'TRIALS' ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition shrink-0 min-h-[40px]",
+            subTab === 'TRIALS' ? "bg-indigo-600 text-white shadow-lg" : "text-white/50 hover:text-white/90 hover:bg-[#1a1a1a]/50"
           )}
         >
           <Swords className="w-4 h-4 text-cyan-400" /> Боевые Испытания
         </button>
       </div>
 
-      {/* UPDATE 1.1 REWARD BAR */}
-      {!update11Claimed && (
-        <div className="bg-gradient-to-r from-emerald-950/60 to-green-950/60 border border-green-500/50 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+      {/* UPDATE 1.1a REWARD BAR */}
+      {!update11aClaimed && (
+        <div className="bg-gradient-to-r from-emerald-950/60 to-green-950/60 border border-green-500/50 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
           <div>
             <span className="text-[10px] font-black text-green-400 uppercase tracking-widest border border-green-500/30 px-2.5 py-1 rounded-md bg-green-500/10">
-              ОБНОВЛЕНИЕ 1.1
+              ОБНОВЛЕНИЕ 1.1a
             </span>
-            <p className="text-sm text-slate-200 mt-2 font-medium">
-              Празднуем выход крупного обновления 1.1! Заберите специальный подарок за вход.
+            <p className="text-sm text-white/90 mt-2 font-medium">
+              Празднуем выход обновления 1.1a! Заберите специальный подарок за вход.
             </p>
             <div className="flex gap-4 mt-2 text-xs font-mono">
               <span className="text-green-400 font-bold flex items-center gap-1">
@@ -272,25 +273,55 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
               updateProfile(p => ({
                 ...p,
                 gems: p.gems + 600,
-                events: { ...p.events, update11Claimed: true }
+                events: { ...p.events, update11aClaimed: true }
               }));
-              alert("Награда за обновление 1.1 получена!");
             }}
-            className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-500 text-white text-xs font-bold tracking-wider rounded-xl uppercase transition-all shadow-lg min-h-[44px]"
+            className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-500 text-white text-xs font-bold tracking-wider rounded-2xl uppercase transition-all shadow-lg min-h-[44px]"
           >
             Забрать 600 Гемов
           </button>
         </div>
       )}
 
+      {/* DESIGN COMPENSATION BAR */}
+      {!designCompensationClaimed && (
+        <div className="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 border border-purple-500/50 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div>
+            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest border border-purple-500/30 px-2.5 py-1 rounded-md bg-purple-500/10">
+              СИСТЕМНАЯ КОМПЕНСАЦИЯ
+            </span>
+            <p className="text-sm text-white/90 mt-2 font-medium">
+              Компенсация за доставленные неудобства, связанные с предыдущими дизайнами игры.
+            </p>
+            <div className="flex gap-4 mt-2 text-xs font-mono">
+              <span className="text-purple-400 font-bold flex items-center gap-1">
+                <Gem className="w-3.5 h-3.5" /> +300 Гемов
+              </span>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              updateProfile(p => ({
+                ...p,
+                gems: p.gems + 300,
+                events: { ...p.events, designCompensationClaimed: true }
+              }));
+            }}
+            className="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold tracking-wider rounded-2xl uppercase transition-all shadow-lg min-h-[44px]"
+          >
+            Забрать 300 Гемов
+          </button>
+        </div>
+      )}
+
       {/* TAB 0: DAILY LOGIN */}
       {subTab === 'LOGIN' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden relative p-6 space-y-6">
+        <div className="bg-[#111111] border border-white/5 rounded-3xl overflow-hidden relative p-6 space-y-6">
           <div>
             <h2 className="text-xl font-black text-indigo-400 uppercase tracking-tight flex items-center gap-2">
               <Sparkles className="w-5 h-5" /> Проект: Инициализация (7 Дней Входа)
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               Синхронизируйтесь с сетью ежедневно, чтобы открывать фрагменты памяти и получать ценные камни истока.
             </p>
           </div>
@@ -304,31 +335,31 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                 <div
                   key={day}
                   className={cn(
-                    "p-3 rounded-xl border flex flex-col items-center text-center relative transition-all min-h-[120px] justify-between",
+                    "p-3 rounded-2xl border flex flex-col items-center text-center relative transition-all min-h-[120px] justify-between",
                     isClaimed
                       ? "bg-indigo-950/40 border-indigo-500/50"
                       : isToday && !alreadyCheckedIn
-                        ? "bg-slate-800 border-indigo-400 ring-2 ring-indigo-500/40 shadow-lg"
-                        : "bg-slate-950/60 border-slate-800 opacity-60"
+                        ? "bg-[#1a1a1a] border-indigo-400 ring-2 ring-indigo-500/40 shadow-lg"
+                        : "bg-[#0a0a0a]/60 border-white/5 opacity-60"
                   )}
                 >
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  <span className="text-[10px] font-black uppercase text-white/50 tracking-wider">
                     День {day}
                   </span>
 
-                  <div className="my-2 p-2 rounded-full bg-slate-900">
-                    <Gem className={cn("w-6 h-6", isClaimed ? "text-indigo-400" : "text-slate-500")} />
+                  <div className="my-2 p-2 rounded-full bg-[#111111]">
+                    <Gem className={cn("w-6 h-6", isClaimed ? "text-indigo-400" : "text-white/40")} />
                   </div>
 
-                  <div className="text-xs font-mono font-bold text-slate-200">
+                  <div className="text-xs font-mono font-bold text-white/90">
                     +{day * 60} 💎
                   </div>
-                  <div className="text-[9px] font-mono text-slate-400">
+                  <div className="text-[9px] font-mono text-white/50">
                     +{day * 5000} 🪙
                   </div>
 
                   {isClaimed && (
-                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px] rounded-xl flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#0a0a0a]/70 backdrop-blur-[1px] rounded-2xl flex items-center justify-center">
                       <CheckCircle2 className="w-7 h-7 text-indigo-400" />
                     </div>
                   )}
@@ -337,15 +368,15 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
             })}
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
-            <span className="text-xs font-mono text-slate-300">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#0a0a0a] p-4 rounded-2xl border border-white/5">
+            <span className="text-xs font-mono text-white/70">
               Текущая серия входов: <strong className="text-indigo-400">{loginStreak} / 7</strong> дней
             </span>
 
             <button
               onClick={handleCheckIn}
               disabled={alreadyCheckedIn}
-              className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 font-bold rounded-xl uppercase text-xs tracking-wider transition min-h-[44px]"
+              className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1a1a1a] disabled:text-white/40 font-bold rounded-2xl uppercase text-xs tracking-wider transition min-h-[44px]"
             >
               {alreadyCheckedIn ? "Награда за сегодня получена" : "Синхронизироваться и забрать"}
             </button>
@@ -355,12 +386,12 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
 
       {/* TAB 1: ANOMALY BREACH */}
       {subTab === 'BREACH' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 space-y-6">
           <div>
             <h2 className="text-xl font-black text-red-400 uppercase tracking-tight flex items-center gap-2">
               <ShieldAlert className="w-5 h-5" /> Аномальный Прорыв: Охота на Глитчи
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               Зачищайте зараженные вирусом виртуальные сектора. Каждая зачистка уничтожает аномалию и приносит гемы.
             </p>
           </div>
@@ -375,10 +406,10 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                 <div
                   key={sec.id}
                   className={cn(
-                    "p-4 rounded-xl border flex flex-col justify-between space-y-3 transition-all",
+                    "p-4 rounded-2xl border flex flex-col justify-between space-y-3 transition-all",
                     isCleared
-                      ? "bg-slate-950/60 border-slate-800 opacity-60"
-                      : "bg-slate-950 border-red-900/40 hover:border-red-500/50 shadow-md"
+                      ? "bg-[#0a0a0a]/60 border-white/5 opacity-60"
+                      : "bg-[#0a0a0a] border-red-900/40 hover:border-red-500/50 shadow-md"
                   )}
                 >
                   <div className="flex justify-between items-start">
@@ -386,7 +417,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                       <span className="text-[10px] font-mono text-red-400 font-bold block">
                         Угроза: {sec.threat}
                       </span>
-                      <h3 className="text-sm font-black uppercase text-slate-100">
+                      <h3 className="text-sm font-black uppercase text-white">
                         {sec.name}
                       </h3>
                     </div>
@@ -397,11 +428,11 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-400 font-medium">
+                  <p className="text-xs text-white/50 font-medium">
                     {sec.desc}
                   </p>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <div className="flex items-center gap-3 text-xs font-mono">
                       <span className="text-indigo-400 font-bold">💎 +{sec.rewardGems}</span>
                       <span className="text-amber-400 font-bold">🪙 +{sec.rewardGold}</span>
@@ -410,7 +441,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                     <button
                       onClick={() => handleAttackSector(sec.id)}
                       disabled={isCleared}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition min-h-[36px]"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-[#1a1a1a] disabled:text-white/40 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition min-h-[36px]"
                     >
                       {isCleared ? "Зачищено" : "Атаковать"}
                     </button>
@@ -424,18 +455,18 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
 
       {/* TAB 2: MATRIX ALCHEMY */}
       {subTab === 'ALCHEMY' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 space-y-6">
           <div>
             <h2 className="text-xl font-black text-emerald-400 uppercase tracking-tight flex items-center gap-2">
               <FlaskConical className="w-5 h-5" /> Алхимия Матрицы: Синтез Кристаллов
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               Поместите 3 стихийных осколка в тигель, чтобы переплавить их в чистые гемы и ресурсы.
             </p>
           </div>
 
           {/* Crucible Altar */}
-          <div className="bg-slate-950 border border-emerald-900/40 p-6 rounded-2xl flex flex-col items-center justify-center space-y-4">
+          <div className="bg-[#0a0a0a] border border-emerald-900/40 p-6 rounded-3xl flex flex-col items-center justify-center space-y-4">
             <div className="flex flex-col items-center gap-1">
               <span className="text-xs font-mono uppercase tracking-widest text-emerald-400">
                 Алхимический Тигель (Выбрано {crucibleSlots.length} / 3)
@@ -457,14 +488,14 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                   <div
                     key={slotIdx}
                     className={cn(
-                      "w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 flex items-center justify-center transition-all shadow-inner",
+                      "w-16 h-16 sm:w-20 sm:h-20 rounded-3xl border-2 flex items-center justify-center transition-all shadow-inner",
                       shard === 'Flame'
                         ? "bg-red-950/60 border-red-500 text-red-400"
                         : shard === 'Surge'
                           ? "bg-purple-950/60 border-purple-500 text-purple-400"
                           : shard === 'Frost'
                             ? "bg-cyan-950/60 border-cyan-500 text-cyan-400"
-                            : "bg-slate-900 border-slate-800 border-dashed text-slate-600"
+                            : "bg-[#111111] border-white/5 border-dashed text-white/40"
                     )}
                   >
                     {shard === 'Flame' && <Flame className="w-8 h-8 animate-bounce" />}
@@ -481,21 +512,21 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
               <button
                 onClick={() => addShard('Flame')}
                 disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
-                className="px-4 py-2 bg-red-950/50 hover:bg-red-800 text-red-400 border border-red-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+                className="px-4 py-2 bg-red-950/50 hover:bg-red-800 text-red-400 border border-red-800/60 disabled:opacity-40 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
               >
                 <Flame className="w-4 h-4" /> + Огненный Осколок
               </button>
               <button
                 onClick={() => addShard('Surge')}
                 disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
-                className="px-4 py-2 bg-purple-950/50 hover:bg-purple-800 text-purple-400 border border-purple-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+                className="px-4 py-2 bg-purple-950/50 hover:bg-purple-800 text-purple-400 border border-purple-800/60 disabled:opacity-40 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
               >
                 <Zap className="w-4 h-4" /> + Импульсный Осколок
               </button>
               <button
                 onClick={() => addShard('Frost')}
                 disabled={crucibleSlots.length >= 3 || alchemyAttemptsLeft <= 0}
-                className="px-4 py-2 bg-cyan-950/50 hover:bg-cyan-800 text-cyan-400 border border-cyan-800/60 disabled:opacity-40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
+                className="px-4 py-2 bg-cyan-950/50 hover:bg-cyan-800 text-cyan-400 border border-cyan-800/60 disabled:opacity-40 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition min-h-[40px]"
               >
                 <Snowflake className="w-4 h-4" /> + Крио Осколок
               </button>
@@ -505,21 +536,21 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
             <div className="flex gap-3 w-full max-w-xs pt-2">
               <button
                 onClick={clearCrucible}
-                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs uppercase tracking-wider transition min-h-[40px]"
+                className="flex-1 py-2.5 bg-[#1a1a1a] hover:bg-white/10 text-white/70 font-bold rounded-2xl text-xs uppercase tracking-wider transition min-h-[40px]"
               >
                 Очистить
               </button>
               <button
                 onClick={handleSynthesize}
                 disabled={crucibleSlots.length < 3 || isSynthesizing || alchemyAttemptsLeft <= 0}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-950/50 min-h-[40px]"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#1a1a1a] disabled:text-white/40 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-950/50 min-h-[40px]"
               >
                 {isSynthesizing ? "Синтез..." : alchemyAttemptsLeft <= 0 ? "Лимит исчерпан" : "Синтезировать"}
               </button>
             </div>
 
             {lastRecipeResult && (
-              <div className="mt-2 text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-xl text-center w-full max-w-md">
+              <div className="mt-2 text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 p-3 rounded-2xl text-center w-full max-w-md">
                 {lastRecipeResult}
               </div>
             )}
@@ -529,12 +560,12 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
 
       {/* TAB 3: TACTICAL TRIALS */}
       {subTab === 'TRIALS' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 space-y-6">
           <div>
             <h2 className="text-xl font-black text-cyan-400 uppercase tracking-tight flex items-center gap-2">
               <Swords className="w-5 h-5" /> Тактические Испытания Эгиды
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               Боевые симуляции с элементальными аномалиями поля боя. Испытайте свой отряд!
             </p>
           </div>
@@ -547,10 +578,10 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                 <div
                   key={tr.id}
                   className={cn(
-                    "p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all",
+                    "p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all",
                     isCompleted
-                      ? "bg-slate-950/60 border-slate-800 opacity-60"
-                      : "bg-slate-950 border-slate-800 hover:border-cyan-500/40"
+                      ? "bg-[#0a0a0a]/60 border-white/5 opacity-60"
+                      : "bg-[#0a0a0a] border-white/5 hover:border-cyan-500/40"
                   )}
                 >
                   <div className="space-y-1">
@@ -564,7 +595,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-300 font-medium">
+                    <p className="text-xs text-white/70 font-medium">
                       Модификатор: <span className="text-amber-400">{tr.modifier}</span>
                     </p>
                     <div className="flex items-center gap-3 text-xs font-mono pt-1">
@@ -576,7 +607,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                   <button
                     onClick={() => handleStartTrial(tr.id)}
                     disabled={isCompleted}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition min-h-[44px]"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-[#1a1a1a] disabled:text-white/40 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition min-h-[44px]"
                   >
                     {isCompleted ? "Пройдено" : "Начать испытание"}
                   </button>

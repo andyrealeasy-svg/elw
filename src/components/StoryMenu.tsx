@@ -157,16 +157,16 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
   const totalStagesInAllChapters = STORY_CHAPTERS.reduce((acc, c) => acc + c.stages.length, 0);
 
   return (
-    <div className="w-full max-w-6xl h-[90vh] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+    <div className="w-full max-w-6xl h-[90vh] bg-[#0a0a0a] rounded-3xl border border-white/5 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
       {/* Top Bar Header */}
-      <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/60 backdrop-blur-md">
+      <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between bg-[#111111]/60 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Book className="w-5 h-5 text-slate-950 font-black" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <Book className="w-5 h-5 text-black font-black" />
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter text-white uppercase">Летопись Мира</h2>
-            <p className="text-[10px] sm:text-xs font-mono text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <p className="text-[10px] sm:text-xs font-mono text-white/50 uppercase tracking-widest flex items-center gap-2">
               <span>Сюжетная Сага</span>
               <span>•</span>
               <span className="text-amber-400 font-bold">Прогресс: {totalCompletedStages} / {totalStagesInAllChapters}</span>
@@ -175,7 +175,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
         </div>
         <button 
           onClick={onBack}
-          className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95 border border-slate-700 text-xs sm:text-sm"
+          className="px-5 py-2 bg-[#1a1a1a] hover:bg-white/10 text-white font-bold rounded-2xl transition-all active:scale-95 border border-white/10 text-xs sm:text-sm"
         >
           Назад в Хаб
         </button>
@@ -183,9 +183,9 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Chapter Selection Column */}
-        <div className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r border-slate-900 bg-slate-900/30 p-3 sm:p-4 overflow-y-auto shrink-0 max-h-[35vh] md:max-h-none space-y-3">
+        <div className="w-full md:w-80 border-b-2 md:border-b-0 md:border-r border-white/5 bg-[#111111]/30 p-3 sm:p-4 overflow-y-auto shrink-0 max-h-[35vh] md:max-h-none space-y-3">
           <div className="flex items-center justify-between px-1 mb-1">
-            <h3 className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest">Хроники и Главы</h3>
+            <h3 className="text-[10px] sm:text-xs font-black text-white/40 uppercase tracking-widest">Хроники и Главы</h3>
             <span className="text-[10px] font-mono text-amber-500">{STORY_CHAPTERS.length} {STORY_CHAPTERS.length === 1 ? 'ГЛАВА' : 'ГЛАВЫ'}</span>
           </div>
 
@@ -201,12 +201,12 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                   key={chapter.id}
                   onClick={() => unlocked && setSelectedChapter(chapter)}
                   disabled={!unlocked}
-                  className={`min-w-[200px] md:min-w-0 text-left p-3.5 rounded-xl border-2 transition-all relative overflow-hidden group shrink-0 ${
+                  className={`min-w-[200px] md:min-w-0 text-left p-3.5 rounded-2xl border-2 transition-all relative overflow-hidden group shrink-0 ${
                     isSelected
-                      ? 'border-amber-500 bg-gradient-to-br from-amber-500/15 to-slate-900 shadow-lg shadow-amber-500/10'
+                      ? 'border-amber-500 bg-gradient-to-br from-amber-500/15 to-[#111111] shadow-lg shadow-amber-500/10'
                       : unlocked 
-                        ? 'border-slate-800 bg-slate-900/80 hover:border-slate-700 hover:bg-slate-800/80' 
-                        : 'border-slate-900 bg-slate-950/60 opacity-50 grayscale cursor-not-allowed'
+                        ? 'border-white/5 bg-[#111111]/80 hover:border-white/10 hover:bg-[#1a1a1a]/80' 
+                        : 'border-white/5 bg-[#0a0a0a]/60 opacity-50 grayscale cursor-not-allowed'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -214,30 +214,30 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                       ГЛАВА {index + 1}
                     </span>
                     <div className="flex items-center gap-1">
-                      {!unlocked && <Lock className="w-3 h-3 text-slate-600" />}
+                      {!unlocked && <Lock className="w-3 h-3 text-white/40" />}
                       {unlocked && isAllDone && (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-950/60 px-1.5 py-0.5 rounded border border-green-500/30">
                           <CheckCircle2 className="w-3 h-3" /> Пройдена
                         </span>
                       )}
                       {unlocked && !isAllDone && (
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-[10px] font-mono text-white/50">
                           {completedCount}/{chapter.stages.length}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <h4 className="font-bold text-sm text-slate-100 group-hover:text-amber-300 transition-colors truncate">
+                  <h4 className="font-bold text-sm text-white group-hover:text-amber-300 transition-colors truncate">
                     {chapter.title}
                   </h4>
                   {chapter.subtitle && (
-                    <p className="text-[11px] text-slate-400 font-mono truncate mt-0.5">
+                    <p className="text-[11px] text-white/50 font-mono truncate mt-0.5">
                       {chapter.subtitle}
                     </p>
                   )}
 
-                  <div className="mt-3 h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800/60">
+                  <div className="mt-3 h-1.5 bg-[#0a0a0a] rounded-full overflow-hidden border border-white/5/60">
                     <div 
                       className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500" 
                       style={{ width: `${(completedCount / chapter.stages.length) * 100}%` }}
@@ -250,11 +250,11 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
         </div>
 
         {/* Selected Chapter Stages Column */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-950/60 flex flex-col">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-[#0a0a0a]/60 flex flex-col">
           {selectedChapter ? (
             <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto w-full pb-10">
               {/* Chapter Banner */}
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-amber-950/20 border border-slate-800 relative overflow-hidden">
+              <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-[#111111] via-[#111111]/90 to-amber-950/20 border border-white/5 relative overflow-hidden">
                 <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-500/5 to-transparent pointer-events-none" />
                 <div className="flex items-center gap-2 text-amber-500 font-mono text-xs uppercase tracking-widest mb-1 font-bold">
                   <Flame className="w-3.5 h-3.5" />
@@ -263,7 +263,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                 <h3 className="text-xl sm:text-2xl font-black italic text-white mb-2">
                   {selectedChapter.title}
                 </h3>
-                <p className="text-slate-300 font-mono text-xs sm:text-sm leading-relaxed max-w-2xl">
+                <p className="text-white/70 font-mono text-xs sm:text-sm leading-relaxed max-w-2xl">
                   {selectedChapter.description}
                 </p>
               </div>
@@ -290,21 +290,21 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                   return (
                     <div 
                       key={stage.id}
-                      className={`relative p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
                         unlocked 
-                          ? 'border-slate-800/90 bg-slate-900/70 group cursor-pointer hover:border-amber-500/40 hover:bg-slate-800/70' 
-                          : 'border-slate-900 bg-slate-950/40 opacity-40 cursor-not-allowed'
+                          ? 'border-white/5/90 bg-[#111111]/70 group cursor-pointer hover:border-amber-500/40 hover:bg-[#1a1a1a]/70' 
+                          : 'border-white/5 bg-[#0a0a0a]/40 opacity-40 cursor-not-allowed'
                       }`}
                       onClick={() => unlocked && handleStageClick(stage)}
                     >
                       <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
                         {/* Icon */}
-                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center border shrink-0 ${
+                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center border shrink-0 ${
                           completed 
                             ? 'bg-green-500/10 border-green-500/40 text-green-400' 
                             : unlocked 
                               ? typeColor 
-                              : 'bg-slate-950 border-slate-900 text-slate-700'
+                              : 'bg-[#0a0a0a] border-white/5 text-white/30'
                         }`}>
                           {stage.type === 'BATTLE' && <Swords className="w-5 h-5" />}
                           {stage.type === 'RIDDLE' && <HelpCircle className="w-5 h-5" />}
@@ -317,15 +317,15 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                             <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${typeColor}`}>
                               {typeLabel}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-500 font-bold">
+                            <span className="text-[10px] font-mono text-white/40 font-bold">
                               УР. {stage.level}
                             </span>
-                            <h5 className="font-bold text-sm sm:text-base text-slate-100 truncate group-hover:text-amber-300 transition-colors">
+                            <h5 className="font-bold text-sm sm:text-base text-white truncate group-hover:text-amber-300 transition-colors">
                               {stage.name}
                             </h5>
                             {completed && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />}
                           </div>
-                          <p className="text-[11px] sm:text-xs text-slate-400 font-mono line-clamp-1 mt-0.5">
+                          <p className="text-[11px] sm:text-xs text-white/50 font-mono line-clamp-1 mt-0.5">
                             {stage.description}
                           </p>
                         </div>
@@ -345,12 +345,12 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                             </span>
                           )}
                         </div>
-                        <ChevronRight className={`w-5 h-5 transition-transform ${unlocked ? 'text-slate-500 group-hover:translate-x-1 group-hover:text-amber-400' : 'text-slate-800'}`} />
+                        <ChevronRight className={`w-5 h-5 transition-transform ${unlocked ? 'text-white/40 group-hover:translate-x-1 group-hover:text-amber-400' : 'text-white/20'}`} />
                       </div>
 
                       {!unlocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl backdrop-blur-[1px]">
-                          <Lock className="w-4 h-4 text-slate-600" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl backdrop-blur-[1px]">
+                          <Lock className="w-4 h-4 text-white/40" />
                         </div>
                       )}
                     </div>
@@ -368,10 +368,10 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-amber-500/15 border-2 border-amber-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-amber-500/10"
+                      className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-amber-500/15 border-2 border-amber-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-amber-500/10"
                     >
                       <div className="flex items-center gap-3.5 text-left w-full sm:w-auto">
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
                           <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
                         </div>
                         <div>
@@ -387,7 +387,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
 
                       <button 
                         onClick={() => setSelectedChapter(nextChapter)}
-                        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 shrink-0"
                       >
                         <span>Перейти к Главе {currentIdx + 2}</span>
                         <ChevronRight className="w-4 h-4" />
@@ -399,7 +399,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-xl bg-green-950/30 border border-green-500/40 text-center flex items-center justify-center gap-2 text-green-300 font-mono text-xs sm:text-sm font-bold"
+                      className="p-4 rounded-2xl bg-green-950/30 border border-green-500/40 text-center flex items-center justify-center gap-2 text-green-300 font-mono text-xs sm:text-sm font-bold"
                     >
                       <CheckCircle2 className="w-5 h-5 text-green-400" />
                       <span>Все доступные сюжетные хроники успешно завершены! Ждите новых обновлений.</span>
@@ -409,7 +409,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
               })()}
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-700">
+            <div className="h-full flex flex-col items-center justify-center text-white/30">
               <Book className="w-16 h-16 mb-4 opacity-20" />
               <p className="font-mono uppercase tracking-widest text-sm">Выберите главу для начала</p>
             </div>
@@ -430,13 +430,13 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="w-full max-w-2xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden shadow-amber-500/10 flex flex-col max-h-[85vh]"
+              className="w-full max-w-2xl bg-[#111111] rounded-3xl border border-white/5 shadow-2xl overflow-hidden shadow-amber-500/10 flex flex-col max-h-[85vh]"
             >
               {/* DIALOGUE STAGE OVERLAY */}
               {selectedStage.type === 'DIALOGUE' && selectedStage.dialogue && (
                 <div className="flex flex-col h-full overflow-hidden">
                   {/* Dialogue Header */}
-                  <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                  <div className="p-4 bg-[#0a0a0a] border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-5 h-5 text-blue-400" />
                       <h3 className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
@@ -449,7 +449,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                         className={`px-2.5 py-1 rounded text-xs font-mono border transition-all flex items-center gap-1 ${
                           showFullDialogueLog 
                             ? 'bg-blue-600 text-white border-blue-400' 
-                            : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                            : 'bg-[#1a1a1a] text-white/70 border-white/10 hover:bg-white/10'
                         }`}
                       >
                         <List className="w-3.5 h-3.5" />
@@ -466,12 +466,12 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                         {selectedStage.dialogue.map((line, i) => {
                           const meta = getSpeakerMetadata(line.speaker, line.charId);
                           return (
-                            <div key={i} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800">
+                            <div key={i} className="p-3.5 bg-[#0a0a0a] rounded-2xl border border-white/5">
                               <div className="flex items-center gap-2 mb-1.5">
                                 <span className="text-base">{meta.emoji}</span>
                                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">{line.speaker}</span>
                               </div>
-                              <p className="text-slate-300 font-mono text-sm leading-relaxed">{line.text}</p>
+                              <p className="text-white/70 font-mono text-sm leading-relaxed">{line.text}</p>
                             </div>
                           );
                         })}
@@ -486,17 +486,17 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                         return (
                           <div className="flex flex-col items-center justify-between min-h-[320px] space-y-4">
                             {/* Speaker Header Card */}
-                            <div className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+                            <div className="w-full flex items-center gap-3.5 p-3 rounded-2xl bg-[#0a0a0a]/80 border border-white/5">
                               {meta.splash ? (
                                 <img 
                                   key={`${currentLine.speaker}-${dialogueIndex}`}
                                   src={meta.splash} 
                                   alt={currentLine.speaker} 
-                                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-amber-500/40 shadow-md shrink-0" 
+                                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-amber-500/40 shadow-md shrink-0" 
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-800 flex items-center justify-center text-2xl border-2 border-slate-700 shrink-0">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#1a1a1a] flex items-center justify-center text-2xl border-2 border-white/10 shrink-0">
                                   {meta.emoji}
                                 </div>
                               )}
@@ -505,11 +505,11 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                                   <span className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wide">
                                     {currentLine.speaker}
                                   </span>
-                                  <span className="text-[10px] font-mono text-slate-500">
+                                  <span className="text-[10px] font-mono text-white/40">
                                     Реплика {dialogueIndex + 1} / {selectedStage.dialogue?.length}
                                   </span>
                                 </div>
-                                <div className="mt-1 h-1 w-24 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="mt-1 h-1 w-24 bg-[#1a1a1a] rounded-full overflow-hidden">
                                   <div 
                                     className="h-full bg-amber-500 transition-all duration-300"
                                     style={{ width: `${((dialogueIndex + 1) / (selectedStage.dialogue?.length || 1)) * 100}%` }}
@@ -519,8 +519,8 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                             </div>
 
                             {/* Speech Bubble */}
-                            <div className="w-full flex-1 p-5 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 relative flex items-center">
-                              <p className="text-slate-200 text-sm sm:text-base font-mono leading-relaxed italic">
+                            <div className="w-full flex-1 p-5 sm:p-6 bg-[#0a0a0a] rounded-3xl border border-white/5 relative flex items-center">
+                              <p className="text-white/90 text-sm sm:text-base font-mono leading-relaxed italic">
                                 "{currentLine.text}"
                               </p>
                             </div>
@@ -531,19 +531,19 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                   </div>
 
                   {/* Dialogue Footer Controls */}
-                  <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3">
+                  <div className="p-4 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setDialogueIndex(prev => Math.max(0, prev - 1))}
                         disabled={dialogueIndex === 0 || showFullDialogueLog}
-                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs flex items-center gap-1 transition-all"
+                        className="px-3 py-2 bg-[#1a1a1a] hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs flex items-center gap-1 transition-all"
                       >
                         <ChevronLeft className="w-4 h-4" /> Назад
                       </button>
                       <button
                         onClick={() => setDialogueIndex((selectedStage.dialogue?.length || 1) - 1)}
                         disabled={showFullDialogueLog || dialogueIndex === (selectedStage.dialogue?.length || 1) - 1}
-                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300 font-mono rounded-lg text-xs transition-all"
+                        className="px-3 py-2 bg-[#1a1a1a] hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white/70 font-mono rounded-xl text-xs transition-all"
                       >
                         Пропустить
                       </button>
@@ -552,7 +552,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     {dialogueIndex < (selectedStage.dialogue.length - 1) && !showFullDialogueLog ? (
                       <button
                         onClick={() => setDialogueIndex(prev => prev + 1)}
-                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm rounded-xl uppercase tracking-wider transition-all flex items-center gap-1 shadow-lg shadow-blue-500/20"
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm rounded-2xl uppercase tracking-wider transition-all flex items-center gap-1 shadow-lg shadow-blue-500/20"
                       >
                         <span>Далее</span>
                         <ChevronRight className="w-4 h-4" />
@@ -560,7 +560,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     ) : (
                       <button
                         onClick={() => completeNonBattleStage(selectedStage)}
-                        className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black text-xs sm:text-sm rounded-xl uppercase tracking-wider transition-all flex items-center gap-1 shadow-lg shadow-green-500/20"
+                        className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black text-xs sm:text-sm rounded-2xl uppercase tracking-wider transition-all flex items-center gap-1 shadow-lg shadow-green-500/20"
                       >
                         <span>Завершить и Получить Награду</span>
                         <CheckCircle2 className="w-4 h-4" />
@@ -577,11 +577,11 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     <HelpCircle className="w-6 h-6 text-purple-400" />
                     <h3 className="text-xl font-bold text-white uppercase tracking-tight">{selectedStage.name}</h3>
                   </div>
-                  <p className="text-xs text-slate-400 font-mono uppercase tracking-widest mb-6">
+                  <p className="text-xs text-white/50 font-mono uppercase tracking-widest mb-6">
                     Выберите правильный ответ, чтобы открыть врата дальше
                   </p>
                   
-                  <div className="p-5 sm:p-6 bg-slate-950 rounded-2xl border border-slate-800 mb-6 text-center shadow-inner">
+                  <div className="p-5 sm:p-6 bg-[#0a0a0a] rounded-3xl border border-white/5 mb-6 text-center shadow-inner">
                     <p className="text-base sm:text-lg text-amber-200 italic font-serif leading-relaxed">
                       "{selectedStage.riddle?.question}"
                     </p>
@@ -592,7 +592,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                       const isCorrect = i === selectedStage.riddle?.correctIndex;
                       const isSelected = riddleAnswer === i;
                       
-                      let btnStyle = 'bg-slate-800/80 border-slate-700 hover:border-amber-500/60 hover:bg-slate-800 text-slate-200';
+                      let btnStyle = 'bg-[#1a1a1a]/80 border-white/10 hover:border-amber-500/60 hover:bg-[#1a1a1a] text-white/90';
                       if (showRiddleFeedback && isSelected) {
                         btnStyle = showRiddleFeedback === 'CORRECT' 
                           ? 'bg-green-600 border-green-400 text-white animate-pulse' 
@@ -604,7 +604,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                           key={i}
                           disabled={showRiddleFeedback !== null}
                           onClick={() => handleRiddleSubmit(selectedStage, i)}
-                          className={`w-full p-3.5 text-left rounded-xl border-2 font-bold transition-all text-xs sm:text-sm ${btnStyle}`}
+                          className={`w-full p-3.5 text-left rounded-2xl border-2 font-bold transition-all text-xs sm:text-sm ${btnStyle}`}
                         >
                           <div className="flex items-center justify-between">
                             <span>{option}</span>
@@ -615,7 +615,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     })}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <button 
                       onClick={() => setShowHint(!showHint)}
                       className="text-xs font-mono text-amber-400 hover:text-amber-300 underline"
@@ -624,7 +624,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     </button>
                     <button 
                       onClick={() => setSelectedStage(null)}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg text-xs transition-all"
+                      className="px-4 py-2 bg-[#1a1a1a] hover:bg-white/10 text-white/70 font-bold rounded-xl text-xs transition-all"
                     >
                       Отмена
                     </button>
@@ -634,7 +634,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                     <motion.p 
                       initial={{ opacity: 0, y: -5 }} 
                       animate={{ opacity: 1, y: 0 }} 
-                      className="mt-3 p-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-300 font-mono text-xs"
+                      className="mt-3 p-3 bg-amber-950/40 rounded-xl border border-amber-500/30 text-amber-300 font-mono text-xs"
                     >
                       Подсказка: {selectedStage.riddle.hint}
                     </motion.p>

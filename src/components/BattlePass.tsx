@@ -108,17 +108,17 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
   };
 
   return (
-    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[700px] bg-slate-950 md:rounded-2xl border-4 border-slate-800 shadow-2xl flex flex-col font-sans text-gray-200 overflow-hidden">
-      <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 shrink-0">
+    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[700px] bg-[#0a0a0a] md:rounded-3xl border-4 border-white/5 shadow-2xl flex flex-col font-sans text-white/90 overflow-hidden">
+      <div className="flex items-center justify-between p-4 bg-[#111111] border-b border-white/5 shrink-0">
         <div className="flex items-center gap-4">
-           <button onClick={onBack} className="p-2 hover:bg-slate-800 rounded transition">
+           <button onClick={onBack} className="p-2 hover:bg-[#1a1a1a] rounded transition">
               <ArrowLeft className="w-6 h-6" />
            </button>
            <div>
-              <h1 className="text-xl font-black uppercase italic tracking-tighter text-slate-200">
+              <h1 className="text-xl font-black uppercase italic tracking-tighter text-white/90">
                 Боевой Пропуск
               </h1>
-              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest leading-none">Обновление: Ежедневно</p>
+              <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest leading-none">Обновление: Ежедневно</p>
            </div>
         </div>
         
@@ -131,7 +131,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
           <button 
             onClick={buyGoldenPass}
             disabled={profile.gems < GOLDEN_PASS_COST}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 disabled:opacity-50 disabled:grayscale transition-all rounded-lg shadow-lg shadow-amber-500/20 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 disabled:opacity-50 disabled:grayscale transition-all rounded-xl shadow-lg shadow-amber-500/20 active:scale-95"
           >
             <Crown className="w-4 h-4 text-white" />
             <div className="text-left leading-none">
@@ -144,28 +144,28 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
 
       <div className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar">
          {/* Status Header */}
-         <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl mb-8 flex flex-col sm:flex-row gap-6 items-center">
+         <div className="bg-[#111111] border border-white/5 p-6 rounded-3xl mb-8 flex flex-col sm:flex-row gap-6 items-center">
             <div className="relative shrink-0">
-               <div className="w-24 h-24 rounded-full border-4 border-indigo-500/20 flex items-center justify-center bg-slate-950 relative">
+               <div className="w-24 h-24 rounded-full border-4 border-indigo-500/20 flex items-center justify-center bg-[#0a0a0a] relative">
                   <Star className="w-14 h-14 text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)] fill-indigo-400/10" />
                   <span className="absolute inset-0 flex items-center justify-center font-black text-2xl text-white">
                     {currentLevel}
                   </span>
                </div>
-               <div className="absolute -bottom-1 -right-1 bg-indigo-500 text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-slate-900 uppercase">LVL</div>
+               <div className="absolute -bottom-1 -right-1 bg-indigo-500 text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white/5 uppercase">LVL</div>
             </div>
             <div className="flex-1 w-full">
-               <div className="flex justify-between mb-2 text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest">
+               <div className="flex justify-between mb-2 text-[10px] font-mono font-black text-white/40 uppercase tracking-widest">
                   <span className="flex items-center gap-2">Прогресс <span className="text-indigo-400">{Math.floor((profile.bpExp / (MAX_LEVELS * EXP_PER_LEVEL)) * 100)}%</span></span>
                   <span>{currentExpInLevel} / {EXP_PER_LEVEL} EXP</span>
                </div>
-               <div className="h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+               <div className="h-3 bg-[#0a0a0a] rounded-full overflow-hidden border border-white/5">
                   <div 
                      className="h-full bg-gradient-to-r from-indigo-600 to-blue-400 transition-all duration-1000" 
                      style={{ width: `${(currentExpInLevel / EXP_PER_LEVEL) * 100}%` }}
                   />
                </div>
-               <p className="mt-3 text-[10px] font-medium text-slate-600 uppercase tracking-tight text-center sm:text-left">
+               <p className="mt-3 text-[10px] font-medium text-white/40 uppercase tracking-tight text-center sm:text-left">
                   Зарабатывайте EXP Боевого Пропуска за Ежедневные Поручения. 5 гемов на каждом уровне с чередованием Золота и Опыта Героя!
                </p>
             </div>
@@ -173,7 +173,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
             {/* Claim All Button */}
             <button 
               onClick={claimAll}
-              className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 active:scale-95 transition-all uppercase tracking-widest text-xs h-full flex flex-col items-center justify-center gap-1 group"
+              className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-xl shadow-indigo-500/20 active:scale-95 transition-all uppercase tracking-widest text-xs h-full flex flex-col items-center justify-center gap-1 group"
             >
               <Gift className="w-5 h-5 group-hover:bounce transition-transform" />
               <span>Забрать всё</span>
@@ -181,12 +181,12 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
          </div>
 
          {/* View Mode Switcher */}
-         <div className="flex p-1 bg-slate-900 rounded-xl mb-6 gap-1 border border-slate-800 overflow-hidden">
+         <div className="flex p-1 bg-[#111111] rounded-2xl mb-6 gap-1 border border-white/5 overflow-hidden">
             <button 
               onClick={() => setViewMode('FREE')}
               className={cn(
-                "flex-1 py-3 px-4 rounded-lg font-black text-xs uppercase tracking-widest transition-all gap-2 flex items-center justify-center",
-                viewMode === 'FREE' ? "bg-slate-800 text-white shadow-xl" : "text-slate-500 hover:text-slate-300"
+                "flex-1 py-3 px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all gap-2 flex items-center justify-center",
+                viewMode === 'FREE' ? "bg-[#1a1a1a] text-white shadow-xl" : "text-white/40 hover:text-white/70"
               )}
             >
               <Gift className="w-4 h-4" />Обычные
@@ -194,7 +194,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
             <button 
               onClick={() => setViewMode('PREMIUM')}
               className={cn(
-                "flex-1 py-3 px-4 rounded-lg font-black text-xs uppercase tracking-widest transition-all gap-2 flex items-center justify-center relative",
+                "flex-1 py-3 px-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all gap-2 flex items-center justify-center relative",
                 viewMode === 'PREMIUM' ? "bg-amber-600 text-white shadow-xl" : "text-amber-600/50 hover:text-amber-500"
               )}
             >
@@ -216,47 +216,47 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
 
                return (
                   <div key={level} className={cn(
-                     "flex items-center justify-between p-4 rounded-2xl border-2 transition-all relative overflow-hidden group",
-                     isUnlocked && !isClaimed && !locked ? "bg-slate-900 border-indigo-500/30" : "bg-slate-950 border-slate-900",
+                     "flex items-center justify-between p-4 rounded-3xl border-2 transition-all relative overflow-hidden group",
+                     isUnlocked && !isClaimed && !locked ? "bg-[#111111] border-indigo-500/30" : "bg-[#0a0a0a] border-white/5",
                      isClaimed && "opacity-40 grayscale-[0.8]",
-                     locked && "border-slate-900/50"
+                     locked && "border-white/5"
                   )}>
-                     {locked && <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none" />}
+                     {locked && <div className="absolute inset-0 bg-[#0a0a0a]/40 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none" />}
                      
                      <div className="flex items-center gap-5 z-20">
-                        <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center shrink-0 group-hover:border-indigo-500/50 transition-colors">
-                           <span className="text-[8px] font-black text-slate-500 leading-none tracking-tighter uppercase">Уровень</span>
-                           <span className="font-black text-lg text-slate-300 leading-none mt-1">{level}</span>
+                        <div className="w-12 h-12 rounded-2xl bg-[#111111] border border-white/5 flex flex-col items-center justify-center shrink-0 group-hover:border-indigo-500/50 transition-colors">
+                           <span className="text-[8px] font-black text-white/40 leading-none tracking-tighter uppercase">Уровень</span>
+                           <span className="font-black text-lg text-white/70 leading-none mt-1">{level}</span>
                         </div>
                         <div className="flex flex-col">
                            <div className="flex items-center gap-2 mb-1">
                               <span className={cn(
                                 "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
-                                isPremium ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-slate-800 text-slate-400 border-slate-700"
+                                isPremium ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-[#1a1a1a] text-white/50 border-white/10"
                               )}>
                                 {isPremium ? "Золотая Награда" : "Обычная Награда"}
                               </span>
                               {isClaimed && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                            </div>
                            <div className="flex flex-wrap items-center gap-3">
-                               <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                               <div className="flex items-center gap-1.5 bg-[#0a0a0a]/60 px-2.5 py-1 rounded-xl border border-white/5">
                                  <Gem className={cn(
                                    "w-4 h-4",
                                    isPremium ? "text-amber-400" : "text-pink-400",
                                    isUnlocked && !isClaimed && "animate-pulse"
                                  )} />
-                                 <span className="font-black text-sm text-slate-100 italic tracking-tighter">+{reward.gems}</span>
+                                 <span className="font-black text-sm text-white italic tracking-tighter">+{reward.gems}</span>
                                </div>
 
                                {reward.gold !== undefined && (
-                                 <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                                 <div className="flex items-center gap-1.5 bg-[#0a0a0a]/60 px-2.5 py-1 rounded-xl border border-white/5">
                                    <Coins className="w-4 h-4 text-yellow-400" />
                                    <span className="font-black text-xs text-yellow-300">+{reward.gold.toLocaleString()} G</span>
                                  </div>
                                 )}
 
                                {reward.heroExp !== undefined && (
-                                 <div className="flex items-center gap-1.5 bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800">
+                                 <div className="flex items-center gap-1.5 bg-[#0a0a0a]/60 px-2.5 py-1 rounded-xl border border-white/5">
                                    <Sparkles className="w-4 h-4 text-emerald-400" />
                                    <span className="font-black text-xs text-emerald-300">+{reward.heroExp.toLocaleString()} EXP</span>
                                  </div>
@@ -268,17 +268,17 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                      <div className="z-20">
                         {locked ? (
                           <div className="flex flex-col items-center gap-1 opacity-60">
-                            <Lock className="w-5 h-5 text-slate-500" />
-                            <span className="text-[8px] font-black uppercase text-slate-600">Закрыто</span>
+                            <Lock className="w-5 h-5 text-white/40" />
+                            <span className="text-[8px] font-black uppercase text-white/40">Закрыто</span>
                           </div>
                         ) : (
                           <button
                             disabled={!isUnlocked || isClaimed}
                             onClick={() => claimReward(level, isPremium)}
                             className={cn(
-                               "px-6 py-2.5 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95",
-                               isClaimed ? "bg-slate-800 text-slate-600" :
-                               isUnlocked ? (isPremium ? "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20") : "bg-slate-900 text-slate-700 border border-slate-800 cursor-not-allowed"
+                               "px-6 py-2.5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-95",
+                               isClaimed ? "bg-[#1a1a1a] text-white/40" :
+                               isUnlocked ? (isPremium ? "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20") : "bg-[#111111] text-white/30 border border-white/5 cursor-not-allowed"
                             )}
                           >
                              {isClaimed ? "Получено" : isUnlocked ? "Забрать" : "Ур. " + level}
@@ -297,35 +297,35 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md cursor-pointer p-4"
           onClick={() => setSummaryReward(null)}
         >
-          <div className="flex flex-col items-center gap-6 max-w-md w-full bg-slate-900 border-2 border-indigo-500/40 p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex flex-col items-center gap-6 max-w-md w-full bg-[#111111] border-2 border-indigo-500/40 p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <h2 className="text-3xl md:text-4xl font-black italic text-white uppercase tracking-tighter text-center">
               Получено наград
             </h2>
             
             <div className="w-full flex flex-col gap-3 my-2">
-              <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+              <div className="flex items-center justify-between bg-[#0a0a0a]/80 border border-white/5 p-3.5 rounded-3xl">
                  <div className="flex items-center gap-3">
                    <Gem className="w-7 h-7 text-pink-400" />
-                   <span className="font-bold text-slate-300 text-sm">Гемы</span>
+                   <span className="font-bold text-white/70 text-sm">Гемы</span>
                  </div>
                  <span className="font-black text-xl text-pink-300">+{summaryReward.gems}</span>
               </div>
 
               {(summaryReward.gold || 0) > 0 && (
-                <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between bg-[#0a0a0a]/80 border border-white/5 p-3.5 rounded-3xl">
                    <div className="flex items-center gap-3">
                      <Coins className="w-7 h-7 text-yellow-400" />
-                     <span className="font-bold text-slate-300 text-sm">Золото (Мора)</span>
+                     <span className="font-bold text-white/70 text-sm">Золото (Мора)</span>
                    </div>
                    <span className="font-black text-xl text-yellow-300">+{(summaryReward.gold || 0).toLocaleString()}</span>
                 </div>
               )}
 
               {(summaryReward.heroExp || 0) > 0 && (
-                <div className="flex items-center justify-between bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between bg-[#0a0a0a]/80 border border-white/5 p-3.5 rounded-3xl">
                    <div className="flex items-center gap-3">
                      <Sparkles className="w-7 h-7 text-emerald-400" />
-                     <span className="font-bold text-slate-300 text-sm">Опыт героя</span>
+                     <span className="font-bold text-white/70 text-sm">Опыт героя</span>
                    </div>
                    <span className="font-black text-xl text-emerald-300">+{(summaryReward.heroExp || 0).toLocaleString()}</span>
                 </div>

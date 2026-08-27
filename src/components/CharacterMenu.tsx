@@ -22,7 +22,7 @@ const elementIcons: Record<string, React.ReactNode> = {
   Dendro: <Leaf className="w-3.5 h-3.5 text-emerald-400" />,
   Cryo: <Snowflake className="w-3.5 h-3.5 text-cyan-400" />,
   Geo: <Mountain className="w-3.5 h-3.5 text-amber-500" />,
-  Physical: <Shield className="w-3.5 h-3.5 text-slate-300" />,
+  Physical: <Shield className="w-3.5 h-3.5 text-white/70" />,
 };
 
 const elementColors: Record<string, string> = {
@@ -32,7 +32,7 @@ const elementColors: Record<string, string> = {
   Electro: "text-purple-400 border-purple-400 focus:ring-purple-400",
   Geo: "text-yellow-500 border-yellow-500 focus:ring-yellow-500",
   Cryo: "text-cyan-400 border-cyan-400 focus:ring-cyan-400",
-  Physical: "text-slate-300 border-slate-500 focus:ring-slate-500",
+  Physical: "text-white/70 border-slate-500 focus:ring-slate-500",
 };
 
 interface Props {
@@ -193,7 +193,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
   };
 
   return (
-    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gray-950 md:rounded-xl border-t-2 md:border-4 border-gray-800 shadow-2xl flex flex-col font-mono text-gray-200 relative">
+    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-[#0a0a0a] md:rounded-3xl border md:border-white/10 shadow-2xl flex flex-col font-sans text-white/90 relative overflow-hidden">
       {isSquadBuilderOpen && (
         <SquadBuilder 
           profile={profile} 
@@ -202,19 +202,19 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
         />
       )}
 
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b-2 border-gray-800 bg-gray-900 shrink-0">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/5 bg-[#111111] shrink-0">
         <div className="flex items-center">
-          <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded transition mr-3 sm:mr-4">
+          <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-2xl transition mr-3 sm:mr-4">
              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <h1 className="text-base sm:text-xl font-bold font-sans tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 uppercase">
+          <h1 className="text-base sm:text-xl font-black tracking-tight text-white uppercase">
             Отряд / Инвентарь
           </h1>
         </div>
 
         <button 
           onClick={() => setIsSquadBuilderOpen(true)}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-sans font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg border border-indigo-400/30 transition-all min-h-[40px]"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-sans font-bold text-xs uppercase tracking-wider rounded-2xl transition-all min-h-[40px]"
         >
           <Swords className="w-4 h-4" />
           <span className="hidden sm:inline">Настройка боевого отряда</span>
@@ -224,7 +224,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
          {/* Roster Selection Sidebar */}
-        <div className="w-full md:w-1/3 flex md:flex-col overflow-x-auto md:overflow-y-auto border-b-2 md:border-b-0 md:border-r-2 border-gray-800 p-2 gap-2 bg-gray-900/50 shrink-0 custom-scrollbar">
+        <div className="w-full md:w-1/3 flex md:flex-col overflow-x-auto md:overflow-y-auto border-b md:border-b-0 md:border-r border-white/5 p-2 gap-2 bg-[#0a0a0a] shrink-0 custom-scrollbar">
            {ownedIds.map(id => {
              const charData = profile.roster[id];
              const preview = characterBlueprints[id]("", charData.level, charData.constellation);
@@ -234,14 +234,14 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                  key={id}
                  onClick={() => setSelectedId(id)}
                  className={cn(
-                   "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border-2 text-left min-w-[140px] md:min-w-0 transition-all relative overflow-hidden shrink-0 md:shrink",
-                   selectedId === id ? "bg-gray-800 " + elementColors[preview.element] : "border-transparent bg-gray-900 hover:bg-gray-800 text-gray-400"
+                   "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-2xl border-2 text-left min-w-[140px] md:min-w-0 transition-all relative overflow-hidden shrink-0 md:shrink",
+                   selectedId === id ? "bg-[#1a1a1a] " + elementColors[preview.element] : "border-transparent bg-[#111111] hover:bg-[#1a1a1a] text-white/50"
                  ) + " leading-tight"}
                >
-                  {isTeam && <div className="absolute top-0 right-0 bg-blue-600 text-[8px] sm:text-[9px] px-1 font-bold text-white uppercase rounded-bl">Отряд</div>}
-                  <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded shadow-md shrink-0 border-2 flex items-center justify-center font-bold text-lg relative overflow-hidden", preview.color, elementColors[preview.element])}>
+                  {isTeam && <div className="absolute top-0 right-0 bg-indigo-600 text-[8px] sm:text-[9px] px-1 font-bold text-white uppercase rounded-bl-lg">Отряд</div>}
+                  <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 border flex items-center justify-center font-bold text-lg relative overflow-hidden", preview.color, elementColors[preview.element])}>
                      {getCharSplash(id) ? (
-                        <img src={getCharSplash(id) || ""} className="w-full h-full object-cover animate-in fade-in" referrerPolicy="no-referrer" />
+                        <img src={getCharSplash(id) || ""} className="w-full h-full object-cover grayscale-[0.2]" referrerPolicy="no-referrer" />
                      ) : (
                         getCharEmoji(id)
                      )}
@@ -253,13 +253,13 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                          "text-[9px] font-black px-1 rounded",
                          (charRarity[id] || "B") === "S" ? "text-amber-400 bg-amber-500/10" :
                          (charRarity[id] || "B") === "A" ? "text-purple-400 bg-purple-500/10" :
-                         "text-slate-400 bg-slate-500/10"
+                         "text-white/50 bg-slate-500/10"
                        )}>{charRarity[id] || "B"}</span>
                      </div>
                      <div className="text-[9px] sm:text-xs opacity-70 flex items-center gap-1 mt-0.5 font-medium">
                        <span>Ур. {charData.level}</span>
                        <span className="opacity-30">|</span>
-                       <span className="text-[9px] lowercase font-semibold text-slate-300">{elementNamesRU[preview.element] || preview.element}</span>
+                       <span className="text-[9px] lowercase font-semibold text-white/70">{elementNamesRU[preview.element] || preview.element}</span>
                      </div>
                   </div>
                </button>
@@ -268,19 +268,19 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
         </div>
 
         {/* Selected Char Details */}
-        <div className="w-full md:w-2/3 p-4 sm:p-6 overflow-y-auto bg-gradient-to-br from-gray-950 to-gray-900 flex flex-col gap-4">
+        <div className="w-full md:w-2/3 p-4 sm:p-6 overflow-y-auto bg-[#0a0a0a] flex flex-col gap-4">
            
            {/* Team Switcher */}
-           <div className="grid grid-cols-3 gap-2 bg-gray-900/80 p-1.5 rounded-xl border border-gray-800 shadow-inner shrink-0">
+           <div className="grid grid-cols-3 gap-2 bg-[#111111] p-1.5 rounded-2xl border border-white/5 shrink-0">
              {[0, 1, 2].map(idx => (
                <button
                  key={idx}
                  onClick={() => switchTeam(idx)}
                  className={cn(
-                   "py-2 text-[10px] sm:text-xs font-black uppercase tracking-tighter rounded-lg transition-all border-2 flex flex-col items-center justify-center gap-1",
+                   "py-2 text-[10px] sm:text-xs font-black uppercase tracking-tighter rounded-xl transition-all border-2 flex flex-col items-center justify-center gap-1",
                    profile.activeTeamIndex === idx 
-                     ? "bg-indigo-600/20 border-indigo-500 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)]" 
-                     : "bg-gray-950 border-gray-900 text-gray-600 hover:text-gray-400 hover:border-gray-800"
+                     ? "bg-indigo-600/10 border-indigo-500 text-indigo-400" 
+                     : "bg-transparent border-transparent text-white/40 hover:text-white/70"
                  )}
                >
                  <span className="opacity-50">Слот {idx + 1}</span>
@@ -298,30 +298,30 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
            </div>
 
            {/* Top Stats & Actions */}
-           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-b border-gray-800 pb-4">
+           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-b border-white/5 pb-4">
               <div className="flex items-start gap-4">
-                 <div className={cn("w-16 h-16 sm:w-20 sm:h-20 rounded-lg shadow-xl border-2 flex items-center justify-center text-3xl shrink-0 relative overflow-hidden", charDef.color, elementColors[charDef.element])}>
+                 <div className={cn("w-16 h-16 sm:w-20 sm:h-20 rounded-3xl border flex items-center justify-center text-3xl shrink-0 relative overflow-hidden", charDef.color, elementColors[charDef.element])}>
                      {getCharSplash(selectedId) ? (
-                        <img src={getCharSplash(selectedId) || ""} className="w-full h-full object-cover animate-in fade-in" referrerPolicy="no-referrer" />
+                        <img src={getCharSplash(selectedId) || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                      ) : (
                         getCharEmoji(selectedId)
                      )}
                   </div>
                  <div className="pt-1">
-                    <h2 className={cn("text-2xl sm:text-3xl font-bold drop-shadow-md", (elementColors[charDef.element] || "text-slate-300").split(' ')[0])}>{charDef.name}</h2>
+                    <h2 className={cn("text-2xl sm:text-3xl font-bold drop-shadow-md", (elementColors[charDef.element] || "text-white/70").split(' ')[0])}>{charDef.name}</h2>
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                       <span className="text-gray-400 flex items-center gap-1 text-xs bg-gray-900/80 px-2.5 py-1 rounded border border-gray-800">
+                       <span className="text-white/50 flex items-center gap-1 text-xs bg-[#111111]/80 px-2.5 py-1 rounded border border-white/5">
                           <Zap className="w-3.5 h-3.5 text-indigo-400" /> Ур. {charDef.level} | Созвездие {charDef.constellation}
                        </span>
                        <span className={cn(
-                         "px-2.5 py-1 rounded text-xs font-bold border flex items-center gap-1 bg-gray-900/80",
+                         "px-2.5 py-1 rounded text-xs font-bold border flex items-center gap-1 bg-[#111111]/80",
                          charDef.element === "Pyro" ? "text-red-400 border-red-500/20" :
                          charDef.element === "Hydro" ? "text-blue-400 border-blue-500/20" :
                          charDef.element === "Electro" ? "text-purple-400 border-purple-500/20" :
                          charDef.element === "Dendro" ? "text-emerald-400 border-emerald-500/20" :
                          charDef.element === "Cryo" ? "text-cyan-300 border-cyan-500/20" :
                          charDef.element === "Geo" ? "text-amber-400 border-amber-500/20" :
-                         "text-slate-300 border-slate-500/20"
+                         "text-white/70 border-slate-500/20"
                        )}>
                          {elementIcons[charDef.element] || <HelpCircle className="w-3.5 h-3.5" />}
                          {elementNamesRU[charDef.element] || charDef.element}
@@ -330,10 +330,10 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                          const tier = charRarity[selectedId] || "B";
                          return (
                            <span className={cn(
-                             "px-2.5 py-1 rounded text-xs font-black tracking-wider border bg-gray-900/80",
+                             "px-2.5 py-1 rounded text-xs font-black tracking-wider border bg-[#111111]/80",
                              tier === "S" ? "text-amber-400 border-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.1)]" :
                              tier === "A" ? "text-purple-400 border-purple-500/25" :
-                             "text-slate-400 border-slate-500/25"
+                             "text-white/50 border-slate-500/25"
                            )}>
                              {tier}-Tier
                            </span>
@@ -343,59 +343,59 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                  </div>
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto">
-                 <button onClick={toggleTeam} className={cn("px-4 py-2 font-bold uppercase text-xs tracking-wider rounded transition-all", inTeam ? "bg-red-900/50 hover:bg-red-800/80 text-red-200 border border-red-800" : "bg-blue-600 hover:bg-blue-500 text-white shadow-lg")}>
+                 <button onClick={toggleTeam} className={cn("px-4 py-2 font-bold uppercase text-xs tracking-wider rounded-2xl transition-all", inTeam ? "bg-red-950 border border-red-900 text-red-400 hover:bg-red-900" : "bg-indigo-600 hover:bg-indigo-500 text-white")}>
                     {inTeam ? "Убрать из отряда" : "Добавить в отряд"}
                  </button>
               </div>
            </div>
 
            {/* Tabs */}
-           <div className="flex gap-4 border-b border-gray-800 shrink-0">
-             <button onClick={() => setActiveTab('STATS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'STATS' ? "text-gray-200 border-b-2 border-gray-400" : "text-gray-600 hover:text-gray-400")}>Бой</button>
-             <button onClick={() => setActiveTab('ARTIFACTS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'ARTIFACTS' ? "text-gray-200 border-b-2 border-gray-400" : "text-gray-600 hover:text-gray-400")}>Артефакты</button>
-             <button onClick={() => setActiveTab('CONSTELLATIONS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'CONSTELLATIONS' ? "text-gray-200 border-b-2 border-gray-400" : "text-gray-600 hover:text-gray-400")}>Созвездия</button>
+           <div className="flex gap-4 border-b border-white/5 shrink-0">
+             <button onClick={() => setActiveTab('STATS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'STATS' ? "text-white/90 border-b-2 border-gray-400" : "text-gray-600 hover:text-white/50")}>Бой</button>
+             <button onClick={() => setActiveTab('ARTIFACTS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'ARTIFACTS' ? "text-white/90 border-b-2 border-gray-400" : "text-gray-600 hover:text-white/50")}>Артефакты</button>
+             <button onClick={() => setActiveTab('CONSTELLATIONS')} className={cn("pb-2 font-bold uppercase text-[10px] sm:text-xs tracking-widest transition-colors", activeTab === 'CONSTELLATIONS' ? "text-white/90 border-b-2 border-gray-400" : "text-gray-600 hover:text-white/50")}>Созвездия</button>
            </div>
 
            {activeTab === 'STATS' && (
            <div className="animate-in fade-in space-y-4">
                {/* Level Up Banner */}
-               <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
+               <div className="bg-[#111111] border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
                   <div>
-                    <h3 className="font-bold flex items-center gap-2 text-sm text-gray-300"><TrendingUp className="w-4 h-4 text-green-400"/> Возвышение (Ур. {selectedData.level} ➔ {selectedData.level + 1})</h3>
+                    <h3 className="font-bold flex items-center gap-2 text-sm text-white/70"><TrendingUp className="w-4 h-4 text-green-400"/> Возвышение (Ур. {selectedData.level} ➔ {selectedData.level + 1})</h3>
                     <div className="flex gap-4 mt-2 text-xs font-mono">
-                      <span className={profile.heroExp >= costExp ? "text-gray-400" : "text-red-400"}>EXP: {costExp}</span>
-                      <span className={profile.gold >= costGold ? "text-gray-400" : "text-red-400"}>Золото: {costGold}</span>
+                      <span className={profile.heroExp >= costExp ? "text-white/50" : "text-red-400"}>EXP: {costExp}</span>
+                      <span className={profile.gold >= costGold ? "text-white/50" : "text-red-400"}>Золото: {costGold}</span>
                     </div>
                   </div>
-                  <button onClick={levelUp} disabled={!canLevelUp} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-600 text-white font-bold rounded uppercase text-xs tracking-wider transition-all">
+                  <button onClick={levelUp} disabled={!canLevelUp} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-[#1a1a1a] disabled:text-gray-600 text-white font-bold rounded uppercase text-xs tracking-wider transition-all">
                      Повысить уровень
                   </button>
                </div>
 
-           <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 shadow-sm">
-              <h3 className="font-bold text-gray-400 mb-3 border-b border-gray-800 pb-2 flex items-center gap-2 text-xs uppercase tracking-wider">
+           <div className="bg-[#111111] border border-white/5 rounded-xl p-4 shadow-sm">
+              <h3 className="font-bold text-white/50 mb-3 border-b border-white/5 pb-2 flex items-center gap-2 text-xs uppercase tracking-wider">
                  <Users className="w-4 h-4" /> Характеристики
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
-                 <div className="bg-gray-950 p-2 rounded border border-gray-800"><span className="text-gray-500 block mb-1">HP</span> <span className="font-bold text-green-400">{charDef.stats.maxHp}</span></div>
-                 <div className="bg-gray-950 p-2 rounded border border-gray-800"><span className="text-gray-500 block mb-1">ATK</span> <span className="font-bold text-red-400">{charDef.stats.atk}</span></div>
-                 <div className="bg-gray-950 p-2 rounded border border-gray-800"><span className="text-gray-500 block mb-1">DEF</span> <span className="font-bold text-blue-400">{charDef.stats.def}</span></div>
-                 <div className="bg-gray-950 p-2 rounded border border-gray-800"><span className="text-gray-500 block mb-1">SPD</span> <span className="font-bold text-yellow-400">{charDef.stats.spd}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">HP</span> <span className="font-bold text-green-400">{charDef.stats.maxHp}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">ATK</span> <span className="font-bold text-red-400">{charDef.stats.atk}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">DEF</span> <span className="font-bold text-blue-400">{charDef.stats.def}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">SPD</span> <span className="font-bold text-yellow-400">{charDef.stats.spd}</span></div>
               </div>
            </div>
 
            <div>
-              <h3 className="font-bold text-gray-400 mb-3 border-b border-gray-800 pb-2 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <h3 className="font-bold text-white/50 mb-3 border-b border-white/5 pb-2 flex items-center gap-2 text-xs uppercase tracking-wider">
                  <Shield className="w-4 h-4" /> Навыки
               </h3>
               <div className="flex flex-col gap-3">
                  {charDef.skills.map(skill => (
-                    <div key={skill.id} className="bg-gray-900/80 border border-gray-800 rounded-lg p-3 hover:border-gray-600 transition-colors">
+                    <div key={skill.id} className="bg-[#111111]/80 border border-white/5 rounded-xl p-3 hover:border-gray-600 transition-colors">
                        <div className="flex justify-between items-start mb-2 gap-2">
-                          <h4 className="font-bold text-gray-200 text-sm">{skill.name}</h4>
-                          <span className="text-[10px] px-2 py-1 bg-gray-950 rounded border border-gray-800 text-gray-400">COST: {skill.cost}</span>
+                          <h4 className="font-bold text-white/90 text-sm">{skill.name}</h4>
+                          <span className="text-[10px] px-2 py-1 bg-[#0a0a0a] rounded border border-white/5 text-white/50">COST: {skill.cost}</span>
                        </div>
-                       <p className="text-xs text-gray-400">{skill.description}</p>
+                       <p className="text-xs text-white/50">{skill.description}</p>
                     </div>
                  ))}
               </div>
@@ -408,8 +408,8 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                 {!selectingSlot ? (
                   <>
                     {/* Set Bonuses Summary */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Активные бонусы сетов</h4>
+                    <div className="bg-[#111111]/50 border border-white/5 rounded-3xl p-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">Активные бонусы сетов</h4>
                       <div className="space-y-3">
                         {Object.entries(ARTIFACT_SETS).map(([setId, set]) => {
                           const count = charArts.filter(a => a.setName === setId).length;
@@ -418,21 +418,21 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                             <div key={setId} className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <Sparkles className="w-3 h-3 text-amber-400" />
-                                <span className="text-xs font-bold text-slate-200 uppercase">{set.name} ({count}/4)</span>
+                                <span className="text-xs font-bold text-white/90 uppercase">{set.name} ({count}/4)</span>
                               </div>
                               <div className="pl-5 space-y-1">
-                                {count >= 2 && <p className="text-[10px] text-slate-400 leading-tight"><span className="text-amber-400/80 font-bold">2 предм:</span> {set.twoPieceBonus}</p>}
-                                {count >= 4 && <p className="text-[10px] text-slate-400 leading-tight"><span className="text-amber-400/80 font-bold">4 предм:</span> {set.fourPieceBonus}</p>}
+                                {count >= 2 && <p className="text-[10px] text-white/50 leading-tight"><span className="text-amber-400/80 font-bold">2 предм:</span> {set.twoPieceBonus}</p>}
+                                {count >= 4 && <p className="text-[10px] text-white/50 leading-tight"><span className="text-amber-400/80 font-bold">4 предм:</span> {set.fourPieceBonus}</p>}
                               </div>
                             </div>
                           );
                         })}
-                        {charArts.length === 0 && <p className="text-[10px] text-slate-600 italic">Нет активных бонусов</p>}
+                        {charArts.length === 0 && <p className="text-[10px] text-white/40 italic">Нет активных бонусов</p>}
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-sm text-gray-300 uppercase tracking-widest flex items-center gap-2"><Package className="w-4 h-4"/> Снаряжение</h3>
+                      <h3 className="font-bold text-sm text-white/70 uppercase tracking-widest flex items-center gap-2"><Package className="w-4 h-4"/> Снаряжение</h3>
                       <button onClick={equipAuto} className="text-xs uppercase tracking-widest bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 px-4 py-1.5 rounded-full text-indigo-400 font-black transition-all">Авто-Подбор</button>
                     </div>
                     
@@ -442,31 +442,31 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                         const art = profile.artifacts.find(a => a.id === artId);
                         
                         return (
-                           <div key={slot} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 group hover:border-slate-700 transition-colors">
+                           <div key={slot} className="bg-[#111111] border border-white/5 p-4 rounded-3xl flex flex-col sm:flex-row gap-4 group hover:border-white/10 transition-colors">
                               <div className="flex-1 flex gap-4 cursor-pointer" onClick={() => setSelectingSlot(slot)}>
-                                 <div className="w-14 h-14 bg-slate-950 border-2 border-slate-800 rounded-xl font-mono text-[10px] text-slate-500 uppercase flex items-center justify-center shrink-0 shadow-inner group-hover:border-slate-700 transition-colors">
+                                 <div className="w-14 h-14 bg-[#0a0a0a] border-2 border-white/5 rounded-2xl font-mono text-[10px] text-white/40 uppercase flex items-center justify-center shrink-0 shadow-inner group-hover:border-white/10 transition-colors">
                                    {slot.slice(0,4)}
                                  </div>
                                  {art ? (
                                    <div className="flex-1 min-w-0">
                                      <div className="flex items-center gap-2 mb-1">
                                         <span className="text-xs text-amber-400 font-bold">+{art.level || 0}</span>
-                                        <h4 className="font-black text-xs text-slate-200 uppercase truncate">{ARTIFACT_SETS[art.setName]?.name || art.setName}</h4>
+                                        <h4 className="font-black text-xs text-white/90 uppercase truncate">{ARTIFACT_SETS[art.setName]?.name || art.setName}</h4>
                                      </div>
-                                     <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50">
+                                     <div className="bg-[#0a0a0a]/50 p-2 rounded-xl border border-white/5">
                                         <div className="text-[10px] font-black text-indigo-400 uppercase mb-1">{art.mainStat.type}: +{art.mainStat.value}</div>
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                            {art.subStats?.map((s, i) => (
-                                              <div key={i} className="text-[9px] font-mono text-slate-500 flex justify-between">
+                                              <div key={i} className="text-[9px] font-mono text-white/40 flex justify-between">
                                                  <span className="uppercase opacity-70">{s.type}</span>
-                                                 <span className="text-slate-300">+{s.value}</span>
+                                                 <span className="text-white/70">+{s.value}</span>
                                               </div>
                                            ))}
                                         </div>
                                      </div>
                                    </div>
                                  ) : (
-                                   <div className="flex items-center text-xs text-slate-600 font-mono italic">Ячейка свободна (Нажми для выбора)</div>
+                                   <div className="flex items-center text-xs text-white/40 font-mono italic">Ячейка свободна (Нажми для выбора)</div>
                                  )}
                               </div>
                               
@@ -499,7 +499,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                              return n;
                                           })
                                        }}
-                                       className="z-10 text-[10px] font-black uppercase px-4 py-2 bg-slate-800 text-slate-400 rounded-xl hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:hover:bg-slate-800 disabled:hover:text-slate-400 transition-all border border-slate-700"
+                                       className="z-10 text-[10px] font-black uppercase px-4 py-2 bg-[#1a1a1a] text-white/50 rounded-2xl hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:hover:bg-[#1a1a1a] disabled:hover:text-white/50 transition-all border border-white/10"
                                     >{art.level >= 20 ? 'МАКС' : 'Улучшить'}</button>
                                  )}
                                  {art && (
@@ -512,7 +512,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                              return n;
                                           })
                                        }}
-                                       className="z-10 text-[10px] font-black uppercase px-4 py-2 bg-red-950/20 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all border border-red-900/50"
+                                       className="z-10 text-[10px] font-black uppercase px-4 py-2 bg-red-950/20 text-red-500 rounded-2xl hover:bg-red-600 hover:text-white transition-all border border-red-900/50"
                                     >Снять</button>
                                  )}
                               </div>
@@ -523,27 +523,27 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex flex-col gap-4 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <div className="flex flex-col gap-4 bg-[#111111] p-4 rounded-3xl border border-white/5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400">
+                          <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-[#1a1a1a] rounded-2xl transition-colors text-white/50">
                             <ArrowLeft className="w-5 h-5" />
                           </button>
-                          <h4 className="font-black uppercase text-sm tracking-widest text-slate-100">Выбор артефакта: {selectingSlot}</h4>
+                          <h4 className="font-black uppercase text-sm tracking-widest text-white">Выбор артефакта: {selectingSlot}</h4>
                         </div>
-                        <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400">
+                        <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-[#1a1a1a] rounded-2xl transition-colors text-white/50">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
                       
                       <div className="relative">
-                        <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           value={artifactSearchQuery}
                           onChange={(e) => setArtifactSearchQuery(e.target.value)}
                           placeholder="Поиск по названию сета или стату..."
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                          className="w-full bg-[#0a0a0a] border border-white/5 rounded-2xl pl-10 pr-4 py-3 text-sm text-white/90 placeholder:text-white/40 focus:outline-none focus:border-indigo-500 transition-colors font-mono"
                         />
                       </div>
                     </div>
@@ -565,7 +565,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
 
                         if (filteredArtifacts.length === 0) {
                           return (
-                            <div className="p-10 text-center text-slate-600 italic font-mono uppercase tracking-widest bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
+                            <div className="p-10 text-center text-white/40 italic font-mono uppercase tracking-widest bg-[#111111]/30 rounded-3xl border border-dashed border-white/5">
                               {profile.artifacts.filter(a => a.slot === selectingSlot).length === 0 
                                 ? "Нет доступных артефактов этого типа" 
                                 : "Ничего не найдено"}
@@ -583,26 +583,26 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                               key={art.id} 
                               onClick={() => !isCurrent && equipManual(art)}
                               className={cn(
-                                "p-4 rounded-2xl border-2 flex flex-col sm:flex-row gap-4 cursor-pointer transition-all",
-                                isCurrent ? "bg-indigo-900/30 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]" : "bg-slate-900 border-slate-800 hover:border-slate-600 hover:shadow-lg"
+                                "p-4 rounded-3xl border-2 flex flex-col sm:flex-row gap-4 cursor-pointer transition-all",
+                                isCurrent ? "bg-indigo-900/30 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]" : "bg-[#111111] border-white/5 hover:border-slate-600 hover:shadow-lg"
                               )}
                             >
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold text-amber-500">+{art.level}</span>
-                                    <h5 className="font-black text-xs uppercase text-slate-100">{ARTIFACT_SETS[art.setName]?.name}</h5>
+                                    <h5 className="font-black text-xs uppercase text-white">{ARTIFACT_SETS[art.setName]?.name}</h5>
                                     {score > 1200 && <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
                                   </div>
-                                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-tighter">Счет: {score}</span>
+                                  <span className="text-[10px] font-mono text-white/40 uppercase tracking-tighter">Счет: {score}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="text-xs font-black text-indigo-400 uppercase">{art.mainStat.type}: +{art.mainStat.value}</div>
                                   <div className="space-y-0.5">
                                     {art.subStats.map((s, i) => (
-                                      <div key={i} className="text-[10px] font-mono text-slate-500 flex justify-between">
+                                      <div key={i} className="text-[10px] font-mono text-white/40 flex justify-between">
                                         <span className="uppercase opacity-70">{s.type}</span>
-                                        <span className="text-slate-300">+{s.value}</span>
+                                        <span className="text-white/70">+{s.value}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -614,7 +614,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                       <Check className="w-3 h-3" /> Экипировано
                                    </div>
                                 ) : usedBy ? (
-                                  <div className="text-[9px] font-bold uppercase py-1 px-3 bg-slate-950 border border-slate-800 text-slate-500 rounded-full">
+                                  <div className="text-[9px] font-bold uppercase py-1 px-3 bg-[#0a0a0a] border border-white/5 text-white/40 rounded-full">
                                     У {characterBlueprints[usedBy]("mock", 1, 0).name}
                                   </div>
                                 ) : (
@@ -634,11 +634,11 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
 
            {activeTab === 'CONSTELLATIONS' && (
               <div className="animate-in fade-in space-y-6">
-                <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-4">
+                <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-2xl p-4">
                   <h3 className="text-indigo-400 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
                     <Star className="w-4 h-4" /> Удаль героя
                   </h3>
-                  <p className="text-[10px] text-gray-400 leading-relaxed font-sans">
+                  <p className="text-[10px] text-white/50 leading-relaxed font-sans">
                     Копии персонажей открывают созвездия, которые значительно усиливают способности и открывают новые тактические возможности.
                   </p>
                 </div>
@@ -652,10 +652,10 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                       <div 
                         key={num} 
                         className={cn(
-                          "p-4 rounded-xl border-2 transition-all group relative overflow-hidden",
+                          "p-4 rounded-2xl border-2 transition-all group relative overflow-hidden",
                           isUnlocked 
-                            ? "bg-gray-900 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]" 
-                            : "bg-gray-950/50 border-gray-800 grayscale opacity-60"
+                            ? "bg-[#111111] border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]" 
+                            : "bg-[#0a0a0a]/50 border-white/5 grayscale opacity-60"
                         )}
                       >
                         {isUnlocked && (
@@ -664,15 +664,15 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                         <div className="flex items-center gap-4 relative z-10">
                           <div className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center font-black border-2",
-                            isUnlocked ? "bg-indigo-950 border-indigo-500 text-indigo-400" : "bg-gray-900 border-gray-800 text-gray-700"
+                            isUnlocked ? "bg-indigo-950 border-indigo-500 text-indigo-400" : "bg-[#111111] border-white/5 text-gray-700"
                           )}>
                             {num}
                           </div>
                           <div>
-                            <div className={cn("text-xs font-bold uppercase tracking-tight", isUnlocked ? "text-gray-200" : "text-gray-500")}>
+                            <div className={cn("text-xs font-bold uppercase tracking-tight", isUnlocked ? "text-white/90" : "text-white/40")}>
                               {cInfo?.name || `Уровень ${num}`}
                             </div>
-                            <div className="text-[10px] text-gray-400 mt-1 leading-normal font-sans">
+                            <div className="text-[10px] text-white/50 mt-1 leading-normal font-sans">
                               {cInfo?.description || (num === 3 || num === 5 ? "Значительно повышает эффективность навыков персонажа." : "Открывает скрытые резервы силы.")}
                             </div>
                           </div>

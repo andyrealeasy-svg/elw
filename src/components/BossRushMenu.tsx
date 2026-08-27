@@ -52,7 +52,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
   const usedChars = new Set(teams.flat());
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col font-sans">
+    <div className="fixed inset-0 z-50 bg-[#0a0a0a] flex flex-col font-sans">
       <div className="flex-none p-6 pb-2 border-b border-white/10 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
@@ -73,7 +73,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="text-xs text-white/50 font-medium">
               Соберите 3 уникальных отряда для 3 боссов • {profile.bossRushClaimed ? 'Награды выдаются 1 раз за сезон' : 'Однократная награда за зачистку всех 3 боссов'}
             </p>
           </div>
@@ -81,7 +81,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
         <button 
           onClick={() => isReady && onStartRush(teams)}
           disabled={!isReady}
-          className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-lg tracking-widest uppercase transition-all shadow-lg shadow-fuchsia-600/20"
+          className="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:bg-[#1a1a1a] disabled:text-white/40 text-white font-bold rounded-xl tracking-widest uppercase transition-all shadow-lg shadow-fuchsia-600/20"
         >
           Начать
         </button>
@@ -96,7 +96,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: tIdx * 0.1 }}
               key={boss.id} 
-              className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 relative overflow-hidden"
+              className="bg-[#111111]/50 border border-white/5 rounded-3xl p-6 relative overflow-hidden"
             >
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="sm:w-1/3 flex flex-col justify-center border-r border-white/5 pr-4">
@@ -110,7 +110,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                     </span>
                   </div>
                   <h3 className="text-lg font-black uppercase text-white tracking-tight">{boss.name}</h3>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">{boss.desc}</p>
+                  <p className="text-xs text-white/50 mt-2 leading-relaxed">{boss.desc}</p>
                 </div>
                 
                 <div className="sm:w-2/3 grid grid-cols-4 gap-2">
@@ -124,8 +124,8 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                         <div 
                           onClick={() => setActiveSlot({ teamIdx: tIdx, charIdx: cIdx })}
                           className={cn(
-                            "absolute inset-0 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden group flex items-center justify-center",
-                            charId ? "border-fuchsia-500/30 bg-slate-800" : isActive ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-white/5 bg-slate-900/50 hover:border-white/20"
+                            "absolute inset-0 rounded-3xl border-2 transition-all cursor-pointer overflow-hidden group flex items-center justify-center",
+                            charId ? "border-fuchsia-500/30 bg-[#1a1a1a]" : isActive ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-white/5 bg-[#111111]/50 hover:border-white/20"
                           )}
                         >
                           {charId ? (
@@ -163,11 +163,11 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="hidden lg:flex w-1/3 border-l border-white/5 bg-slate-900/80 p-6 flex-col"
+            className="hidden lg:flex w-1/3 border-l border-white/5 bg-[#111111]/80 p-6 flex-col"
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold uppercase tracking-widest text-sm">Выберите персонажа</h3>
-              <button onClick={() => setActiveSlot(null)} className="p-1 hover:bg-white/10 rounded-lg">
+              <button onClick={() => setActiveSlot(null)} className="p-1 hover:bg-white/10 rounded-xl">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -183,8 +183,8 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                     <div 
                       onClick={() => !isUsed && handleSelectChar(charId)}
                       className={cn(
-                        "absolute inset-0 rounded-xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
-                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 hover:border-fuchsia-500 hover:scale-105 bg-slate-900"
+                        "absolute inset-0 rounded-2xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
+                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-[#111111]/40" : "cursor-pointer border-white/10 hover:border-fuchsia-500 hover:scale-105 bg-[#111111]"
                       )}
                     >
                       {info.image ? (
@@ -230,8 +230,8 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                     <div 
                       onClick={() => !isUsed && handleSelectChar(charId)}
                       className={cn(
-                        "absolute inset-0 rounded-xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
-                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-slate-900/40" : "cursor-pointer border-white/10 active:border-fuchsia-500 bg-slate-900"
+                        "absolute inset-0 rounded-2xl border overflow-hidden transition-all flex items-center justify-center p-2 text-center",
+                        isUsed ? "opacity-30 grayscale cursor-not-allowed border-white/5 bg-[#111111]/40" : "cursor-pointer border-white/10 active:border-fuchsia-500 bg-[#111111]"
                       )}
                     >
                       {info.image ? (

@@ -185,7 +185,7 @@ export interface PlayerProfile {
   artifacts: Artifact[];
   roster: Record<string, CharData>;
   team: string[]; // Blueprint IDs of active team (legacy/current sync)
-  teams: string[][]; // Array of 3 team compositions
+  teams: string[][]; // Array of 10 team compositions
   activeTeamIndex: number; // 0, 1, or 2
   bpExp: number;
   bpClaimedLevels: number[];

@@ -220,10 +220,10 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       if (floatText) {
         let tColor = element === 'Physical' ? 'text-white' : element === 'Hydro' ? 'text-blue-400' : element === 'Pyro' ? 'text-red-500' : element === 'Dendro' ? 'text-green-400' : element === 'Electro' ? 'text-purple-400' : element === 'Cryo' ? 'text-cyan-300' : 'text-yellow-400';
         if (isCrit) {
-          tColor = 'text-amber-300 text-lg sm:text-xl font-black drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] z-20';
+          tColor = 'text-amber-300 text-lg sm:text-xl font-black  z-20';
           if(playEffect) playEffect(target.uid, "shake");
         } else if (rxnMult > 1) {
-          tColor = 'text-orange-400 text-xl font-black drop-shadow-[0_0_10px_rgba(251,146,60,0.8)] z-10'; // Reaction color
+          tColor = 'text-orange-400 text-xl font-black  z-10'; // Reaction color
         }
         
         const textLabel = isCrit ? `💥КРИТ! -${dmg}` : `-${dmg}`;
@@ -1549,7 +1549,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const target = t[0];
           if (state) state.enemyParty.forEach(e => e.buffs.duelMark = 0);
           target.buffs.duelMark = 1;
-          if (ft) ft(target.uid, "🎯 ДУЭЛЬ", "text-red-500 font-black text-xl drop-shadow-[0_0_10px_rgba(239,68,68,1)]");
+          if (ft) ft(target.uid, "🎯 ДУЭЛЬ", "text-red-500 font-black text-xl ");
           if (pl) pl(target.uid, "shake");
           
           dealDamage(s, target, 1.5, "Physical", log, ft, pl, 1, state, c >= 2 ? 0.7 : 0.5);
@@ -1567,7 +1567,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const isExecute = target.stats.hp > 0 && target.stats.hp < target.stats.maxHp * limit;
           
           if (isExecute) {
-             if (ft) ft(s.uid, "☠️ КАЗНЬ!", "text-red-600 font-black drop-shadow-[0_0_10px_rgba(220,38,38,1)] text-2xl");
+             if (ft) ft(s.uid, "☠️ КАЗНЬ!", "text-red-600 font-black  text-2xl");
              if (pl) pl(target.uid, "shake");
           } else if (ft) {
              ft(s.uid, "🔪 Последний Удар", "text-rose-400 font-bold");
@@ -1578,7 +1578,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           if (target.stats.hp <= 0 && state) {
             setTimeout(() => { s.cooldowns['cy_q'] = 0; }, 10);
             s.atb = 100;
-            if (ft) setTimeout(() => ft(s.uid, "♻️ ГОНОРАР", "text-yellow-400 font-bold text-lg drop-shadow-[0_0_8px_rgba(250,204,21,1)]"), 400);
+            if (ft) setTimeout(() => ft(s.uid, "♻️ ГОНОРАР", "text-yellow-400 font-bold text-lg "), 400);
           }
         }
       }

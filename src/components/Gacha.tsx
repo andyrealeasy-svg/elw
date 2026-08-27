@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerProfile } from '../types';
-import { ArrowLeft, Sparkles, Gem, Star, SkipForward } from 'lucide-react';
+import { ArrowLeft, Sparkles, Gem, Star, SkipForward, Info, X } from 'lucide-react';
 import { baseCharacterPool, characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+
+const LIMITED_S = ["volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita"];
+const S_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "S");
+const STANDARD_S_POOL = S_POOL.filter(id => !LIMITED_S.includes(id));
+const A_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "A");
+const B_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "B");
 
 interface Props {
   profile: PlayerProfile;
@@ -76,9 +82,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     STANDARD: {
       title: "ЭХО ВРЕМЕНИ",
       subtitle: "КОСМИЧЕСКИЙ ПЕРЕКРЕСТОК",
-      sId: "aelita",
-      sName: "Аэлита",
-      sElement: "Dendro",
+      sId: "neuron",
+      sName: "Нейрон",
+      sElement: "Electro",
       sThemeColor: "text-indigo-400 border-indigo-500/40 bg-indigo-950/40",
       sBgAccent: "from-indigo-600/20 to-transparent",
       desc: "Стандартная молитва. Содержит всех героев в равной пропорции!",
@@ -89,6 +95,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
   const currentBannerData = bannerDisplayDetails[activeBanner];
 
   const [pullStage, setPullStage] = useState<'IDLE' | 'ANIMATING' | 'REVEALING' | 'SUMMARY'>('IDLE');
+  const [showRatesModal, setShowRatesModal] = useState(false);
   const [pulls, setPulls] = useState<PullResult[]>([]);
   const [revealIndex, setRevealIndex] = useState(0);
   
@@ -112,12 +119,6 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     let currentPityS = nextP.gachaPityS ?? 0;
     let currentPityA = nextP.gachaPityA ?? 0;
     let currentGuaranteed = nextP.gachaGuaranteed ?? false;
-
-    const LIMITED_S = ["volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum"];
-    const S_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "S");
-    const STANDARD_S_POOL = S_POOL.filter(id => !LIMITED_S.includes(id));
-    const A_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "A");
-    const B_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "B");
 
     for(let i=0; i<times; i++) {
       currentPityS += 1;
@@ -253,7 +254,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
   };
 
   const getBannerTabColor = (bKey: 'VOLTA' | 'SELINA' | 'KRONA' | 'ASHER' | 'CYRUS' | 'RAVEN' | 'MAESTRO' | 'INEFFA' | 'ZEPHYR' | 'AURUM', isActive: boolean): string => {
-    if (!isActive) return 'text-gray-400 hover:text-white border-transparent';
+    if (!isActive) return 'text-white/50 hover:text-white border-transparent';
     switch (bKey) {
       case 'VOLTA': return 'bg-violet-600 text-white border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]';
       case 'SELINA': return 'bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]';
@@ -287,7 +288,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
   const meteorColor = maxRarityInPulls === 'S' ? 'from-yellow-400 to-yellow-600 shadow-yellow-500' : maxRarityInPulls === 'A' ? 'from-purple-400 to-purple-600 shadow-purple-500' : 'from-blue-400 to-blue-600 shadow-blue-500';
 
   return (
-    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gradient-to-br from-indigo-950 via-purple-900 to-black md:rounded-xl border-4 border-gray-800 shadow-2xl flex flex-col font-sans text-gray-200 overflow-hidden relative">
+    <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gradient-to-br from-indigo-950 via-purple-900 to-black md:rounded-2xl border-4 border-white/5 shadow-2xl flex flex-col font-sans text-white/90 overflow-hidden relative">
       
       {/* Top Bar for IDLE only */}
       {pullStage === 'IDLE' && (
@@ -300,9 +301,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                Молитвы
              </h1>
           </div>
-          <div className="flex items-center gap-2 bg-gray-900/80 px-4 py-1.5 rounded-full border border-gray-700">
-             <Gem className="w-4 h-4 text-pink-400" />
-             <span className="font-mono font-bold">{profile.gems}</span>
+          <div className="flex items-center gap-2 bg-[#111111]/80 px-4 py-1.5 rounded-full border border-white/10">
+                <Gem className="w-4 h-4 text-pink-400" />
+                <span className="font-mono font-bold">{profile.gems}</span>
           </div>
         </div>
       )}
@@ -315,33 +316,64 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
            </div>
 
            <div className="z-10 w-full flex flex-col items-center">
-              <div className="flex flex-nowrap md:flex-wrap justify-start md:justify-center bg-black/40 p-1.5 rounded-xl backdrop-blur-sm border border-purple-900/50 overflow-x-auto md:overflow-x-visible max-w-full gap-2 mb-6 w-full md:w-auto shadow-xl custom-scrollbar">
-                <button 
-                  onClick={() => setActiveBanner('STANDARD')} 
-                  className={cn(
-                    "px-4 py-3 sm:py-2 shrink-0 font-bold uppercase text-[11px] sm:text-[10px] tracking-wider rounded-lg transition-all whitespace-nowrap", 
-                    activeBanner === 'STANDARD' ? 'bg-white text-black shadow-md scale-[1.02]' : 'text-gray-400 hover:text-white'
-                  )}
-                >
-                  Стандарт
-                </button>
-                {allAvailableBanners.map(bKey => (
-                  <button 
-                    key={bKey}
-                    onClick={() => setActiveBanner(bKey)} 
-                    className={cn(
-                      "px-4 py-3 sm:py-2 shrink-0 font-bold uppercase text-[11px] sm:text-[10px] tracking-wider rounded-lg transition-all whitespace-nowrap flex items-center gap-2 border", 
-                      getBannerTabColor(bKey, activeBanner === bKey),
-                      activeBanner === bKey ? "shadow-md scale-[1.02]" : ""
-                    )}
-                  >
-                    <span>{getBannerTabEmoji(bKey)} {getBannerTabName(bKey)}</span>
-                  </button>
-                ))}
+              <div className="flex flex-nowrap justify-start md:justify-center overflow-x-auto max-w-full gap-3 mb-8 w-full px-4 custom-scrollbar pb-2">
+                {['STANDARD', ...allAvailableBanners].map((bKey) => {
+                  const data = bannerDisplayDetails[bKey as keyof typeof bannerDisplayDetails];
+                  const splash = getCharSplash(data.sId);
+                  const isActive = activeBanner === bKey;
+
+                  return (
+                    <button
+                      key={bKey}
+                      onClick={() => setActiveBanner(bKey as any)}
+                      className={cn(
+                        "group relative h-16 sm:h-20 shrink-0 rounded-2xl overflow-hidden transition-all duration-500 border bg-[#0a0a0a]",
+                        isActive 
+                          ? "w-48 sm:w-56 border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]" 
+                          : "w-20 sm:w-24 border-white/5 opacity-60 hover:opacity-100 hover:border-white/20 hover:shadow-lg"
+                      )}
+                    >
+                      {splash && (
+                         <img 
+                           src={splash} 
+                           alt={data.title} 
+                           className={cn(
+                             "absolute inset-0 w-full h-full object-cover object-top transition-all duration-700",
+                             isActive ? "opacity-100 scale-100" : "opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-70 scale-110"
+                           )} 
+                           style={{ 
+                             WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+                             maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)'
+                           }}
+                           referrerPolicy="no-referrer" 
+                         />
+                      )}
+                      
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-transparent pointer-events-none"></div>
+                      
+                      <div className="absolute inset-0 flex flex-col justify-center items-start px-3 sm:px-4 z-10">
+                        {isActive ? (
+                          <div className="flex flex-col items-start gap-1">
+                             <span className="text-[9px] font-black text-white/50 tracking-widest uppercase">{bKey === 'STANDARD' ? 'Базовый' : 'Событие'}</span>
+                             <span className="text-xs sm:text-sm font-black uppercase text-white truncate tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
+                               {bKey === 'STANDARD' ? 'Стандарт' : getBannerTabName(bKey as any)}
+                             </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center w-full gap-1">
+                             <span className="text-sm drop-shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
+                               {bKey === 'STANDARD' ? '✨' : getBannerTabEmoji(bKey as any)}
+                             </span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
                {/* Genshin-styled Banner Card with S-star splash art background and A-star rate-ups */}
                <div className="relative w-full max-w-2xl px-1">
-                  <div className="relative w-full h-[250px] sm:h-[280px] md:h-[320px] rounded-2xl overflow-hidden border border-slate-700/80 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex bg-slate-950 mb-6 group">
+                  <div className="relative w-full h-[250px] sm:h-[280px] md:h-[320px] rounded-3xl overflow-hidden border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex bg-[#0a0a0a] mb-6 group">
                      {/* Animated glow matching banner element */}
                      <div className={`absolute inset-0 opacity-40 mix-blend-color-dodge pointer-events-none transition-all duration-700 bg-gradient-to-tr ${
                         activeBanner === 'VOLTA' ? 'from-violet-500/25 via-transparent to-cyan-500/30' :
@@ -359,8 +391,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                               referrerPolicy="no-referrer"
                            />
                            {/* Beautiful darkening gradients to maintain supreme legibility */}
-                           <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
-                           <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent font-sans"></div>
+                           <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent"></div>
+                           <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent font-sans"></div>
                         </div>
                      )}
 
@@ -402,7 +434,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
 
                            {/* Right side: Rate Up/Featured Characters (the lower-rarity representation) */}
                            {currentBannerData.aRateUps.length > 0 && (
-                              <div className="flex flex-col bg-slate-950/85 border border-slate-800/80 p-2 sm:p-2.5 rounded-xl backdrop-blur-md max-w-[280px]">
+                              <div className="flex flex-col bg-[#0a0a0a]/85 border border-white/5 p-2 sm:p-2.5 rounded-2xl backdrop-blur-md max-w-[280px]">
                                  <span className="text-[9px] uppercase font-black tracking-widest text-purple-400 mb-1.5 flex items-center gap-1">
                                     <Sparkles className="w-2.5 h-2.5 text-purple-400 animate-pulse" />
                                     {activeBanner === 'STANDARD' ? 'Содержимое баннера (4★/3★):' : 'Вероятность Повышена (4★):'}
@@ -436,7 +468,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                                        
                                        return (
                                           <div key={aId} className="flex items-center gap-1.5">
-                                             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden border bg-slate-900 ${ringColor} flex items-center justify-center relative shrink-0`}>
+                                             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border bg-[#111111] ${ringColor} flex items-center justify-center relative shrink-0`}>
                                                 {getCharSplash(aId) ? (
                                                    <img src={getCharSplash(aId) || ""} className="w-full h-full object-cover" alt={bp.name} referrerPolicy="no-referrer" />
                                                 ) : (
@@ -467,24 +499,31 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                </div>
 
               {/* PITY counters and 50/50 status */}
-              <div className="z-10 w-full max-w-lg mb-8 bg-black/60 border border-slate-800 rounded-xl p-4 text-xs sm:text-sm font-mono flex flex-col gap-2.5 shadow-xl backdrop-blur-sm">
-                 <div className="flex justify-between items-center px-1">
-                    <span className="text-gray-400 flex items-center gap-1.5">
+              <div className="z-10 w-full max-w-lg mb-8 bg-black/60 border border-white/5 rounded-2xl p-4 text-xs sm:text-sm flex flex-col gap-2.5 shadow-xl backdrop-blur-sm">
+                 <div className="flex justify-between items-center mb-1 pb-2 border-b border-white/5">
+                    <span className="font-bold uppercase tracking-widest text-white/50 text-[10px]">Статистика Молитв</span>
+                    <button onClick={() => setShowRatesModal(true)} className="flex items-center gap-1 text-white/40 hover:text-white transition-colors text-[10px] uppercase font-bold tracking-widest bg-white/5 px-2 py-1 rounded-full">
+                       <Info className="w-3 h-3" />
+                       Шансы и Детали
+                    </button>
+                 </div>
+                 <div className="flex justify-between items-center px-1 font-mono">
+                    <span className="text-white/50 flex items-center gap-1.5">
                        <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse"></span>
                        До гаранта <span className="text-yellow-400 font-bold">★ S-ранга</span>:
                     </span>
                     <span className="text-yellow-400 font-black">{MAX_PITY_S - (profile.gachaPityS ?? 0)} / {MAX_PITY_S}</span>
                  </div>
-                 <div className="flex justify-between items-center px-1">
-                    <span className="text-gray-400 flex items-center gap-1.5">
+                 <div className="flex justify-between items-center px-1 font-mono">
+                    <span className="text-white/50 flex items-center gap-1.5">
                        <span className="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
                        До гаранта <span className="text-purple-400 font-bold">★ A-ранга</span>:
                     </span>
                     <span className="text-purple-400 font-black">{MAX_PITY_A - (profile.gachaPityA ?? 0)} / {MAX_PITY_A}</span>
                  </div>
                  {activeBanner !== 'STANDARD' && (
-                    <div className="border-t border-slate-900/80 pt-2.5 flex justify-between items-center px-1">
-                       <span className="text-gray-400">Текущий статус 50/50:</span>
+                    <div className="border-t border-white/5 pt-2.5 flex justify-between items-center px-1">
+                       <span className="text-white/50">Текущий статус 50/50:</span>
                        <span className={`font-bold uppercase tracking-wider text-xs px-2 py-0.5 rounded ${(profile.gachaGuaranteed ?? false) ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-orange-950 text-orange-400 border border-orange-500/30'}`}>
                           {(profile.gachaGuaranteed ?? false) ? 'Гарантирован (100%)' : 'Шанс 50/50'}
                        </span>
@@ -496,7 +535,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                  <button 
                    onClick={() => performPull(1)}
                    disabled={profile.gems < PULL_COST}
-                   className="flex-1 bg-slate-100 hover:bg-white text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-xl shadow-xl flex flex-col items-center transition hover:scale-105 active:scale-95"
+                   className="flex-1 bg-slate-100 hover:bg-white text-black disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-2xl shadow-xl flex flex-col items-center transition hover:scale-105 active:scale-95"
                  >
                     <span className="uppercase tracking-widest mb-1">1 Молитва</span>
                     <div className="flex items-center gap-1 text-sm font-mono opacity-80">
@@ -506,7 +545,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                  <button 
                    onClick={() => performPull(10)}
                    disabled={profile.gems < PULL_COST * 10}
-                   className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(217,70,239,0.5)] flex flex-col items-center transition hover:scale-105 active:scale-95"
+                   className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(217,70,239,0.5)] flex flex-col items-center transition hover:scale-105 active:scale-95"
                  >
                     <span className="uppercase tracking-widest mb-1">10 Молитв</span>
                     <div className="flex items-center gap-1 text-sm font-mono opacity-90">
@@ -523,7 +562,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
          {pullStage === 'ANIMATING' && (
             <motion.div 
                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration: 0.5}}
-               className="absolute inset-0 bg-slate-950 flex justify-center items-center overflow-hidden z-40 cursor-pointer"
+               className="absolute inset-0 bg-[#0a0a0a] flex justify-center items-center overflow-hidden z-40 cursor-pointer"
                onClick={skipToSummary}
             >
                <motion.div 
@@ -546,7 +585,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
            <motion.div 
               key={`reveal-${revealIndex}`}
               initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.2 }} transition={{duration: 0.3}}
-              className="absolute inset-0 bg-slate-950 flex flex-col justify-start md:justify-center items-center z-40 cursor-pointer p-6 overflow-y-auto pt-16 pb-12"
+              className="absolute inset-0 bg-[#0a0a0a] flex flex-col justify-start md:justify-center items-center z-40 cursor-pointer p-6 overflow-y-auto pt-16 pb-12"
               onClick={handleNextReveal}
            >
               <div className="absolute top-4 right-4 text-white/50 text-xs font-bold uppercase flex items-center gap-1 z-50" onClick={(e) => { e.stopPropagation(); skipToSummary(); }}><SkipForward className="w-3 h-3"/> Skip All</div>
@@ -571,7 +610,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                     initial={{ opacity: 0, scale: 0.9, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ duration: 0.4, ease: "easeOut" }}
-                    className="relative w-full max-w-lg aspect-video rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-800/80 mb-6 group bg-slate-900/10 flex items-center justify-center z-10"
+                    className="relative w-full max-w-lg aspect-video rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-white/5 mb-6 group bg-[#111111]/10 flex items-center justify-center z-10"
                  >
                     <img 
                        src={getCharSplash(pulls[revealIndex].charId) || ""} 
@@ -579,16 +618,16 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                        alt={pulls[revealIndex].charName}
                        referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60 pointer-events-none"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-60 pointer-events-none"></div>
                  </motion.div>
               ) : (
-                 <div className="w-40 h-40 bg-slate-900 border-2 border-slate-800 rounded-full flex items-center justify-center text-7xl select-none mb-6 relative z-10 shadow-[inner_0_4px_12px_rgba(0,0,0,0.6)]">
+                 <div className="w-40 h-40 bg-[#111111] border-2 border-white/5 rounded-full flex items-center justify-center text-7xl select-none mb-6 relative z-10 shadow-[inner_0_4px_12px_rgba(0,0,0,0.6)]">
                     {getCharEmoji(pulls[revealIndex].charId)}
                  </div>
               )}
 
               {pulls[revealIndex].rarity === 'S' && pulls[revealIndex].won5050 !== undefined && pulls[revealIndex].won5050 !== null && (
-                 <div className={`px-4 py-2 rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider mb-6 animate-pulse relative z-10 text-center ${
+                 <div className={`px-4 py-2 rounded-2xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider mb-6 animate-pulse relative z-10 text-center ${
                     pulls[revealIndex].won5050 
                        ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
                        : 'bg-rose-950/90 border-rose-500/50 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
@@ -603,7 +642,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                  </div>
               ) : (
                  <div className="flex flex-col items-center gap-2 mt-4">
-                   <div className="bg-slate-800 border border-slate-700 text-slate-300 font-mono text-sm px-4 py-1 rounded">
+                   <div className="bg-[#1a1a1a] border border-white/10 text-white/70 font-mono text-sm px-4 py-1 rounded">
                       Дубликат: Созвездие {pulls[revealIndex].constellation}
                    </div>
                    {pulls[revealIndex].refunded > 0 && (
@@ -622,9 +661,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
          {pullStage === 'SUMMARY' && (
             <motion.div 
                initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}
-               className="absolute inset-0 bg-slate-950 flex flex-col z-40 p-4 sm:p-8 overflow-y-auto"
+               className="absolute inset-0 bg-[#0a0a0a] flex flex-col z-40 p-4 sm:p-8 overflow-y-auto"
             >
-               <h2 className="text-2xl sm:text-4xl font-black uppercase text-center mt-4 mb-8 text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 tracking-widest">
+               <h2 className="text-2xl sm:text-4xl font-black uppercase text-center mt-4 mb-8 text-white tracking-widest">
                  Результат
                </h2>
                
@@ -633,7 +672,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                      <motion.div 
                         key={i} 
                         initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                        className={`w-28 sm:w-32 h-40 sm:h-48 border rounded-xl flex flex-col items-center justify-between p-2 relative overflow-hidden bg-slate-900 ${
+                        className={`w-28 sm:w-32 h-40 sm:h-48 border rounded-2xl flex flex-col items-center justify-between p-2 relative overflow-hidden bg-[#111111] ${
                            p.rarity === 'S' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' :
                            p.rarity === 'A' ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]' :
                            'border-blue-900'
@@ -657,7 +696,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
 
                         <div className="absolute inset-0 flex items-center justify-center opacity-[0.14] pointer-events-none select-none">
                            {getCharSplash(p.charId) ? (
-                              <img src={getCharSplash(p.charId) || ""} className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
+                              <img src={getCharSplash(p.charId) || ""} className="w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
                            ) : (
                               <span className="text-7xl">{getCharEmoji(p.charId)}</span>
                            )}
@@ -678,7 +717,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                         ) : p.refunded > 0 ? (
                            <div className="z-10 bg-pink-600 text-white font-bold text-[10px] px-1 py-0.5 rounded-full flex items-center justify-center gap-1 w-full text-center truncate">+{p.refunded}<Gem className="w-2 h-2"/></div>
                         ) : (
-                           <div className="z-10 bg-slate-700 text-slate-300 font-bold text-[10px] px-2 py-0.5 rounded-full w-full text-center">C{p.constellation}</div>
+                           <div className="z-10 bg-white/10 text-white/70 font-bold text-[10px] px-2 py-0.5 rounded-full w-full text-center">C{p.constellation}</div>
                         )}
                      </motion.div>
                   ))}
@@ -687,11 +726,120 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                <div className="mt-auto pt-8 flex justify-center pb-4">
                   <button 
                      onClick={() => setPullStage('IDLE')} 
-                     className="px-12 py-4 bg-white hover:bg-gray-200 text-black rounded-xl font-black uppercase tracking-widest transition-transform active:scale-95 shadow-xl"
+                     className="px-12 py-4 bg-white hover:bg-gray-200 text-black rounded-2xl font-black uppercase tracking-widest transition-transform active:scale-95 shadow-xl"
                   >
                      Завершить
                   </button>
                </div>
+            </motion.div>
+         )}
+      </AnimatePresence>
+      <AnimatePresence>
+         {showRatesModal && (
+            <motion.div 
+               initial={{ opacity: 0 }} 
+               animate={{ opacity: 1 }} 
+               exit={{ opacity: 0 }} 
+               className="absolute inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            >
+               <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowRatesModal(false)}></div>
+               <motion.div 
+                  initial={{ y: 50, scale: 0.95 }}
+                  animate={{ y: 0, scale: 1 }}
+                  exit={{ y: 20, scale: 0.95 }}
+                  className="relative w-full max-w-2xl max-h-[85vh] bg-[#0f0f13] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+               >
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-black/40">
+                     <div className="flex items-center gap-3">
+                        <Info className="w-5 h-5 text-purple-400" />
+                        <h2 className="text-xl font-bold uppercase tracking-widest text-white">Детали Молитвы</h2>
+                     </div>
+                     <button onClick={() => setShowRatesModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition">
+                        <X className="w-5 h-5" />
+                     </button>
+                  </div>
+                  <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-8 text-sm text-white/80">
+                     <section>
+                        <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400 fill-current" /> Базовые Шансы</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                           <div className="bg-[#1a1a24] border border-yellow-500/30 rounded-2xl p-4 flex flex-col gap-1">
+                              <span className="text-yellow-400 font-black text-lg">5★ (S-ранг)</span>
+                              <span className="text-white/90 font-mono text-xl">5.0%</span>
+                              <span className="text-white/50 text-xs mt-1">Гарант на 80-й молитве</span>
+                           </div>
+                           <div className="bg-[#1a1a24] border border-purple-500/30 rounded-2xl p-4 flex flex-col gap-1">
+                              <span className="text-purple-400 font-black text-lg">4★ (A-ранг)</span>
+                              <span className="text-white/90 font-mono text-xl">15.0%</span>
+                              <span className="text-white/50 text-xs mt-1">Гарант на 10-й молитве</span>
+                           </div>
+                           <div className="bg-[#1a1a24] border border-blue-500/30 rounded-2xl p-4 flex flex-col gap-1">
+                              <span className="text-blue-400 font-black text-lg">3★ (B-ранг)</span>
+                              <span className="text-white/90 font-mono text-xl">80.0%</span>
+                              <span className="text-white/50 text-xs mt-1">Остальные исходы</span>
+                           </div>
+                        </div>
+                     </section>
+                     
+                     <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                        <h3 className="text-md font-bold text-white mb-3 uppercase tracking-wider">Правила Баннера "{currentBannerData.title}"</h3>
+                        <ul className="list-disc list-inside space-y-2 text-white/70">
+                           {activeBanner === 'STANDARD' ? (
+                              <>
+                                 <li>Все доступные персонажи 5★ и 4★ имеют равный шанс выпадения.</li>
+                                 <li>В стандартной молитве не бывает проигрыша 50/50.</li>
+                              </>
+                           ) : (
+                              <>
+                                 <li><span className="text-yellow-400 font-bold">Правило 50/50:</span> При получении персонажа 5★, есть 50% шанс получить главного ивентового героя — <strong>{currentBannerData.sName}</strong>.</li>
+                                 <li>Если вы получили стандартного 5★ персонажа, следующий полученный 5★ будет гарантированно 100% ивентовым.</li>
+                                 <li>При получении персонажа 4★, есть 50% шанс получить одного из персонажей с повышенным шансом: {currentBannerData.aRateUps.map(id => characterBlueprints[id]("temp",1,0).name).join(', ')}.</li>
+                              </>
+                           )}
+                        </ul>
+                     </section>
+
+                     <section>
+                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 5★ Персонажей</h3>
+                        <div className="flex flex-wrap gap-2">
+                           {activeBanner !== 'STANDARD' && (
+                              <div className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                 {getCharEmoji(currentBannerData.sId)} {currentBannerData.sName} <span className="text-[10px] uppercase bg-yellow-500/30 px-1.5 py-0.5 rounded ml-1">Ивент</span>
+                              </div>
+                           )}
+                           {STANDARD_S_POOL.map(id => {
+                              const bp = characterBlueprints[id]("temp",1,0);
+                              return (
+                                 <div key={id} className="bg-white/5 border border-white/10 text-white/80 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    {getCharEmoji(id)} {bp.name}
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     </section>
+
+                     <section>
+                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 4★ Персонажей</h3>
+                        <div className="flex flex-wrap gap-2">
+                           {activeBanner !== 'STANDARD' && currentBannerData.aRateUps.map(id => {
+                              const bp = characterBlueprints[id]("temp",1,0);
+                              return (
+                                 <div key={id} className="bg-purple-500/20 border border-purple-500/40 text-purple-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    {getCharEmoji(id)} {bp.name} <span className="text-[10px] uppercase bg-purple-500/30 px-1.5 py-0.5 rounded ml-1">Повышен шанс</span>
+                                 </div>
+                              );
+                           })}
+                           {A_POOL.filter(id => activeBanner === 'STANDARD' || !currentBannerData.aRateUps.includes(id)).map(id => {
+                              const bp = characterBlueprints[id]("temp",1,0);
+                              return (
+                                 <div key={id} className="bg-white/5 border border-white/10 text-white/80 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    {getCharEmoji(id)} {bp.name}
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     </section>
+                  </div>
+               </motion.div>
             </motion.div>
          )}
       </AnimatePresence>

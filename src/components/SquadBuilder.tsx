@@ -27,7 +27,7 @@ const elementIcons: Record<string, { icon: React.ReactNode; color: string; bg: s
   Dendro: { icon: <Leaf className="w-3.5 h-3.5 text-emerald-400" />, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
   Cryo: { icon: <Snowflake className="w-3.5 h-3.5 text-cyan-400" />, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30" },
   Geo: { icon: <Mountain className="w-3.5 h-3.5 text-amber-500" />, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/30" },
-  Physical: { icon: <Shield className="w-3.5 h-3.5 text-slate-300" />, color: "text-slate-300", bg: "bg-slate-500/10", border: "border-slate-500/30" },
+  Physical: { icon: <Shield className="w-3.5 h-3.5 text-white/70" />, color: "text-white/70", bg: "bg-slate-500/10", border: "border-slate-500/30" },
 };
 
 export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfile, onClose }) => {
@@ -144,13 +144,13 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
   });
 
   return (
-    <div className="fixed inset-0 z-[120] bg-slate-950 text-white flex flex-col font-sans overflow-hidden">
+    <div className="fixed inset-0 z-[120] bg-[#0a0a0a] text-white flex flex-col font-sans overflow-hidden">
       {/* Top Header */}
-      <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md shrink-0">
+      <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/5 bg-[#111111]/90 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
           <button 
             onClick={onClose}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2 sm:p-2.5 rounded-2xl bg-[#1a1a1a] hover:bg-white/10 text-white/70 transition-colors border border-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -159,23 +159,23 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
               <Swords className="w-5 h-5 text-indigo-400" />
               Боевой Отряд
             </h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest hidden sm:block">
+            <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest hidden sm:block">
               Настройка состава для сражений
             </p>
           </div>
         </div>
 
         {/* Preset Selector */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
-          {[0, 1, 2].map((idx) => (
+        <div className="flex items-center bg-[#0a0a0a] p-1 rounded-2xl border border-white/5 gap-1 overflow-x-auto no-scrollbar max-w-full">
+          {Array.from({length: 10}).map((_, idx) => (
             <button
               key={idx}
               onClick={() => switchPreset(idx)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all min-h-[38px]",
+                "px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all min-h-[38px] whitespace-nowrap shrink-0",
                 activePreset === idx
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/40"
-                  : "text-slate-400 hover:text-slate-200"
+                  : "text-white/50 hover:text-white/90"
               )}
             >
               Слот {idx + 1}
@@ -188,22 +188,22 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-5xl w-full mx-auto">
         
         {/* Squad Summary Stats Bar */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div className="bg-[#111111]/80 border border-white/5 rounded-3xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-6">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Сила Отряда</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40 block">Сила Отряда</span>
               <span className="text-xl sm:text-2xl font-mono font-black text-indigo-400">
                 {(totalHp + totalAtk * 3).toLocaleString()}
               </span>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            <div className="h-8 w-px bg-[#1a1a1a]" />
             <div className="flex gap-4 text-xs font-mono">
               <div>
-                <span className="text-slate-500 text-[10px] uppercase block">Сумм. HP</span>
+                <span className="text-white/40 text-[10px] uppercase block">Сумм. HP</span>
                 <span className="text-green-400 font-bold">{totalHp.toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] uppercase block">Сумм. ATK</span>
+                <span className="text-white/40 text-[10px] uppercase block">Сумм. ATK</span>
                 <span className="text-red-400 font-bold">{totalAtk.toLocaleString()}</span>
               </div>
             </div>
@@ -217,7 +217,7 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
               </span>
             ))}
             {resonances.filter(r => r.active).length === 0 && (
-              <span className="text-[10px] text-slate-500 font-mono italic">
+              <span className="text-[10px] text-white/40 font-mono italic">
                 Возьмите 2 персонажей одной стихии для резонанса
               </span>
             )}
@@ -227,10 +227,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
         {/* 4 Active Squad Slots Grid (Mobile Friendly 2x2 or 4x1) */}
         <div>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">
+            <h2 className="text-xs font-black uppercase tracking-widest text-white/50">
               Текущий состав ({currentTeamIds.length} / 4)
             </h2>
-            <span className="text-[10px] text-slate-500 italic">
+            <span className="text-[10px] text-white/40 italic">
               Нажмите слот для выбора или смены
             </span>
           </div>
@@ -248,10 +248,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                     key={slotIndex}
                     onClick={() => setSelectedSlotIndex(isSelectedSlot ? null : slotIndex)}
                     className={cn(
-                      "relative rounded-2xl border-2 p-3 sm:p-4 bg-slate-900/90 transition-all cursor-pointer overflow-hidden flex flex-col justify-between min-h-[160px] sm:min-h-[200px] group",
+                      "relative rounded-3xl border-2 p-3 sm:p-4 bg-[#111111]/90 transition-all cursor-pointer overflow-hidden flex flex-col justify-between min-h-[160px] sm:min-h-[200px] group",
                       isSelectedSlot
                         ? "border-indigo-500 ring-2 ring-indigo-500/40 shadow-xl shadow-indigo-950/50"
-                        : "border-slate-800 hover:border-slate-700"
+                        : "border-white/5 hover:border-white/10"
                     )}
                   >
                     {/* Splash Art BG */}
@@ -262,12 +262,12 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                         className="w-full h-full object-cover object-top"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
                     </div>
 
                     {/* Top Badges */}
                     <div className="relative z-10 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-slate-950/80 border border-slate-800 text-slate-400">
+                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-[#0a0a0a]/80 border border-white/5 text-white/50">
                         {slotIndex === 0 ? "👑 Лидер" : `Слот ${slotIndex + 1}`}
                       </span>
 
@@ -276,7 +276,7 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                           e.stopPropagation();
                           removeFromSquad(b.id);
                         }}
-                        className="p-1.5 rounded-lg bg-red-950/60 text-red-400 hover:bg-red-600 hover:text-white transition-colors border border-red-800/40 min-h-[32px] min-w-[32px] flex items-center justify-center"
+                        className="p-1.5 rounded-xl bg-red-950/60 text-red-400 hover:bg-red-600 hover:text-white transition-colors border border-red-800/40 min-h-[32px] min-w-[32px] flex items-center justify-center"
                         title="Убрать из отряда"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -296,20 +296,20 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                               "px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border",
                               tier === "S" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" :
                               tier === "A" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" :
-                              "bg-slate-500/10 text-slate-400 border-slate-500/30"
+                              "bg-slate-500/10 text-white/50 border-slate-500/30"
                             )}>
                               {tier}-Tier
                             </span>
                           );
                         })()}
-                        <span className="text-[10px] font-mono font-bold text-slate-400">
+                        <span className="text-[10px] font-mono font-bold text-white/50">
                           Ур. {b.data.level}
                         </span>
                       </div>
                       <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-tight truncate">
                         {b.def.name}
                       </h3>
-                      <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
+                      <div className="flex justify-between text-[10px] font-mono text-white/50 mt-1">
                         <span>HP: <strong className="text-green-400">{b.def.stats.maxHp}</strong></span>
                         <span>ATK: <strong className="text-red-400">{b.def.stats.atk}</strong></span>
                       </div>
@@ -323,10 +323,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                   key={slotIndex}
                   onClick={() => setSelectedSlotIndex(slotIndex)}
                   className={cn(
-                    "rounded-2xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[160px] sm:min-h-[200px]",
+                    "rounded-3xl border-2 border-dashed p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[160px] sm:min-h-[200px]",
                     isSelectedSlot
                       ? "border-indigo-500 bg-indigo-950/20 text-indigo-400"
-                      : "border-slate-800 hover:border-slate-700 bg-slate-900/30 text-slate-600 hover:text-slate-400"
+                      : "border-white/5 hover:border-white/10 bg-[#111111]/30 text-white/40 hover:text-white/50"
                   )}
                 >
                   <div className="w-10 h-10 rounded-full border border-current flex items-center justify-center mb-2">
@@ -345,9 +345,9 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
         </div>
 
         {/* Character Selection Roster */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div className="bg-[#111111] border border-white/5 rounded-3xl p-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-300 flex items-center gap-2">
+            <h3 className="text-xs font-black uppercase tracking-widest text-white/70 flex items-center gap-2">
               <Users className="w-4 h-4 text-indigo-400" /> Выбор персонажей из персонального ростера
             </h3>
 
@@ -358,10 +358,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                   key={el}
                   onClick={() => setElementFilter(el)}
                   className={cn(
-                    "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0 transition-colors min-h-[32px]",
+                    "px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider shrink-0 transition-colors min-h-[32px]",
                     elementFilter === el
                       ? "bg-indigo-600 text-white"
-                      : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                      : "bg-[#1a1a1a] text-white/50 hover:text-white/90"
                   )}
                 >
                   {el === "ALL" ? "Все" : el}
@@ -382,10 +382,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                   key={id}
                   onClick={() => assignToSquad(id)}
                   className={cn(
-                    "p-3 rounded-xl border-2 text-left relative overflow-hidden transition-all flex flex-col justify-between group min-h-[100px]",
+                    "p-3 rounded-2xl border-2 text-left relative overflow-hidden transition-all flex flex-col justify-between group min-h-[100px]",
                     isAlreadyInTeam
-                      ? "bg-slate-950 border-indigo-500/50 opacity-80"
-                      : "bg-slate-950/80 border-slate-800 hover:border-slate-600"
+                      ? "bg-[#0a0a0a] border-indigo-500/50 opacity-80"
+                      : "bg-[#0a0a0a]/80 border-white/5 hover:border-slate-600"
                   )}
                 >
                   {/* Splash Art BG */}
@@ -409,7 +409,7 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                           "px-1 py-0.5 rounded text-[8px] font-black border",
                           tier === "S" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" :
                           tier === "A" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" :
-                          "bg-slate-500/10 text-slate-400 border-slate-500/30"
+                          "bg-slate-500/10 text-white/50 border-slate-500/30"
                         )}>
                           {tier}
                         </span>
@@ -423,10 +423,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                   </div>
 
                   <div className="relative z-10 mt-3">
-                    <div className="text-xs font-black uppercase truncate text-slate-200">
+                    <div className="text-xs font-black uppercase truncate text-white/90">
                       {preview.name}
                     </div>
-                    <div className="text-[9px] font-mono text-slate-400">
+                    <div className="text-[9px] font-mono text-white/50">
                       Ур. {cData.level}
                     </div>
                   </div>
@@ -439,10 +439,10 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
       </div>
 
       {/* Footer Confirm Bar */}
-      <div className="p-4 border-t border-slate-800 bg-slate-900/90 backdrop-blur-md flex justify-end items-center shrink-0">
+      <div className="p-4 border-t border-white/5 bg-[#111111]/90 backdrop-blur-md flex justify-end items-center shrink-0">
         <button
           onClick={onClose}
-          className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg transition-all min-h-[44px]"
+          className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all min-h-[44px]"
         >
           Готово / Сохранить
         </button>
