@@ -4,18 +4,110 @@ import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calend
 import { characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import EventsMenu from './EventsMenu';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
+import { Ticket, Loader2 } from 'lucide-react';
 
 interface Props {
   profile: PlayerProfile;
   setRoute: (r: GameRoute | { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT', runs?: number }) => void;
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
   onLogout?: () => void;
+  username?: string;
 }
 
-export default function HubMenu({ profile, setRoute, updateProfile, onLogout }: Props) {
+export default function HubMenu({ profile, setRoute, updateProfile, onLogout, username }: Props) {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DAILIES' | 'DUNGEONS' | 'ACHIEVEMENTS' | 'SHOP' | 'EVENTS' | 'EXPEDITIONS'>('OVERVIEW');
   const [menuOpen, setMenuOpen] = useState(false);
   const [goldExpRuns, setGoldExpRuns] = useState<Record<string, number>>({ GOLD: 1, EXP: 1 });
+
+  const [promoCode, setPromoCode] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  const handlePromoSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoMessage(null);
+
+    const code = promoCode.trim().toUpperCase();
+
+    if (profile.claimedPromos?.includes(code)) {
+      setPromoMessage({ type: 'error', text: 'Промокод уже использован!' });
+      setPromoLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', code)
+        .single();
+      
+      if (error || !data) {
+        setPromoMessage({ type: 'error', text: 'Промокод не найден' });
+        setPromoLoading(false);
+        return;
+      }
+
+      if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+        setPromoMessage({ type: 'error', text: 'Срок действия истёк' });
+        setPromoLoading(false);
+        return;
+      }
+
+      // Claim success! Apply rewards
+      updateProfile(p => {
+        const next = { ...p };
+        if (data.gems) next.gems += data.gems;
+        if (data.gold) next.gold += data.gold;
+        if (data.resin) next.resin += data.resin;
+        if (data.heroExp) next.heroExp += data.heroExp;
+        
+        if (data.characters && Array.isArray(data.characters)) {
+           const newRoster = { ...next.roster };
+           data.characters.forEach((charId: string) => {
+              if (characterBlueprints[charId]) {
+                 if (!newRoster[charId]) {
+                    newRoster[charId] = { level: 1, exp: 0, ascension: 0, dupes: 0 };
+                 } else {
+                    newRoster[charId].dupes += 1;
+                 }
+              }
+           });
+           next.roster = newRoster;
+        }
+
+        // Apply any extra jsonb rewards if needed
+        if (data.other_rewards) {
+           const r = data.other_rewards;
+           if (r.gems) next.gems += r.gems;
+           if (r.gold) next.gold += r.gold;
+        }
+        
+        next.claimedPromos = [...(p.claimedPromos || []), code];
+        return next;
+      });
+
+      let rewardText = [];
+      if (data.gems) rewardText.push(`${data.gems} Гемов`);
+      if (data.gold) rewardText.push(`${data.gold} Золота`);
+      if (data.resin) rewardText.push(`${data.resin} Смолы`);
+      if (data.heroExp) rewardText.push(`${data.heroExp} Книг опыта`);
+      if (data.characters && Array.isArray(data.characters)) rewardText.push(`Персонажей: ${data.characters.length}`);
+      if (rewardText.length === 0) rewardText.push('Секретная награда');
+
+      setPromoMessage({ type: 'success', text: `Успешно! Получено: ${rewardText.join(', ')}` });
+      setPromoCode('');
+    } catch (e) {
+      console.error(e);
+      setPromoMessage({ type: 'error', text: 'Ошибка сети.' });
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
 
   // Daily Tasks Data
   const DAILIES = [
@@ -114,8 +206,17 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout }: 
             </button>
          </nav>
          {onLogout && (
-           <div className="p-4 border-t border-white/5">
-              <button onClick={onLogout} className="flex items-center gap-3 p-3 w-full rounded-xl font-bold hover:bg-red-500/20 text-red-400 transition-colors">
+           <div className="p-4 border-t border-white/5 flex flex-col gap-3">
+              <div className="flex items-center gap-3 px-2">
+                 <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold uppercase text-lg shadow-[0_0_10px_rgba(99,102,241,0.2)]">
+                    {username?.charAt(0) || 'И'}
+                 </div>
+                 <div className="flex-1 truncate">
+                    <div className="text-[10px] text-white/50 font-mono uppercase tracking-widest">Аккаунт</div>
+                    <div className="text-sm font-bold text-white truncate">{username || 'Игрок'}</div>
+                 </div>
+              </div>
+              <button onClick={onLogout} className="flex items-center justify-center gap-3 p-3 w-full rounded-xl font-bold bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
                  <X className="w-5 h-5" /> Выйти
               </button>
            </div>
@@ -301,12 +402,20 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout }: 
                   </button>
                </div>
                {onLogout && (
-                  <button 
-                     onClick={() => { onLogout(); setMenuOpen(false); }}
-                     className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-[#111111] border border-red-500/20 hover:bg-red-500/10 active:scale-95 transition rounded-2xl text-red-400 font-bold text-xs uppercase tracking-widest"
-                  >
-                     <X className="w-4 h-4" /> Выйти из аккаунта
-                  </button>
+                  <div className="mt-4 pt-4 border-t border-white/5 w-full flex flex-col gap-4">
+                     <div className="flex items-center justify-center gap-2 px-2 bg-[#111111] py-2 rounded-2xl border border-white/5">
+                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold uppercase text-[10px]">
+                           {username?.charAt(0) || 'И'}
+                        </div>
+                        <span className="text-sm font-bold text-white/90 truncate">{username || 'Игрок'}</span>
+                     </div>
+                     <button 
+                        onClick={() => { onLogout(); setMenuOpen(false); }}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 active:scale-95 transition rounded-2xl text-red-400 font-bold text-xs uppercase tracking-widest"
+                     >
+                        <X className="w-4 h-4" /> Выйти из аккаунта
+                     </button>
+                  </div>
                )}
             </div>
          </div>
@@ -621,6 +730,43 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout }: 
                         >
                            Купить за 250k G
                         </button>
+                     </div>
+                  </div>
+
+                  <div className="mt-8 bg-[#111111] border border-white/5 rounded-2xl p-6 relative overflow-hidden">
+                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
+                     <div className="flex flex-col md:flex-row items-center gap-6">
+                        <div className="flex-1">
+                           <h3 className="font-bold text-xl mb-2 text-white/90 flex items-center gap-2">
+                              <Ticket className="w-5 h-5 text-purple-400" /> Ввод промокода
+                           </h3>
+                           <p className="text-white/50 text-sm font-mono mb-4 md:mb-0">
+                              Активируйте секретные коды от разработчиков для получения уникальных наград.
+                           </p>
+                        </div>
+                        <form onSubmit={handlePromoSubmit} className="flex-1 w-full flex flex-col items-end gap-3">
+                           <div className="w-full flex gap-2">
+                              <input 
+                                 type="text" 
+                                 value={promoCode}
+                                 onChange={(e) => setPromoCode(e.target.value)}
+                                 placeholder="Введите код..."
+                                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-purple-500/50 uppercase font-mono tracking-widest"
+                              />
+                              <button 
+                                 type="submit"
+                                 disabled={promoLoading || !promoCode.trim()}
+                                 className="px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-900/50 disabled:text-white/40 text-white font-black uppercase tracking-widest rounded-xl text-xs transition-all flex items-center justify-center min-w-[120px]"
+                              >
+                                 {promoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Активировать'}
+                              </button>
+                           </div>
+                           {promoMessage && (
+                              <div className={`text-xs font-mono font-bold w-full ${promoMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                 {promoMessage.text}
+                              </div>
+                           )}
+                        </form>
                      </div>
                   </div>
                </div>

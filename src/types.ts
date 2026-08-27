@@ -177,7 +177,8 @@ export interface StoryChapter {
 }
 
 export interface PlayerProfile {
-  gems: number; // Premium currency
+  gems: number;
+  claimedPromos?: string[]; // Premium currency
   resin: number; // Energy
   gold: number;
   heroExp: number;

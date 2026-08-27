@@ -642,7 +642,7 @@ export default function App() {
           className="w-full flex justify-center items-center h-full min-h-screen"
         >
       {currentRouteName === 'HUB' && (
-        <HubMenu profile={profile} updateProfile={setProfile} setRoute={setRoute} onLogout={() => { supabase.auth.signOut().then(() => { localStorage.removeItem('ed_user'); localStorage.removeItem('ed_profile_v3'); setIsAuthenticated(false); setUserId(null); setUsername(null); }); }} />
+        <HubMenu profile={profile} updateProfile={setProfile} setRoute={setRoute} username={username || 'Игрок'} onLogout={() => { supabase.auth.signOut().then(() => { localStorage.removeItem('ed_user'); localStorage.removeItem('ed_profile_v3'); setIsAuthenticated(false); setUserId(null); setUsername(null); }); }} />
       )}
 
       {currentRouteName === 'ROSTER' && (
