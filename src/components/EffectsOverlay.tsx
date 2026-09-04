@@ -74,7 +74,23 @@ export const EffectsOverlay = memo(forwardRef<EffectsOverlayRef, { unitId: strin
             {ve.type === "heal" && <motion.div initial={{y:20, opacity:0}} animate={{y:-50, opacity:[0, 1, 0]}} transition={{duration: 0.8}} className="absolute text-6xl">💚</motion.div>}
             {ve.type === "shield" && <motion.div initial={{scale:0.5, opacity:0}} animate={{scale:2.5, opacity:[0, 0.8, 0]}} transition={{duration: 0.5}} className="absolute text-emerald-300 text-7xl opacity-50">🛡️</motion.div>}
             {ve.type === "buff" && <motion.div initial={{scale:0.8, opacity:0}} animate={{scale:2, opacity:[0, 1, 0]}} transition={{duration: 0.6}} className="absolute text-yellow-300 text-6xl">✨</motion.div>}
-            {ve.type === "hit" && <motion.div initial={{ scale: 1 }} animate={{ scale: [1, 2, 0], opacity: [1, 1, 0] }} transition={{ duration: 0.3 }} className="absolute text-6xl">💥</motion.div>}
+            {ve.type === "kairen_frost" && (
+                <motion.div className="absolute flex items-center justify-center">
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 6, 4.5, 0], rotate: 45 }} transition={{ duration: 1 }} className="absolute text-8xl ">❄️</motion.div>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.4, 0], scale: [1, 2] }} transition={{ duration: 0.5 }} className="absolute w-40 h-40 bg-cyan-400/20 rounded-full " />
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*60) * 110, y: Math.cos(i*60) * 110, opacity: [1, 0], scale: [1.2, 0.5], rotate: 180 }} transition={{ duration: 0.7, delay: i * 0.05 }} className="absolute text-lg">💎</motion.div>
+                  ))}
+                </motion.div>
+            )}            {ve.type === "aveline_nature" && (
+                <motion.div className="absolute flex items-center justify-center">
+                  <motion.div initial={{ scale: 0, y: 50 }} animate={{ scale: [0, 5, 0], y: [50, 0, -20] }} transition={{ duration: 0.8 }} className="absolute text-8xl  opacity-20">💧</motion.div>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 4, 0], rotate: 360 }} transition={{ duration: 1 }} className="absolute text-7xl">🌸</motion.div>
+                  {[...Array(5)].map((_, i) => (
+                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*72) * 100, y: Math.cos(i*72) * 100, opacity: [1, 0], scale: [1, 0] }} transition={{ duration: 0.6, delay: i * 0.05 }} className="absolute text-xl">🌺</motion.div>
+                  ))}
+                </motion.div>
+            )}            {ve.type === "hit" && <motion.div initial={{ scale: 1 }} animate={{ scale: [1, 2, 0], opacity: [1, 1, 0] }} transition={{ duration: 0.3 }} className="absolute text-6xl">💥</motion.div>}
           </React.Fragment>
         ))}
       </div>

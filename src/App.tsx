@@ -12,7 +12,7 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, createGlitchSectorEnemy, createTrialEnemy, getCharSplash } from './data';
+import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage } from './types';
 import ArtifactDungeon from './components/ArtifactDungeon';
 import WorldMap from './components/WorldMap';
@@ -49,6 +49,7 @@ const defaultProfile: PlayerProfile = {
   bpClaimedLevels: [],
   bpClaimedLevelsPremium: [],
   hasGoldenPass: false,
+  bpResetTime: Date.now() + 3 * 24 * 60 * 60 * 1000,
   lunarAbyssClaimed: [],
   lunarAbyssResetTime: getNextThursdayResetTime(),
   bossRushClaimed: false,
@@ -86,7 +87,7 @@ export default function App() {
     { type: 'ABYSS_FLOOR', level: number, floorId: number } |
     { type: 'STORY_STAGE', stage: StoryStage } |
     { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } |
-    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number }
+    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean }
   >('HUB');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -137,10 +138,6 @@ export default function App() {
         if (lastReset < startOfDay) {
            resetProfile = {
               ...resetProfile,
-              bpExp: 0,
-              bpClaimedLevels: [],
-              bpClaimedLevelsPremium: [],
-              hasGoldenPass: false,
               dailies: {
                  battlesWon: 0,
                  skillsUsed: 0,
@@ -157,6 +154,16 @@ export default function App() {
         }
 
         // Weekly Thursday Reset for Abyss
+        // Battle Pass Reset (every 3 days)
+        const bpReset = parsed.bpResetTime || 0;
+        if (now.getTime() >= bpReset) {
+           resetProfile.bpExp = 0;
+           resetProfile.bpClaimedLevels = [];
+           resetProfile.bpClaimedLevelsPremium = [];
+           resetProfile.hasGoldenPass = false;
+           resetProfile.bpResetTime = now.getTime() + 3 * 24 * 60 * 60 * 1000;
+        }
+
         const abyssResetTime = parsed.lunarAbyssResetTime || 0;
         if (now.getTime() >= abyssResetTime) {
           resetProfile.lunarAbyssClaimed = [];
@@ -262,10 +269,6 @@ export default function App() {
         if (lastReset < startOfDay) {
           newP = {
             ...newP,
-            bpExp: 0,
-            bpClaimedLevels: [],
-            bpClaimedLevelsPremium: [],
-            hasGoldenPass: false,
             dailies: {
               battlesWon: 0,
               skillsUsed: 0,
@@ -280,6 +283,19 @@ export default function App() {
             }
           };
           updated = true;
+        }
+
+        // Battle Pass Reset
+        if (nowTime > (p.bpResetTime || 0)) {
+           newP = {
+              ...newP,
+              bpExp: 0,
+              bpClaimedLevels: [],
+              bpClaimedLevelsPremium: [],
+              hasGoldenPass: false,
+              bpResetTime: nowTime + 3 * 24 * 60 * 60 * 1000
+           };
+           updated = true;
         }
 
         // Lunar Abyss Reset (every 1 hour)
@@ -311,6 +327,8 @@ export default function App() {
 
   const playerParty: Combatant[] = (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE')
     ? getPartyFromIds(route.teams[route.stage])
+    : (typeof route === 'object' && route.type === 'TRIAL_BATTLE' && route.team)
+    ? route.team.map((id: string) => { const c = characterBlueprints[id](id, 80, 0, []); if (c.stats.spd < 150) c.stats.spd = 150; return c; })
     : getPartyFromIds(profile.team);
 
   const getEnemies = (level: number) => {
@@ -321,9 +339,9 @@ export default function App() {
     if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
       const stageParty = getPartyFromIds(route.teams[route.stage]);
       const bossConfig = [
-        { name: '«Сверхпроводящий Коллос»', element: 'Electro', title: 'Этап 1: «Сверхпроводящий Коллос» (Electro)' },
-        { name: '«Ледяной Исполин»', element: 'Cryo', title: 'Этап 2: «Ледяной Исполин» (Cryo)' },
-        { name: '«Призма Пустоты»', element: 'Electro', title: 'Этап 3: «Призма Пустоты» (Electro)' }
+        { name: '«Магистр Теней»', element: 'Physical', title: 'Этап 1: «Магистр Теней» (Physical)' },
+        { name: '«Сверхпроводящий Колосс»', element: 'Electro', title: 'Этап 2: «Сверхпроводящий Колосс» (Electro)' },
+        { name: '«Абсолютный Ноль»', element: 'Cryo', title: 'Этап 3: «Абсолютный Ноль» (Cryo)' }
       ][route.stage] || { name: 'Босс', element: 'Electro', title: `Этап ${route.stage + 1}` };
 
       const totalDmg = stageParty.reduce((sum, p) => sum + (stats[p.uid] || 0), 0);
@@ -447,7 +465,7 @@ export default function App() {
       if (floorId >= 9) {
          // Lunar Abyss (Weekly Thursday Reset)
          if (!profile.lunarAbyssClaimed.includes(floorId)) {
-            const lunarRewards = [1600, 2400, 3200, 5000];
+            const lunarRewards = [500, 600, 700, 800];
             abyssGems = lunarRewards[floorId - 9];
             setProfile(p => ({ ...p, lunarAbyssClaimed: [...p.lunarAbyssClaimed || [], floorId] }));
          }
@@ -689,11 +707,11 @@ export default function App() {
             route.type === 'ABYSS_FLOOR' 
               ? generateAbyssWaves(route.floorId, route.level)
               : route.type === 'BOSS_RUSH_BATTLE'
-                ? [[createBossRushEnemy(route.stage)]]
+                ? [generateBossRushWave(route.stage)]
                 : route.type === 'GLITCH_BATTLE'
                   ? [[createGlitchSectorEnemy(route.sectorId)]]
                 : route.type === 'TRIAL_BATTLE'
-                  ? [[createTrialEnemy(route.trialId)]]
+                  ? (route.isTestRun ? [Array.from({ length: 3 }).map(() => createBasicEnemy(80, 'slime_fire'))] : [[createTrialEnemy(route.trialId)]])
                 : route.type === 'DUNGEON'
                   ? Array.from({ length: route.runs || 1 }).map(() => (
                       route.dungeonType === 'ARTIFACT' && (route as any).dungeonId

@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerProfile } from '../types';
 import { 
@@ -15,7 +17,7 @@ interface Props {
 }
 
 export default function EventsMenu({ profile, updateProfile, setRoute }: Props) {
-  const [subTab, setSubTab] = useState<'LOGIN' | 'AVELINE' | 'GRID' | 'FRONTIER' | 'TESTRUN' | 'MINIGAME' | 'UPDATE'>('AVELINE');
+  const [subTab, setSubTab] = useState<'LOGIN' | 'AVELINE' | 'GRID' | 'FRONTIER' | 'TESTRUN' | 'MINIGAME'>('AVELINE');
   const todayStr = new Date().toISOString().split('T')[0];
 
   // ==========================================
@@ -29,7 +31,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
     if (alreadyCheckedIn) return;
     const nextStreak = loginStreak >= 7 ? 1 : loginStreak + 1;
     updateProfile(p => ({
-      ...p, gems: p.gems + 160, gold: p.gold + (nextStreak * 5000),
+      ...p, gems: p.gems + (nextStreak * 60), gold: p.gold + (nextStreak * 5000),
       events: { ...p.events, initStreak: nextStreak, initLastClaimDay: todayStr }
     }));
   };
@@ -37,8 +39,6 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   // ==========================================
   // EVENT 2: AVELINE (Story Event)
   // ==========================================
-  const [activeDialogue, setActiveDialogue] = useState<typeof avelineStoryStages[0] | null>(null);
-  const [dialogueIndex, setDialogueIndex] = useState(0);
   const avelineStoryStages = [
     {
       id: "event_aveline_1",
@@ -126,8 +126,8 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
     
     setTimeout(() => {
       let rGems = 0; let rGold = 0; let rExp = 0;
-      if (newItems[index].type === 'JACKPOT') rGems = 50;
-      if (newItems[index].type === 'GEMS') rGems = 10;
+      if (newItems[index].type === 'JACKPOT') rGems = 500;
+      if (newItems[index].type === 'GEMS') rGems = 100;
       if (newItems[index].type === 'GOLD') rGold = 50000;
       if (newItems[index].type === 'EXP') { rExp = 10000; rGold = 10000; }
 
@@ -173,7 +173,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   // EVENT 5: TEST RUN
   // ==========================================
   const testRuns = [
-    { id: 'test_aveline', char: 'aveline', team: ['aveline', 'ineffa', 'zephyr', 'aurum'] },
+    { id: 'test_aveline', char: 'aveline', team: ['aveline', 'ineffa', 'nova', 'blaze'] },
     { id: 'test_kairen1', char: 'kairen', team: ['kairen', 'volosatinya', 'glacier', 'snezhana'] },
     { id: 'test_cyrus', char: 'cyrus', team: ['cyrus', 'maestro', 'nova', 'moyan'] },
     { id: 'test_raven', char: 'raven', title: 'Рейвен', team: ['raven', 'maestro', 'tide', 'pulse'] },
@@ -227,7 +227,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   const claimMinigame = () => {
     if (score < 100 || minigamePlayed) return;
     updateProfile(p => ({
-      ...p, gems: p.gems + 40, gold: p.gold + 50000, 
+      ...p, gems: p.gems + 200, gold: p.gold + 50000, 
       events: { ...p.events, minigameDate: todayStr }
     }));
     setIsPlaying(false);
@@ -259,12 +259,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
           <Grid3x3 className="w-4 h-4" /> <div className="text-left leading-tight"><div className="text-[10px] opacity-70">Ежедневно</div>Эхо Вероятностей</div>
         </button>
 
-        
         <div className="h-px bg-white/10 w-full my-2"></div>
-        <button onClick={() => setSubTab('UPDATE')} className={cn("flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition shrink-0", subTab === 'UPDATE' ? "bg-cyan-600 text-white" : "text-white/50 hover:bg-[#1a1a1a]/50")}>
-          <Gift className="w-4 h-4" /> Обновление 1.2
-        </button>
-
         <button onClick={() => setSubTab('LOGIN')} className={cn("flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition shrink-0", subTab === 'LOGIN' ? "bg-indigo-600 text-white" : "text-white/50 hover:bg-[#1a1a1a]/50")}>
           <Sparkles className="w-4 h-4" /> Инициализация
         </button>
@@ -275,51 +270,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
         
         {/* AVELINE STORY */}
         {subTab === 'AVELINE' && (
-          <div className="space-y-6 max-w-4xl mx-auto relative h-full">
-            {activeDialogue && (
-              <div className="fixed inset-0 z-[100] bg-black/90 p-4 sm:p-8 flex flex-col justify-end animate-in fade-in">
-                <div className="flex-1 flex items-center justify-center">
-                   {activeDialogue.dialogue?.[dialogueIndex]?.charId && (
-                     <img 
-                       src={getCharSplash(activeDialogue.dialogue[dialogueIndex].charId!)} 
-                       className="h-full max-h-[60vh] object-contain opacity-50"
-                     />
-                   )}
-                </div>
-                <div className="bg-[#111] border border-rose-500/30 rounded-2xl p-6 sm:p-8 max-w-4xl mx-auto w-full relative shadow-[0_0_50px_rgba(225,29,72,0.1)]">
-                   <h4 className="text-xl font-black text-rose-400 uppercase tracking-widest mb-4">
-                     {activeDialogue.dialogue?.[dialogueIndex]?.speaker || "..."}
-                   </h4>
-                   <p className="text-lg text-white/90 leading-relaxed font-serif">
-                     {activeDialogue.dialogue?.[dialogueIndex]?.text}
-                   </p>
-                   <div className="mt-8 flex justify-end">
-                     <button 
-                       onClick={() => {
-                         if (dialogueIndex < (activeDialogue.dialogue?.length || 0) - 1) {
-                           setDialogueIndex(prev => prev + 1);
-                         } else {
-                           updateProfile(p => ({
-                             ...p,
-                             gems: p.gems + activeDialogue.reward.gems,
-                             gold: p.gold + activeDialogue.reward.gold,
-                             storyProgress: {
-                               ...p.storyProgress,
-                               completedStages: [...(p.storyProgress?.completedStages || []), activeDialogue.id]
-                             }
-                           }));
-                           setActiveDialogue(null);
-                         }
-                       }}
-                       className="px-8 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase rounded-xl tracking-widest transition flex items-center gap-2"
-                     >
-                       Далее <Play className="w-4 h-4" />
-                     </button>
-                   </div>
-                </div>
-              </div>
-            )}
-
+          <div className="space-y-6 max-w-4xl mx-auto">
             <div className="bg-gradient-to-r from-rose-950/80 to-[#111] border border-rose-900/50 rounded-3xl p-6 relative overflow-hidden">
                <div className="absolute right-0 top-0 w-64 h-64 bg-rose-500/10 blur-[100px] pointer-events-none" />
                <div className="relative z-10 flex justify-between items-center">
@@ -362,7 +313,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                               <CheckCircle2 className="w-4 h-4" /> Пройдено
                             </button>
                           ) : isUnlocked ? (
-                            <button onClick={() => { if(stage.type === 'DIALOGUE') { setActiveDialogue(stage); setDialogueIndex(0); } else { setRoute({ type: 'STORY_STAGE', stage }); } }} className="w-full sm:w-auto px-8 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs uppercase font-bold tracking-wider transition shadow-lg shadow-rose-900/50 flex items-center justify-center gap-2">
+                            <button onClick={() => setRoute({ type: 'STORY_STAGE', stage })} className="w-full sm:w-auto px-8 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs uppercase font-bold tracking-wider transition shadow-lg shadow-rose-900/50 flex items-center justify-center gap-2">
                               <Play className="w-4 h-4" /> Начать
                             </button>
                           ) : (
@@ -503,7 +454,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                 {minigamePlayed ? (
                   <span className="text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">Награда получена</span>
                 ) : score >= 100 ? (
-                  <button onClick={claimMinigame} className="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-green-900/50 animate-bounce">Забрать 💎 40</button>
+                  <button onClick={claimMinigame} className="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-green-900/50 animate-bounce">Забрать 💎 200</button>
                 ) : (
                   <button onClick={() => setIsPlaying(!isPlaying)} className={cn("px-4 py-1.5 font-bold rounded-lg text-xs shadow-lg", isPlaying ? "bg-red-600 text-white" : "bg-blue-600 text-white")}>
                     {isPlaying ? "Остановить" : "Старт!"}
@@ -520,7 +471,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                         setTargets(prev => prev.filter(pt => pt.id !== t.id));
                         setScore(s => s + 10);
                      }}
-                     style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                     style={{ left: \`\${t.x}%\`, top: \`\${t.y}%\` }}
                      className="absolute w-12 h-12 -ml-6 -mt-6 rounded-full bg-red-500/80 border-2 border-white shadow-[0_0_15px_rgba(239,68,68,1)] hover:scale-95 active:scale-90 transition-transform animate-in zoom-in duration-200 flex items-center justify-center"
                    >
                      <Target className="w-6 h-6 text-white" />
@@ -562,8 +513,8 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                      <div className="absolute inset-0 flex items-center justify-center text-white/10"><Sparkles className="w-8 h-8" /></div>
                    ) : (
                      <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in spin-in-12">
-                       {item.type === 'JACKPOT' && <span className="text-2xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]">50💎</span>}
-                       {item.type === 'GEMS' && <span className="text-xl font-bold text-indigo-400">10💎</span>}
+                       {item.type === 'JACKPOT' && <span className="text-2xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]">500💎</span>}
+                       {item.type === 'GEMS' && <span className="text-xl font-bold text-indigo-400">100💎</span>}
                        {item.type === 'GOLD' && <span className="text-xl font-bold text-yellow-500">50k🪙</span>}
                        {item.type === 'EXP' && <span className="text-xl font-bold text-green-400">EXP</span>}
                        {item.type === 'EMPTY' && <span className="text-white/20">Пусто</span>}
@@ -575,41 +526,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
           </div>
         )}
 
-        
-        
-        {/* UPDATE REWARD */}
-        {subTab === 'UPDATE' && (
-          <div className="flex flex-col items-center justify-center h-full w-full max-w-lg mx-auto">
-            <div className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 flex flex-col items-center text-center">
-              <h2 className="text-xl font-bold text-white mb-2">Обновление 1.2</h2>
-              <p className="text-sm text-white/50 mb-8">Слияние Миров успешно завершено. Благодарим за участие.</p>
-              
-              <div className="flex items-center gap-2 mb-8 bg-white/5 px-6 py-3 rounded-xl border border-white/10">
-                 <span className="text-xl">💎</span>
-                 <span className="text-lg font-bold text-white tracking-widest">800</span>
-              </div>
-              
-              <button 
-                onClick={() => {
-                  if (!profile.events?.update12Claimed) {
-                    updateProfile(p => ({
-                      ...p, gems: p.gems + 800, events: { ...p.events, update12Claimed: true }
-                    }));
-                  }
-                }} 
-                disabled={profile.events?.update12Claimed} 
-                className={cn(
-                  "w-full py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition", 
-                  profile.events?.update12Claimed ? "bg-white/5 text-white/30" : "bg-white text-black hover:bg-white/90"
-                )}
-              >
-                {profile.events?.update12Claimed ? "Получено" : "Получить"}
-              </button>
-            </div>
-          </div>
-        )}
-
-{/* LOGIN */}
+        {/* LOGIN */}
         {subTab === 'LOGIN' && (
           <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 space-y-6 max-w-2xl mx-auto">
             <h2 className="text-xl font-black text-indigo-400 uppercase tracking-tight flex items-center gap-2">
@@ -623,7 +540,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                   <div key={day} className={cn("aspect-square rounded-2xl border flex flex-col items-center justify-center p-2", isClaimed ? "bg-indigo-900/30 border-indigo-500/50" : isToday ? "bg-indigo-600 border-indigo-400 shadow-lg scale-105 z-10" : "bg-[#0a0a0a] border-white/5 opacity-50")}>
                     <span className={cn("text-[10px] font-bold mb-1", (isClaimed || isToday) ? "text-white" : "text-white/40")}>День {day}</span>
                     {isClaimed ? <CheckCircle2 className="w-5 h-5 text-indigo-400" /> : <Gift className={cn("w-5 h-5", isToday ? "text-white animate-pulse" : "text-white/20")} />}
-                    <span className={cn("text-[10px] mt-1 font-mono font-bold", (isClaimed || isToday) ? "text-indigo-200" : "text-white/30")}>+160 💎</span>
+                    <span className={cn("text-[10px] mt-1 font-mono font-bold", (isClaimed || isToday) ? "text-indigo-200" : "text-white/30")}>+{day * 60} 💎</span>
                   </div>
                 );
               })}
@@ -637,3 +554,6 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
     </div>
   );
 }
+`
+
+fs.writeFileSync('src/components/EventsMenu.tsx', code);

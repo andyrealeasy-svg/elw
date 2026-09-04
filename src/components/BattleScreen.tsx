@@ -65,7 +65,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     playEffect: null as any,
     damageDealt: damageDealtRef.current,
     effectsRefs: {} as Record<string, EffectsOverlayRef>,
-    lastChecksum: 0
+    lastChecksum: 0,
+    isAutoBattle: false
   });
 
   const addFloatText = React.useCallback((targetUid: string, text: string, color: string) => {
@@ -181,7 +182,14 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
          if (skill.target === "AllEnemies") targets = newEnemies.filter(e => e.stats.hp > 0);
          else if (skill.target === "SingleEnemy") {
             const aliveEnemies = newEnemies.filter(e => e.stats.hp > 0);
-            if (aliveEnemies.length > 0) targets = [aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)]];
+            if (aliveEnemies.length > 0) {
+               const dueledEnemy = aliveEnemies.find(e => e.buffs && e.buffs.duelMark);
+               if (dueledEnemy) {
+                  targets = [dueledEnemy];
+               } else {
+                  targets = [aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)]];
+               }
+            }
          } else if (skill.target === "SingleAlly") {
             const aliveAllies = newPlayers.filter(a => a.stats.hp > 0);
             if (aliveAllies.length > 0) targets = [aliveAllies[Math.floor(Math.random() * aliveAllies.length)]];
@@ -458,6 +466,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                {unit.buffs.isolationMark > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-purple-400 font-bold">🎯{unit.buffs.isolationMark}</div>}
                {(unit.buffs.voltage ?? 0) > 0 && <div className="text-[7px] bg-violet-600 text-yellow-300 font-bold rounded-sm px-0.5 border border-yellow-400/40">⚡{unit.buffs.voltage}</div>}
                {(unit.buffs.conductionCircuit ?? 0) > 0 && <div className="text-[7px] bg-cyan-600 text-white font-bold rounded-sm px-0.5 border border-cyan-300/40">🔄{unit.buffs.conductionCircuit}</div>}
+               {(unit.buffs.kairenShards ?? 0) > 0 && <div className="text-[7px] bg-sky-600 text-white font-bold rounded-sm px-0.5 border border-sky-300/40">❄️{unit.buffs.kairenShards}</div>}
+               {(unit.buffs.avelinePetals ?? 0) > 0 && <div className="text-[7px] bg-pink-600 text-white font-bold rounded-sm px-0.5 border border-pink-300/40">🌸{unit.buffs.avelinePetals}</div>}
              </div>
           </div>
         </div>

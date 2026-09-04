@@ -12,9 +12,9 @@ interface BossRushMenuProps {
 }
 
 const BOSSES = [
-  { id: 'colossus', name: 'Сверхпроводящий Коллос', level: 80, hpText: '350k HP', element: 'Electro', desc: 'Наносит огромный Электро-урон. Требует сильного исцеления и смягчения урона (под Вольту).', icon: Zap, color: 'text-purple-400' },
-  { id: 'frost_giant', name: 'Ледяной Исполин', level: 85, hpText: '500k HP', element: 'Cryo', desc: 'Защищен мощным ледяным щитом. Уязвим к Горению и огненным атакам (под Селину и Ашера).', icon: Zap, color: 'text-cyan-400' },
-  { id: 'void_prism', name: 'Призма Пустоты', level: 90, hpText: '750k HP', element: 'Electro', desc: 'Обладает высочайшим сопротивлением. Получает критический урон от реакции Отражение (под Инеффу).', icon: Sword, color: 'text-indigo-400' }
+  { id: 'shadow_magister', name: 'Магистр Теней', level: 80, hpText: '400k HP', element: 'Physical', desc: 'Обладает огромной защитой и призывает дронов. Уязвим к пробитию защиты и изоляции (под Сайруса и Рейвен).', icon: Sword, color: 'text-gray-400' },
+  { id: 'colossus', name: 'Сверхпроводящий Колосс', level: 85, hpText: '600k HP', element: 'Electro', desc: 'Наносит непрерывный шквал АоЕ ударов. Требует поглощения входящего урона (под Вольту).', icon: Zap, color: 'text-purple-400' },
+  { id: 'absolute_zero', name: 'Абсолютный Ноль', level: 90, hpText: '900k HP', element: 'Cryo', desc: 'Имеет феноменальный запас здоровья. Требует максимального ДПС и реакций заморозки (под Кайрена и Авелин).', icon: Mountain, color: 'text-cyan-400' }
 ];
 
 export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onStartRush }) => {

@@ -118,7 +118,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
               <h1 className="text-xl font-black uppercase italic tracking-tighter text-white/90">
                 Боевой Пропуск
               </h1>
-              <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest leading-none">Обновление: Ежедневно</p>
+              <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest leading-none">Обновление: Раз в 3 дня</p>
            </div>
         </div>
         

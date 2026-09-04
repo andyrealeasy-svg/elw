@@ -1,0 +1,25 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { PlayerProfile } from '../types';
+import { 
+  Sparkles, 
+  Flower2, 
+  Grid3x3, 
+  Compass,
+  CheckCircle2,
+  Gift,
+  Clock,
+  Unlock,
+  Lock,
+  ChevronRight,
+  Database,
+  Swords,
+  Play,
+  Droplets,
+  Zap,
+  Crosshair,
+  Flame
+} from 'lucide-react';
+import { cn } from '../lib/utils';
+import { getCharSplash, characterBlueprints } from '../data';
+
+// ... (I'll write the full file content in a script)

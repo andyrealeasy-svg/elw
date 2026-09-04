@@ -133,6 +133,8 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
 
   const tierList: Record<string, TierEntry[]> = {
     'T0': [
+      { id: 'aveline' },
+      { id: 'kairen' },
       { id: 'volta' },
       { id: 'ineffa' },
       { id: 'zephyr' },
@@ -199,6 +201,18 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   };
 
   const recommendedTeams: TeamComposition[] = [
+    {
+      name: "Абсолютный Холод",
+      description: "Сильнейшая Freeze-команда. Кайрен наносит разрушительный АоЕ-урон и генерирует осколки за каждого замороженного врага, пока Авелин баффает команду и мгновенно активирует лепестки прилива.",
+      members: ['kairen', 'aveline', 'glacier', 'snezhana'],
+      tags: ["FREEZE", "CRYO", "AOE", "T0"]
+    },
+    {
+      name: "Танец Океана",
+      description: "Команда, играющая от непрерывных реакций с Гидро. Авелин выступает идеальным саппортом, создавая Лепестки Прилива при любой элементальной атаке союзников.",
+      members: ['ineffa', 'aveline', 'nova', 'blaze'],
+      tags: ["VAPE", "HYDRO", "REACTION", "T0"]
+    },
     {
       name: "Биоэлектрическая Цепь",
       description: "Ультимативный энергосустейн от Вольты. Вольта закрывает команду «Проводящим контуром», преобразуя любой урон в исцеление и щиты, пока Зефир и Маэстро разгоняют шкалу ходов и сокрушают врагов.",

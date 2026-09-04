@@ -2,6 +2,174 @@ import { Combatant, Skill, Element, Artifact, ArtifactSlot, StatType, BattleStat
 import { playCritSound } from "./lib/sound";
 import { SPLASH_IMAGES } from "./lib/images";
 
+
+export const triggerKairenIceEcho = (s, state, ft, log, c) => {
+  s.buffs.kairenShards = 0;
+  if (ft) ft(s.uid, "❄️ ЛЕДЯНОЕ ЭХО", "text-blue-400 font-bold");
+  let baseMult = 1.5;
+  if (state && state.enemyParty) {
+    state.isKairenEchoing = true;
+    state.enemyParty.forEach(e => {
+      if (e.stats.hp > 0) {
+        let debuffCount = (e.aura ? 1 : 0) + (e.buffs.frozen ? 1 : 0);
+        dealDamage(s, e, baseMult + (debuffCount * 0.5), 'Cryo', log, null, null, 1, state);
+        if (c >= 4) e.buffs.kairenColdMark = 2;
+      }
+    });
+    state.isKairenEchoing = false;
+  }
+};
+
+export const triggerKairenC6 = (s, state, ft, log) => {
+  s.buffs.kairenShards = 0;
+  s.buffs.kairenC6UsedThisWinter = true;
+  s.buffs.kairenC6CryoBuff = 2;
+  if (ft) ft(s.uid, "🏔️ КОНЕЦ ВЕЧНОЙ ЗИМЫ", "text-cyan-300 font-bold text-xs");
+  if (state && state.enemyParty) {
+    state.isKairenEchoing = true;
+    state.enemyParty.forEach(e => {
+      if (e.stats.hp > 0) {
+        let extra = (e.buffs.frozen || e.isBoss) ? 1.5 : 0;
+        dealDamage(s, e, 3.0 + extra, 'Cryo', log, null, null, 1, state);
+      }
+    });
+    state.isKairenEchoing = false;
+  }
+};
+
+export const addKairenShards = (s, amount, c, state, ft, log) => {
+  let actualAmount = amount;
+  for (let i=0; i<amount; i++) {
+    if (c >= 3 && Math.random() < 0.2) actualAmount++;
+  }
+  let maxShards = (c >= 5 && s.buffs.kairenWinterTurns > 0) ? 7 : 5;
+  s.buffs.kairenShards = (s.buffs.kairenShards || 0) + actualAmount;
+  if (ft && actualAmount > 0) ft(s.uid, `❄️ ОСКОЛКИ (+${actualAmount})`, "text-cyan-200 text-xs");
+
+  if (s.buffs.kairenShards >= maxShards) {
+    if (c >= 6 && maxShards === 7 && !s.buffs.kairenC6UsedThisWinter) {
+      triggerKairenC6(s, state, ft, log);
+    } else {
+      triggerKairenIceEcho(s, state, ft, log, c);
+    }
+  }
+  s.buffs.kairenShards = Math.min(s.buffs.kairenShards || 0, maxShards);
+};
+
+export const kairenTurnStart = (s, t, state, log, ft, pl, c) => {
+  if (s.buffs.kairenWinterTurns && s.buffs.kairenWinterTurns > 0) {
+    s.buffs.kairenWinterTurns--;
+    if (state && state.enemyParty) {
+       state.isKairenEchoing = true;
+       state.enemyParty.forEach(e => {
+         if (e.stats.hp > 0) {
+           let extra = (e.buffs.frozen || e.isBoss) ? 0.5 : 0;
+           dealDamage(s, e, 1.0 + extra, 'Cryo', log, null, null, 1, state);
+         }
+       });
+       state.isKairenEchoing = false;
+    }
+    if (s.buffs.kairenWinterTurns <= 0) s.buffs.kairenC6UsedThisWinter = false;
+  }
+  if (s.buffs.kairenFrostTurns && s.buffs.kairenFrostTurns > 0) s.buffs.kairenFrostTurns--;
+  if (s.buffs.kairenC6CryoBuff && s.buffs.kairenC6CryoBuff > 0) s.buffs.kairenC6CryoBuff--;
+  
+  if (state && state.enemyParty) {
+    state.enemyParty.forEach(e => {
+      if (e.buffs.kairenColdMark && e.buffs.kairenColdMark > 0) e.buffs.kairenColdMark--;
+    });
+  }
+};
+
+export const addPetals = (aveline, amount, ft, c) => {
+  const maxPetals = c >= 1 ? (c >= 3 ? 6 : 5) : 3;
+  aveline.buffs.avelinePetals = Math.min(maxPetals, (aveline.buffs.avelinePetals || 0) + amount);
+  if (ft) ft(aveline.uid, '🌸 ЛЕПЕСТКИ (' + aveline.buffs.avelinePetals + ')', 'text-cyan-300 text-xs');
+};
+
+export const avelineTurnStart = (s, t, state, log, ft, pl, c) => {
+  if (s.buffs.avelineGardenTurns && s.buffs.avelineGardenTurns > 0) {
+    s.buffs.avelineGardenTurns--;
+    if (s.buffs.avelineGardenTurns > 0) {
+      addPetals(s, 1, ft, c);
+      if (state && state.enemyParty) {
+        state.enemyParty.forEach(e => {
+          if (e.stats.hp > 0) dealDamage(s, e, 0.5, 'Hydro', log, null, null, 1, state);
+        });
+      }
+      const heal = s.stats.maxHp * 0.05;
+      if (state && state.playerParty) {
+        state.playerParty.forEach(a => {
+          if (a.stats.hp > 0) {
+            a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal);
+          }
+        });
+      }
+      if (ft) ft(s.uid, '🌸 САД: УРОН И ЛЕЧЕНИЕ', 'text-blue-300 text-xs');
+    }
+  }
+  if (s.buffs.avelineGreatFlowerTurns && s.buffs.avelineGreatFlowerTurns > 0) {
+    s.buffs.avelineGreatFlowerTurns--;
+    if (s.buffs.avelineGreatFlowerTurns > 0) {
+      addPetals(s, 1, ft, c);
+    }
+  }
+};
+
+export const triggerAvelinePetalBloom = (aveline, state, ft, log, c) => {
+  if (aveline.buffs.avelinePetals && aveline.buffs.avelinePetals > 0) {
+    aveline.buffs.avelinePetals--;
+    let bonus = 8;
+    if (c >= 2) {
+      aveline.buffs.avelineC2Stacks = Math.min(3, (aveline.buffs.avelineC2Stacks || 0) + 1);
+      bonus += 4 * aveline.buffs.avelineC2Stacks;
+    }
+    
+    // Since buff duration is handled differently, we'll just stack the dmg boost here permanently (or rather, for the battle session duration as per typical game mechanics in this engine unless it implements timed buffs).
+    state.playerParty.forEach(p => {
+      p.buffs.dmgBoost = (p.buffs.dmgBoost || 0) + bonus;
+      if (c >= 1) {
+        const heal = p.stats.maxHp * 0.03;
+        p.stats.hp = Math.min(p.stats.maxHp, p.stats.hp + heal);
+      }
+    });
+    if (ft) ft(aveline.uid, '🌸 РАСЦВЕТ (' + aveline.buffs.avelinePetals + ')', 'text-pink-300 text-xs');
+  }
+};
+
+export const triggerAvelineElementalFlower = (aveline, state, ft, log, c) => {
+  if (aveline.buffs.avelineGreatFlowerTurns && aveline.buffs.avelineGreatFlowerTurns > 0) {
+    aveline.buffs.avelineElementalFlowers = (aveline.buffs.avelineElementalFlowers || 0) + 1;
+    if (ft) ft(aveline.uid, '🌺 ЦВЕТОК (' + aveline.buffs.avelineElementalFlowers + '/5)', 'text-indigo-300 text-xs');
+    
+    if (aveline.buffs.avelineElementalFlowers >= 5) {
+       let dmgBonus = 15;
+       let healPct = 0.15;
+       if (c >= 6) {
+          aveline.buffs.avelineC6Bonus = Math.min(25, (aveline.buffs.avelineC6Bonus || 0) + 5);
+          dmgBonus += aveline.buffs.avelineC6Bonus;
+          if (aveline.buffs.avelineC6Bonus >= 25) {
+             healPct = 0.20;
+             if (state.enemyParty) {
+                state.enemyParty.forEach(e => {
+                   if (e.stats.hp > 0) dealDamage(aveline, e, 2.0, 'Hydro', log, null, null, 1, state);
+                });
+             }
+          }
+       }
+       if (c < 6) aveline.buffs.avelineElementalFlowers = 0;
+       
+       state.playerParty.forEach(p => {
+          p.buffs.dmgBoost = (p.buffs.dmgBoost || 0) + dmgBonus;
+          if (c >= 5) p.buffs.reactionDmg = (p.buffs.reactionDmg || 0) + 10;
+          const heal = p.stats.maxHp * healPct;
+          p.stats.hp = Math.min(p.stats.maxHp, p.stats.hp + heal);
+       });
+       if (ft) ft(aveline.uid, '✨ ВЕЛИКОЕ ЦВЕТЕНИЕ ✨', 'text-purple-400 font-bold text-xs');
+    }
+  }
+};
+
 export const dealDamage = (source: Combatant, target: Combatant, multiplier: number, element: Element, log: (msg: string) => void, floatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void, hits: number = 1, state?: BattleState, defIgnore: number = 0, ignoreShields: boolean = false, guaranteedCrit: boolean = false) => {
   const hitDelay = 200;
 
@@ -18,12 +186,26 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       
       // Maestro (Isolation Mark) & Asher Passive Logic 
       let bonusCritDamage = source.buffs.critDamage || 0;
+      if (source.buffs.shatteredWinter4pc) {
+         let stacks = (source.buffs.kairenShards || 0) + (source.buffs.avelinePetals || 0);
+         bonusCritDamage += Math.min(40, stacks * 10);
+      }
       if (target.aura === "Pyro" && state && state.playerParty.some(p => p.id === 'asher')) {
         bonusCritDamage += 50;
       }
       
       let actualDefIgnore = defIgnore;
       let actualDmgBoost = 1 + (source.buffs.dmgBoost || 0) / 100;
+      if (source.buffs.oceanSongBuff && source.buffs.oceanSongBuff > 0) actualDmgBoost += 0.20;
+      if (source.buffs.shatteredWinter4pc && target.buffs.frozen) actualDmgBoost += 0.20;
+      if (source.id === 'kairen') {
+         if (source.buffs.kairenFrostTurns && source.buffs.kairenFrostTurns > 0) actualDmgBoost += 0.20;
+         if (source.buffs.kairenC6CryoBuff && source.buffs.kairenC6CryoBuff > 0) actualDmgBoost += 0.30;
+         if (source.constellation >= 2) {
+            if (target.buffs.frozen) actualDmgBoost += 0.25;
+            else if (target.isBoss) actualDmgBoost += 0.15;
+         }
+      }
 
       // Snezhana Overcooling & Critical Overcooling target debuffs
       if (target.buffs) {
@@ -75,7 +257,14 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
 
       const effectiveDef = target.stats.def * (1 - actualDefIgnore);
-      let baseDmg = Math.max(1, Math.floor(((source.stats.atk * multiplier * critMult) / hits)) - (effectiveDef * 0.5));
+      
+      // Aveline scales off max HP instead of ATK (roughly 10% of Max HP per 100% multiplier)
+      let baseStat = source.stats.atk;
+      if (source.id === 'aveline') {
+        baseStat = source.stats.maxHp * 0.12;
+      }
+      
+      let baseDmg = Math.max(1, Math.floor(((baseStat * multiplier * critMult) / hits)) - (effectiveDef * 0.5));
       
       // Apply Damage Boosts
       baseDmg *= actualDmgBoost;
@@ -143,6 +332,16 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
 
       if (reactionMsg && playEffect) playEffect(target.uid, "shake");
+      
+      // Ocean Song 4pc bonus trigger
+      if (reactionMsg && state && !source.isEnemy) {
+        if (i === 0 && source.buffs.oceanSong4pc) {
+          state.playerParty.forEach(p => {
+             p.buffs.oceanSongBuff = 2; // 2 turns
+          });
+          if (floatText) floatText(source.uid, "🌊 ПЕСНЬ ОКЕАНА (+20% DMG)", "text-blue-300 text-xs");
+        }
+      }
 
       let dmg = Math.floor(baseDmg * rxnMult * (0.9 + Math.random() * 0.2));
 
@@ -313,6 +512,20 @@ export const ARTIFACT_SETS: Record<string, ArtifactSet> = {
     fourPieceBonus: "Атаки зверя снижают сопротивление на 20%",
     bonusEffect: (c) => {}
   },
+  "ocean_song": {
+    id: "ocean_song",
+    name: "Песнь Океана",
+    twoPieceBonus: "+15% Гидро урон",
+    fourPieceBonus: "При вызове элементальной реакции увеличивает урон всей команды на 20% на 2 хода.",
+    bonusEffect: (c) => {}
+  },
+  "shattered_winter": {
+    id: "shattered_winter",
+    name: "Расколотая Зима",
+    twoPieceBonus: "+15% Крио урон",
+    fourPieceBonus: "За каждый полученный осколок или стак баффа крит. урон увеличивается на 10% (до 40%). Урон по замороженным врагам +20%.",
+    bonusEffect: (c) => {}
+  },
   "gladiator": {
     id: "gladiator",
     name: "Конец Гладиатора",
@@ -449,6 +662,21 @@ export const scoreArtifact = (art: Artifact, charId: string): number => {
 };
 
 export const ARTIFACT_DUNGEONS: Dungeon[] = [
+  {
+    id: "domain_frozen_tide",
+    name: "Храм Замерзшего Прилива",
+    description: "Древний храм, где океан навеки скован льдами. Здесь добываются сеты Песнь Океана и Расколотая Зима.",
+    level: 90,
+    entryCost: 20,
+    rewardSets: ["ocean_song", "shattered_winter"],
+    enemyTeam: ["aveline", "kairen", "glacier"],
+    effectDescription: "Гидро и Крио урон увеличен на 30%. Заморозка длится дольше.",
+    effect: (state) => {
+      state.playerParty.forEach(p => { 
+        if (p.element === 'Hydro' || p.element === 'Cryo') p.buffs.atk = (p.buffs.atk || 0) + 80; 
+      });
+    }
+  },
   {
     id: "domain_illusions",
     name: "Врата Иллюзий",
@@ -644,6 +872,10 @@ export const applySetBonuses = (combatant: Combatant, artifacts: Artifact[]) => 
            combatant.buffs.reflectionDmgBonus = (combatant.buffs.reflectionDmgBonus || 0) + 0.20;
         } else if (setName === 'storm_mirror') {
            combatant.buffs.dmgBoost = (combatant.buffs.dmgBoost || 0) + 15;
+        } else if (setName === 'ocean_song') {
+           combatant.buffs.dmgBoost = (combatant.buffs.dmgBoost || 0) + 15;
+        } else if (setName === 'shattered_winter') {
+           combatant.buffs.dmgBoost = (combatant.buffs.dmgBoost || 0) + 15;
         } else if (setName === 'crystal_resonance') {
            combatant.buffs.defBoost = (combatant.buffs.defBoost || 0) + 20;
            combatant.stats.def = Math.floor(combatant.stats.def * 1.20);
@@ -708,6 +940,8 @@ const scaleStats = (baseHp: number, baseAtk: number, baseDef: number, baseSpd: n
 };
 
 export const charRarity: Record<string, Rarity> = {
+  aveline: 'S',
+  kairen: 'S',
   zephyr: "S",
   aurum: "S",
   rix: "A",
@@ -745,6 +979,8 @@ export const charRarity: Record<string, Rarity> = {
 
 export const getCharEmoji = (id: string): string => {
   switch (id) {
+    case 'aveline': return '🌸';
+    case 'kairen': return '❄️';
     case 'snezhana': return '❄️';
     case 'volta': return '⚡';
     case 'zephyr': return '⚡';
@@ -845,6 +1081,159 @@ export const applySnezhanaOvercool = (source: Combatant, target: Combatant, stat
 };
 
 export const characterBlueprints: Record<string, (uid: string, level: number, c: number, arts?: Artifact[]) => Combatant> = {
+  kairen: (uid, l, c, arts = []) => ({
+    id: 'kairen', uid, isEnemy: false, name: 'Кайрен', element: 'Cryo', color: 'bg-cyan-600 text-white', level: l, constellation: c,
+    image: getCharSplash('kairen') || undefined,
+    stats: scaleStats(1350, 220, 65, 48, l, c, arts), atb: 0, cooldowns: {}, buffs: {
+       kairenShards: 0,
+       kairenFrostTurns: 0,
+       kairenWinterTurns: 0
+    },
+    skills: [
+      {
+        id: 'ka_atk', name: 'Ледяной танец', type: 'Attack', cost: 0, target: 'SingleEnemy',
+        description: 'Cryo DMG + сплеш урон. Дает 1 Осколок инея за каждого пораженного (2 по замороженным).',
+        execute: (s, t, state, log, ft, pl) => {
+          kairenTurnStart(s, t, state, log, ft, pl, c);
+          let target = t[0];
+          if (pl) pl(target.uid, 'kairen_frost');
+          dealDamage(s, target, 1.0, 'Cryo', log, ft, pl, 1, state);
+          let shardsGained = target.buffs.frozen ? 2 : 1;
+          
+          if (state && state.enemyParty) {
+            state.enemyParty.forEach(e => {
+              if (e.uid !== target.uid && e.stats.hp > 0) {
+                dealDamage(s, e, 0.4, 'Cryo', log, null, null, 1, state);
+                shardsGained += (e.buffs.frozen ? 2 : 1);
+              }
+            });
+          }
+          addKairenShards(s, shardsGained, c, state, ft, log);
+        }
+      },
+      {
+        id: 'ka_e', name: 'Венец вечной зимы', type: 'Skill1', cost: 3, target: 'AllEnemies',
+        description: 'AoE Cryo. Поглощает все Осколки (+урон, +случайные доп. удары). Накладывает «Иней» (2 хода: +20% Cryo DMG).',
+        execute: (s, t, state, log, ft, pl) => {
+          kairenTurnStart(s, t, state, log, ft, pl, c);
+          let shards = s.buffs.kairenShards || 0;
+          s.buffs.kairenShards = 0;
+          let hasFrozen = false;
+          if (pl) pl(s.uid, 'kairen_frost');
+          
+          t.forEach(e => {
+            if (e.stats.hp > 0) {
+               if (e.buffs.frozen) hasFrozen = true;
+               dealDamage(s, e, 1.5 + (shards * 0.2), 'Cryo', log, ft, pl, 1, state);
+            }
+          });
+          
+          if (state && state.enemyParty) {
+            let aliveEnemies = state.enemyParty.filter(e => e.stats.hp > 0);
+            for(let i=0; i<shards; i++) {
+               if (aliveEnemies.length > 0) {
+                 let rndTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+                 dealDamage(s, rndTarget, 0.5, 'Cryo', log, null, null, 1, state);
+                 aliveEnemies = state.enemyParty.filter(e => e.stats.hp > 0);
+               }
+            }
+          }
+          
+          if (hasFrozen) {
+            t.forEach(e => {
+               if (e.stats.hp > 0 && e.buffs.frozen) {
+                 dealDamage(s, e, 1.0, 'Cryo', log, null, null, 1, state);
+               }
+            });
+          }
+          
+          s.buffs.kairenFrostTurns = 3; 
+          if (ft) ft(s.uid, 'ИНЕЙ', 'text-cyan-400');
+          
+          if (c >= 1) {
+             let bonusShards = 2 + (hasFrozen ? 1 : 0);
+             addKairenShards(s, bonusShards, c, state, ft, log);
+          }
+        }
+      },
+      {
+        id: 'ka_q', name: 'Трон безмолвной зимы', type: 'Skill2', cost: 5, target: 'AllEnemies',
+        description: 'Мощный AoE Cryo DMG. «Вечная зима» (3 хода): урон в начале хода, +1 Осколок за реакции союзников. При 5 осколках срабатывает Ледяное эхо.',
+        execute: (s, t, state, log, ft, pl) => {
+          kairenTurnStart(s, t, state, log, ft, pl, c);
+          if (pl) pl(s.uid, 'kairen_frost');
+          t.forEach(e => {
+            if (e.stats.hp > 0) dealDamage(s, e, 2.5, 'Cryo', log, ft, pl, 1, state);
+          });
+          s.buffs.kairenWinterTurns = 4;
+          if (ft) ft(s.uid, 'ВЕЧНАЯ ЗИМА', 'text-blue-500 font-bold');
+          
+          if (c >= 5) {
+            addKairenShards(s, 3, c, state, ft, log);
+          }
+        }
+      }
+    ]
+  }),
+  aveline: (uid, l, c, arts = []) => ({
+    id: 'aveline', uid, isEnemy: false, name: 'Авелин', element: 'Hydro', color: 'bg-blue-400 text-white', level: l, constellation: c,
+    image: getCharSplash('aveline') || undefined,
+    stats: scaleStats(1400, 150, 75, 45, l, c, arts), atb: 0, cooldowns: {}, buffs: {
+       avelinePetals: 0,
+       avelineGardenTurns: 0,
+       avelineGreatFlowerTurns: 0,
+       avelineElementalFlowers: 0,
+       avelineC6Bonus: 0
+    },
+    skills: [
+      {
+        id: 'av_atk', name: 'Лепесток прилива', type: 'Attack', cost: 0, target: 'SingleEnemy',
+        description: 'Hydro DMG (зависит от макс. ХП). Создаёт 1 Лепесток прилива.',
+        execute: (s, t, state, log, ft, pl) => {
+          avelineTurnStart(s, t, state, log, ft, pl, c);
+          if (pl) pl(t[0].uid, 'aveline_nature');
+          dealDamage(s, t[0], 1.0, 'Hydro', log, ft, pl, 2, state);
+          addPetals(s, 1, ft, c);
+        }
+      },
+      {
+        id: 'av_e', name: 'Цветение лазурного сада', type: 'Skill1', cost: 3, target: 'AllEnemies',
+        description: 'Лазурный сад (3 хода). В начале хода: Hydro AoE DMG (от макс. ХП), лечение от макс. ХП, +1 Лепесток.',
+        execute: (s, t, state, log, ft, pl) => {
+          avelineTurnStart(s, t, state, log, ft, pl, c);
+          if (pl) pl(s.uid, 'aveline_nature');
+          s.buffs.avelineGardenTurns = 4; // +1 for next turn tick
+          addPetals(s, c >= 3 ? 2 : 1, ft, c);
+          if (ft) ft(s.uid, 'ЛАЗУРНЫЙ САД', 'text-blue-400');
+          t.forEach(e => {
+            if (e.stats.hp > 0) dealDamage(s, e, 0.8, 'Hydro', log, ft, pl, 1, state);
+          });
+          const heal = s.stats.maxHp * 0.10;
+          state?.playerParty.forEach(a => {
+            if (a.stats.hp > 0) {
+              a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal);
+              if (ft) ft(a.uid, '+' + Math.floor(heal), 'text-green-400');
+            }
+          });
+        }
+      },
+      {
+        id: 'av_q', name: 'Вечное цветение', type: 'Skill2', cost: 5, target: 'AllAllies',
+        description: '+20% Elemental DMG отряду (4 хода). В начале хода: +1 Лепесток. Реакции копят цветы для Великого цветения.',
+        execute: (s, t, state, log, ft, pl) => {
+          avelineTurnStart(s, t, state, log, ft, pl, c);
+          s.buffs.avelineGreatFlowerTurns = 5; // +1 for next turn tick
+          s.buffs.avelineElementalFlowers = 0;
+          if (c < 6) s.buffs.avelineC6Bonus = 0;
+          if (ft) ft(s.uid, 'ВЕЧНОЕ ЦВЕТЕНИЕ', 'text-indigo-400');
+          state?.playerParty.forEach(a => {
+            a.buffs.dmgBoost = (a.buffs.dmgBoost || 0) + 20;
+          });
+        }
+      }
+    ]
+  }),
+
   ineffa: (uid, l, c, arts = []) => ({
     id: "ineffa", uid, isEnemy: false, name: "Инеффа", element: "Pyro", color: "bg-red-800", level: l, constellation: c,
     image: getCharSplash('ineffa') || undefined,
@@ -2562,53 +2951,192 @@ export const createTrialEnemy = (trialId: number): Combatant => {
   };
 };
 
+
+export const createShadowDrone = (): Combatant => {
+  const drone = createBasicEnemy(80, 'glacier');
+  drone.id = 'shadow_drone';
+  drone.uid = 'drone_' + Math.random();
+  drone.name = 'Теневой Дрон';
+  drone.element = 'Physical';
+  drone.stats.maxHp = 50000;
+  drone.stats.hp = 50000;
+  drone.stats.def = 100;
+  drone.image = '/src/assets/images/shadow_drone_enemy_1788132867651.jpg';
+  drone.color = "bg-slate-800";
+  drone.skills = [{ id: "dr_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: "Урон.", execute: (ds, dt, ds_state, dlog, dft, dpl) => { dealDamage(ds, dt[0], 0.8, "Physical", dlog, dft, dpl, 1, ds_state); } }];
+  return drone;
+};
+
+export const createIceMonolith = (): Combatant => {
+  const monolith = createBasicEnemy(90, 'glacier');
+  monolith.id = 'ice_monolith';
+  monolith.uid = 'monolith_' + Math.random();
+  monolith.name = 'Ледяной Монолит';
+  monolith.element = 'Cryo';
+  monolith.stats.maxHp = 150000;
+  monolith.stats.hp = 150000;
+  monolith.stats.atk = 500;
+  monolith.stats.def = 200;
+  monolith.image = '/src/assets/images/ice_monolith_enemy_1788132882968.jpg';
+  monolith.color = "bg-cyan-900 border-cyan-400";
+  monolith.skills = [{ id: "im_atk", name: "Морозный Импульс", type: "Attack", cost: 0, target: "AllEnemies", description: "Слабый AoE Крио урон.", execute: (ds, dt, ds_state, dlog, dft, dpl) => { dt.forEach(e => { if(e.stats.hp > 0) dealDamage(ds, e, 0.4, "Cryo", dlog, dft, dpl, 1, ds_state); }); } }];
+  return monolith;
+};
+
+export const generateBossRushWave = (stage: number): Combatant[] => {
+  const boss = createBossRushEnemy(stage);
+  const wave = [boss];
+  
+  if (stage === 0) {
+    wave.push(createShadowDrone());
+    wave.push(createShadowDrone());
+  } else if (stage === 2) {
+    wave.push(createIceMonolith());
+    wave.push(createIceMonolith());
+    wave.push(createIceMonolith());
+  }
+  
+  return wave;
+};
+
 export const createBossRushEnemy = (stage: number): Combatant => {
   const configs = [
     {
-      id: "boss_colossus_rush",
-      name: "«СВЕРХПРОВОДЯЩИЙ КОЛОСС»",
-      element: "Electro" as Element,
-      color: "bg-purple-950 border-purple-500",
+      id: "boss_magister_rush",
+      name: "«МАГИСТР ТЕНЕЙ»",
+      element: "Physical" as Element,
+      color: "bg-slate-900 border-gray-500",
       level: 80,
-      hp: 350000,
+      hp: 400000,
       atk: 1000,
-      def: 350,
+      def: 1200, // Very high DEF so Cyrus's ignore DEF is great
       spd: 90,
       critRate: 20,
       critDamage: 50,
       image: getCharSplash('boss_colossus') || undefined,
       skills: [
         {
-          id: "br_electro_strike",
-          name: "Импульсный Разряд",
+          id: "br_shadow_strike",
+          name: "Теневой Выпад",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: "Наносит Электро урон (1.2x) и повышает Атаку босса на 10%.",
+          description: "Наносит Физ урон (1.2x). Призывает Теневого Дрона, если суммарно на поле меньше 4 врагов.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.2, "Electro", log, ft, pl, 2, state);
-            s.buffs.atk = (s.buffs.atk || 0) + Math.floor(s.stats.atk * 0.1);
-            if (ft) ft(s.uid, "↑АТК", "text-purple-400 font-bold");
+            dealDamage(s, t[0], 1.2, "Physical", log, ft, pl, 2, state);
+            if (state && state.enemyParty) {
+              const deadDrones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp <= 0);
+              if (deadDrones.length > 0) {
+                const targetDrone = deadDrones[0];
+                targetDrone.stats.hp = targetDrone.stats.maxHp;
+                targetDrone.buffs = {};
+                targetDrone.atb = 0;
+                if (ft) ft(s.uid, "ВОЗРОЖДЕНИЕ ДРОНА", "text-gray-400 font-bold text-xs");
+              }
+            }
           }
         },
         {
-          id: "br_shield_breaker",
-          name: "Разрушитель Цепей",
+          id: "br_shadow_wave",
+          name: "Волна Мрака",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: "AoE Электро урон (1.1x). Если у цели есть щит, наносит на 50% больше урона и снимает часть щита.",
+          description: "AoE Физ урон (1.5x) по всем врагам. Если у босса меньше 70% здоровья, призывает ещё одного дрона.",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            if (pl) pl(s.uid, "Physical");
+            t.forEach(enemy => {
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.5, "Physical", log, ft, pl, 2, state);
+            });
+            if (state && state.enemyParty && s.stats.hp < s.stats.maxHp * 0.7) {
+               const deadDrones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp <= 0);
+               if (deadDrones.length > 0) {
+                  const targetDrone = deadDrones[0];
+                  targetDrone.stats.hp = targetDrone.stats.maxHp;
+                  targetDrone.buffs = {};
+                  targetDrone.atb = 0;
+                  if (ft) ft(s.uid, "РЕЗЕРВНЫЙ ДРОН", "text-gray-400 font-bold text-xs");
+               }
+            }
+          }
+        },
+        {
+          id: "br_annihilation",
+          name: "Абсолютная Тьма",
+          type: "Skill2" as const,
+          cost: 6,
+          target: "AllEnemies" as const,
+          description: "Абсолютная Тьма. Босс поглощает всех живых дронов. Урон (3.0x) увеличивается на 1.5x за каждого поглощенного дрона. Если дронов нет, вместо атаки призывает сразу 3-х новых.",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            if (state && state.enemyParty) {
+              const drones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp > 0);
+              if (drones.length === 0) {
+                const deadDrones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp <= 0);
+                deadDrones.forEach(d => {
+                   d.stats.hp = d.stats.maxHp;
+                   d.buffs = {};
+                   d.atb = 0;
+                });
+                if (ft) ft(s.uid, "ТЕНЕВОЙ РИТУАЛ", "text-gray-400 font-black");
+                if (log) log("Магистр Теней возрождает дронов!");
+                return;
+              } else {
+                let mult = 3.0 + (drones.length * 1.5);
+                drones.forEach(d => { 
+                  d.stats.hp = 0; 
+                  d.buffs = {}; // clear buffs
+                  if (ft) setTimeout(() => ft(d.uid, "ПОГЛОЩЕН", "text-red-500 font-bold"), 100); 
+                });
+                if (log) log(`Магистр Теней поглощает ${drones.length} дронов!`);
+                
+                if (pl) pl(s.uid, "ultimate_aoe");
+                t.forEach(enemy => {
+                  if (enemy.stats.hp > 0) dealDamage(s, enemy, mult, "Physical", log, ft, pl, 1, state);
+                });
+                if (ft) ft(s.uid, "ВЗРЫВ ТЬМЫ", "text-red-600 font-black");
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: "boss_colossus_rush",
+      name: "«СВЕРХПРОВОДЯЩИЙ КОЛОСС»",
+      element: "Electro" as Element,
+      color: "bg-purple-950 border-purple-500",
+      level: 85,
+      hp: 600000,
+      atk: 1000,
+      def: 350,
+      spd: 120, // Very fast to trigger Volta's voltage often
+      critRate: 20,
+      critDamage: 50,
+      image: getCharSplash('boss_colossus') || undefined,
+      skills: [
+        {
+          id: "br_electro_strike",
+          name: "Мульти-Разряд",
+          type: "Attack" as const,
+          cost: 0,
+          target: "SingleEnemy" as const,
+          description: "Наносит серию из 4 Электро ударов. Быстро заряжает Вольтаж Вольты.",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            dealDamage(s, t[0], 1.5, "Electro", log, ft, pl, 4, state);
+          }
+        },
+        {
+          id: "br_chain_lightning",
+          name: "Цепная Молния",
+          type: "Skill1" as const,
+          cost: 3,
+          target: "AllEnemies" as const,
+          description: "Серия из 3 AoE Электро ударов (быстро заряжает Вольтаж).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "Electro");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                let mult = 1.1;
-                if (enemy.buffs.shield && enemy.buffs.shield > 0) {
-                  mult *= 1.5;
-                  enemy.buffs.shield = Math.floor(enemy.buffs.shield * 0.5);
-                  if (ft) ft(enemy.uid, "ЩИТ СЛОМЛЕН!", "text-purple-300 text-xs");
-                }
-                dealDamage(s, enemy, mult, "Electro", log, ft, pl, 3, state);
+                dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 3, state);
               }
             });
           }
@@ -2617,137 +3145,84 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           id: "br_voltage_overload",
           name: "Перегрузка Матрицы",
           type: "Skill2" as const,
-          cost: 6,
+          cost: 5,
           target: "AllEnemies" as const,
-          description: "Огромный Электро урон (2.0x). Вешает на босса бафф, восстанавливающий 10% HP при получении урона.",
+          description: "Огромный Электро урон (2.5x, 5 ударов). Идеально поглощается Цепью Проводимости Вольты.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 2.0, "Electro", log, ft, pl, 5, state);
+                dealDamage(s, enemy, 2.5, "Electro", log, ft, pl, 5, state);
               }
             });
-            s.buffs.matrixHeal = 2; 
-            if (ft) ft(s.uid, "МАТРИЦА ВОССТАНОВЛЕНИЯ", "text-cyan-400 font-black");
           }
         }
       ]
     },
     {
-      id: "boss_frost_giant_rush",
-      name: "«ЛЕДЯНОЙ ИСПОЛИН»",
+      id: "boss_absolute_zero",
+      name: "«АБСОЛЮТНЫЙ НОЛЬ»",
       element: "Cryo" as Element,
-      color: "bg-cyan-950 border-cyan-400",
-      level: 85,
-      hp: 500000,
-      atk: 1200,
-      def: 450,
-      spd: 85,
-      critRate: 15,
-      critDamage: 60,
+      color: "bg-cyan-950 border-cyan-300",
+      level: 90,
+      hp: 900000,
+      atk: 1500,
+      def: 500,
+      spd: 100,
+      critRate: 20,
+      critDamage: 50,
       image: getCharSplash('boss_frost_giant') || undefined,
       skills: [
         {
-          id: "br_frozen_slam",
-          name: "Ледяной Сокрушитель",
+          id: "br_ice_shatter",
+          name: "Раскол Льда",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: "Наносит Крио урон (1.3x). Если на цели есть Дендро, вызывает реакцию Ледяные Шипы (доп урон).",
+          description: "Наносит Крио урон (1.5x).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.3, "Cryo", log, ft, pl, 1, state);
+            dealDamage(s, t[0], 1.5, "Cryo", log, ft, pl, 1, state);
           }
         },
         {
-          id: "br_cryo_fortress",
-          name: "Цитадель Вечной Мерзлоты",
+          id: "br_blizzard",
+          name: "Снежная Буря",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: "Создает Крио щит на 100,000 HP. Пока щит активен, босс получает на 40% меньше урона, кроме урона от Горения.",
+          description: "AoE Крио урон (1.2x).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            s.buffs.shield = (s.buffs.shield || 0) + 100000;
-            s.buffs.frozenAura = 3;
-            if (ft) ft(s.uid, "+100k ЛЕДЯНОЙ ЩИТ", "text-cyan-300 font-black");
+            t.forEach(enemy => {
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Cryo", log, ft, pl, 2, state);
+            });
           }
         },
         {
-          id: "br_permafrost",
-          name: "Вечная Мерзлота",
+          id: "br_deep_freeze",
+          name: "Глубокая Заморозка",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: "Наносит Крио урон всему отряду (1.8x). Срезает 40 ATB и накладывает Заморозку.",
+          description: "Воскрешает уничтоженные Ледяные Монолиты. Затем наносит массивный Крио урон (3.0x).",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            if (state && state.enemyParty) {
+               const deadMonoliths = state.enemyParty.filter(e => e.id === 'ice_monolith' && e.stats.hp <= 0);
+               deadMonoliths.forEach(m => {
+                  m.stats.hp = m.stats.maxHp;
+                  m.buffs = {};
+                  m.atb = 0;
+               });
+               if (deadMonoliths.length > 0 && ft) ft(s.uid, "ВОССТАНОВЛЕНИЕ", "text-cyan-300 font-bold");
+            }
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.8, "Cryo", log, ft, pl, 4, state);
-                enemy.atb = Math.max(0, enemy.atb - 40);
-                enemy.buffs.frozen = 1;
-              }
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 3.0, "Cryo", log, ft, pl, 3, state);
             });
           }
         }
       ]
     },
-    {
-      id: "boss_prism_rush",
-      name: "«ПРИЗМА ПУСТОТЫ»",
-      element: "Electro" as Element,
-      color: "bg-slate-900 border-indigo-500",
-      level: 90,
-      hp: 750000,
-      atk: 1500,
-      def: 600,
-      spd: 95,
-      critRate: 25,
-      critDamage: 80,
-      image: getCharSplash('boss_void_prism') || undefined,
-      skills: [
-        {
-          id: "br_void_shard",
-          name: "Осколок Бездны",
-          type: "Attack" as const,
-          cost: 0,
-          target: "SingleEnemy" as const,
-          description: "Наносит Электро урон (1.5x). Накладывает на цель статус Электро.",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.5, "Electro", log, ft, pl, 3, state);
-          }
-        },
-        {
-          id: "br_mirror_shield",
-          name: "Зеркальное Отражение",
-          type: "Skill1" as const,
-          cost: 3,
-          target: "AllEnemies" as const,
-          description: "Босс получает щит. Пока щит активен, босс получает на 70% меньше урона. Отражение (Pyro+Electro) мгновенно ломает щит.",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            s.buffs.shield = (s.buffs.shield || 0) + 150000;
-            if (ft) ft(s.uid, "ЗЕРКАЛЬНЫЙ БАРЬЕР", "text-indigo-400 font-black");
-          }
-        },
-        {
-          id: "br_void_annihilation",
-          name: "Аннигиляция Пустоты",
-          type: "Skill2" as const,
-          cost: 6,
-          target: "AllEnemies" as const,
-          description: "Взрыв энергии (2.5x) по всем врагам. Урон увеличивается на 50% за каждого павшего союзника босса (если были бы).",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "ultimate_aoe");
-            t.forEach(enemy => {
-              if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 2.5, "Electro", log, ft, pl, 6, state, 0.4);
-              }
-            });
-          }
-        }
-      ]
-    }
   ];
-
   const cfg = configs[Math.min(stage, configs.length - 1)];
   return {
     id: cfg.id + "_" + Math.random(),

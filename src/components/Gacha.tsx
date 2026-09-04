@@ -5,7 +5,7 @@ import { baseCharacterPool, characterBlueprints, charRarity, getCharEmoji, getCh
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
-const LIMITED_S = ["volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita"];
+const LIMITED_S = ["volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita", "aveline", "kairen"];
 const S_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "S");
 const STANDARD_S_POOL = S_POOL.filter(id => !LIMITED_S.includes(id));
 const A_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "A");
@@ -29,66 +29,66 @@ type PullResult = {
 };
 
 export default function Gacha({ profile, updateProfile, onBack }: Props) {
-  const [activeBanner, setActiveBanner] = useState<'VOLTA' | 'SELINA' | 'INEFFA' | 'ASHER' | 'STANDARD'>('VOLTA');
+  const [activeBanner, setActiveBanner] = useState<string>('AVELINE');
   
-  const permanentBanners: ('VOLTA' | 'SELINA' | 'INEFFA' | 'ASHER')[] = ['VOLTA', 'SELINA', 'INEFFA', 'ASHER'];
+  const permanentBanners: ('AVELINE' | 'KAIREN' | 'CYRUS' | 'RAVEN')[] = ['AVELINE', 'KAIREN', 'CYRUS', 'RAVEN'];
   const allAvailableBanners = permanentBanners;
 
   const bannerDisplayDetails = {
-    VOLTA: {
-      title: "ЭНЕРГОРЕЗОНАНС",
-      subtitle: "Матрица Проводимости",
-      sId: "volta",
-      sName: "Вольта",
-      sElement: "Electro",
-      sThemeColor: "text-violet-400 border-violet-500/40 bg-violet-950/40",
-      sBgAccent: "from-violet-600/20 to-transparent",
-      desc: "Шанс на получение Вольты [S] увеличен! Электро Сустейн: накапливает Вольтаж и преобразует его в лечение и щиты!",
-      aRateUps: ["rix", "gaia", "snezhana"] as string[]
+    AVELINE: {
+      title: "ПЕСНЬ ПРИЛИВА",
+      subtitle: "Танец Лепестков",
+      sId: "aveline",
+      sName: "Авелин",
+      sElement: "Hydro",
+      sThemeColor: "text-blue-400 border-blue-500/40 bg-blue-950/40",
+      sBgAccent: "from-blue-600/20 to-transparent",
+      desc: "Шанс на получение Авелин [S] увеличен! Гидро Саппорт: создает лепестки прилива, усиливающие элементальные реакции отряда!",
+      aRateUps: ["aegis", "kopro", "gotka"] as string[]
     },
-    SELINA: {
-      title: "ПЛАМЕННАЯ РОЗА",
-      subtitle: "Алая Роза во тьме",
-      sId: "selina",
-      sName: "Селина",
-      sElement: "Pyro",
-      sThemeColor: "text-rose-400 border-rose-500/40 bg-rose-950/40",
-      sBgAccent: "from-rose-600/20 to-transparent",
-      desc: "Шанс на получение Селины [S] увеличен! Наносит колоссальный урон пламенем.",
-      aRateUps: ["rix", "gaia", "snezhana"] as string[]
+    KAIREN: {
+      title: "ТРОН ЗИМЫ",
+      subtitle: "Ледяное Эхо",
+      sId: "kairen",
+      sName: "Кайрен",
+      sElement: "Cryo",
+      sThemeColor: "text-cyan-400 border-cyan-500/40 bg-cyan-950/40",
+      sBgAccent: "from-cyan-600/20 to-transparent",
+      desc: "Шанс на получение Кайрена [S] увеличен! Крио DPS: поглощает осколки инея для нанесения разрушительного массового урона!",
+      aRateUps: ["aegis", "kopro", "gotka"] as string[]
     },
-    INEFFA: {
-      title: "РАССВЕТНОЕ УТРО",
-      subtitle: "Осколки памяти",
-      sId: "ineffa",
-      sName: "Инеффа",
-      sElement: "Pyro",
-      sThemeColor: "text-red-400 border-red-500/40 bg-red-950/40",
-      sBgAccent: "from-red-600/20 to-transparent",
-      desc: "Шанс на получение Инеффы [S] увеличен! Призывает Отражения и сокрушает врагов зеркалами.",
-      aRateUps: ["rix", "gaia", "snezhana"] as string[]
+    CYRUS: {
+      title: "ТОЧНЫЙ ВЫСТРЕЛ",
+      subtitle: "Смертельное Яблочко",
+      sId: "cyrus",
+      sName: "Сайрус",
+      sElement: "Physical",
+      sThemeColor: "text-yellow-400 border-yellow-500/40 bg-yellow-950/40",
+      sBgAccent: "from-yellow-600/20 to-transparent",
+      desc: "Шанс на получение Сайруса [S] увеличен! Физ DPS: специализируется на критическом уроне и мощных одиночных выстрелах!",
+      aRateUps: ["aegis", "kopro", "gotka"] as string[]
     },
-    ASHER: {
-      title: "ПЛАВКА ПЕПЛА",
-      subtitle: "Мастер Дыхания Горна",
-      sId: "asher",
-      sName: "Ашер",
-      sElement: "Dendro",
-      sThemeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
-      sBgAccent: "from-emerald-600/20 to-transparent",
-      desc: "Шанс на получение Ашера [S] увеличен! Отличный Dendro-саппорт для пиро-персонажей.",
-      aRateUps: ["rix", "gaia", "snezhana"] as string[]
-    },
-    STANDARD: {
-      title: "ЭХО ВРЕМЕНИ",
-      subtitle: "КОСМИЧЕСКИЙ ПЕРЕКРЕСТОК",
-      sId: "neuron",
-      sName: "Нейрон",
+    RAVEN: {
+      title: "ФАНТОМНЫЙ КЛИНОК",
+      subtitle: "Тень Безмолвия",
+      sId: "raven",
+      sName: "Рейвен",
       sElement: "Electro",
       sThemeColor: "text-indigo-400 border-indigo-500/40 bg-indigo-950/40",
       sBgAccent: "from-indigo-600/20 to-transparent",
-      desc: "Стандартная молитва. Содержит всех героев в равной пропорции!",
-      aRateUps: ["viper", "aegis", "blaze", "tide", "glacier", "pulse", "claymore", "echo", "gotka", "kopro", "patch", "neuron", "selva", "moyan", "fenris"] as string[]
+      desc: "Шанс на получение Рейвен [S] увеличен! Электро Убийца: наносит огромный урон целям без дебаффов и разгоняет отряд!",
+      aRateUps: ["aegis", "kopro", "gotka"] as string[]
+    },
+    STANDARD: {
+      title: "ЭХО ПРЕДКОВ",
+      subtitle: "Обычная молитва",
+      sId: "nova", // doesn't matter much, it's just for display
+      sName: "Стандарт",
+      sElement: "Physical",
+      sThemeColor: "text-gray-400 border-gray-500/40 bg-gray-950/40",
+      sBgAccent: "from-gray-600/20 to-transparent",
+      desc: "Обычная молитва. Базовые шансы на получение всех стандартных персонажей.",
+      aRateUps: [] as string[]
     }
   };
 
@@ -238,7 +238,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
      setPullStage('SUMMARY');
   };
 
-  const getBannerTabEmoji = (bKey: 'VOLTA' | 'SELINA' | 'KRONA' | 'ASHER' | 'CYRUS' | 'RAVEN' | 'MAESTRO' | 'INEFFA' | 'ZEPHYR' | 'AURUM'): string => {
+  const getBannerTabEmoji = (bKey: string): string => {
+    if (bKey === 'AVELINE') return '🌸';
+    if (bKey === 'KAIREN') return '❄️';
     switch (bKey) {
       case 'VOLTA': return '⚡';
       case 'SELINA': return '🌹';
@@ -253,7 +255,10 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     }
   };
 
-  const getBannerTabColor = (bKey: 'VOLTA' | 'SELINA' | 'KRONA' | 'ASHER' | 'CYRUS' | 'RAVEN' | 'MAESTRO' | 'INEFFA' | 'ZEPHYR' | 'AURUM', isActive: boolean): string => {
+  const getBannerTabColor = (bKey: string, isActive: boolean): string => {
+    if (!isActive) return 'text-white/50 hover:text-white border-transparent';
+    if (bKey === 'AVELINE') return 'bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
+    if (bKey === 'KAIREN') return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
     if (!isActive) return 'text-white/50 hover:text-white border-transparent';
     switch (bKey) {
       case 'VOLTA': return 'bg-violet-600 text-white border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]';
@@ -269,7 +274,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     }
   };
 
-  const getBannerTabName = (bKey: 'VOLTA' | 'SELINA' | 'KRONA' | 'ASHER' | 'CYRUS' | 'RAVEN' | 'MAESTRO' | 'INEFFA' | 'ZEPHYR' | 'AURUM'): string => {
+  const getBannerTabName = (bKey: string): string => {
+    if (bKey === 'AVELINE') return 'Авелин';
+    if (bKey === 'KAIREN') return 'Кайрен';
     switch (bKey) {
       case 'VOLTA': return 'Вольта';
       case 'SELINA': return 'Селина';
@@ -281,6 +288,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       case 'INEFFA': return 'Инеффа';
       case 'ZEPHYR': return 'Зефир';
       case 'AURUM': return 'Аурум';
+      default: return bKey;
     }
   };
 
