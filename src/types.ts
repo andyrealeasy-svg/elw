@@ -89,7 +89,7 @@ export interface BattleState {
   damageDealt: Record<string, number>; // uid -> total damage
 }
 
-export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean };
+export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string };
 
 export type ArtifactSlot = "flower" | "plume" | "sands" | "goblet" | "circlet";
 export type StatType = "hp" | "atk" | "def" | "spd";

@@ -178,19 +178,19 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
     { id: 'test_cyrus', char: 'cyrus', team: ['cyrus', 'maestro', 'nova', 'moyan'] },
     { id: 'test_raven', char: 'raven', title: 'Рейвен', team: ['raven', 'maestro', 'tide', 'pulse'] },
   ];
-  const completedTestRuns: string[] = profile.events.completedTestRuns || [];
+  const completedTestRuns: string[] = (profile.events && profile.events.completedTestRuns) || [];
 
-  const handleStartTestRun = (testId: string, team: string[]) => {
-    if (completedTestRuns.includes(testId)) return;
+  const handleStartTestRun = (testId: string, team: string[], charName?: string) => {
+    const isCompleted = completedTestRuns.includes(testId);
     setRoute({
       type: 'TRIAL_BATTLE',
       trialId: 1, 
       isTestRun: true,
       testId,
       team,
-      title: "Тестовый Забег",
-      rewardGems: 50,
-      rewardGold: 10000
+      title: charName ? `Тестовый Забег: ${charName}` : "Тестовый Забег",
+      rewardGems: isCompleted ? 0 : 50,
+      rewardGold: isCompleted ? 0 : 10000
     });
   };
 
@@ -453,11 +453,19 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
               {testRuns.map((tr) => {
                 const isCompleted = completedTestRuns.includes(tr.id);
                 const charSplash = getCharSplash(tr.char);
+                const charName = tr.title || characterBlueprints[tr.char]?.(tr.char,1,0,[]).name || tr.char;
                 return (
                   <div key={tr.id} className="relative rounded-2xl overflow-hidden border border-white/10 group h-48">
                     <img src={charSplash} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition duration-500 scale-105 group-hover:scale-110" alt="splash" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4 flex flex-col justify-end">
-                      <h3 className="text-xl font-black text-white">{tr.title || characterBlueprints[tr.char]?.(tr.char,1,0,[]).name || tr.char}</h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-black text-white">{charName}</h3>
+                        {isCompleted && (
+                          <span className="text-[10px] font-bold text-green-400 bg-green-500/20 border border-green-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Пройдено
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-2 mt-2 mb-3">
                         {tr.team.map((tid, i) => (
                            <div key={i} className="w-8 h-8 rounded-full border border-white/20 overflow-hidden bg-black/50">
@@ -466,13 +474,22 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
                         ))}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded">💎 50 Гемов</span>
+                        <span className={cn("text-xs font-mono font-bold px-2 py-1 rounded", isCompleted ? "text-white/40 bg-white/5 line-through" : "text-amber-400 bg-amber-500/10")}>
+                          💎 50 Гемов {isCompleted && <span className="no-underline text-white/40 text-[10px] ml-1">(получено)</span>}
+                        </span>
                         {isCompleted ? (
-                          <button disabled className="px-4 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs font-bold uppercase flex items-center gap-1 border border-green-500/30">
-                            <CheckCircle2 className="w-4 h-4" /> Пройдено
+                          <button 
+                            onClick={() => handleStartTestRun(tr.id, tr.team, charName)} 
+                            className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-xs font-bold uppercase tracking-wider transition border border-white/10 flex items-center gap-1 active:scale-95 cursor-pointer"
+                            title="Повторить забег (без наград)"
+                          >
+                            Повтор
                           </button>
                         ) : (
-                          <button onClick={() => handleStartTestRun(tr.id, tr.team)} className="px-6 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-amber-900/50">
+                          <button 
+                            onClick={() => handleStartTestRun(tr.id, tr.team, charName)} 
+                            className="px-6 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-amber-900/50 active:scale-95 cursor-pointer"
+                          >
                             Испытать
                           </button>
                         )}

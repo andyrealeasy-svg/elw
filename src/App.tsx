@@ -57,7 +57,9 @@ const defaultProfile: PlayerProfile = {
   expeditions: [],
   events: {
     loginStreak: 0,
-    lastLoginDay: 0
+    lastLoginDay: 0,
+    completedTestRuns: [],
+    completedTrials: []
   },
   gachaPityS: 0,
   gachaPityA: 0,
@@ -87,7 +89,7 @@ export default function App() {
     { type: 'ABYSS_FLOOR', level: number, floorId: number } |
     { type: 'STORY_STAGE', stage: StoryStage } |
     { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } |
-    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean }
+    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string }
   >('HUB');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -423,22 +425,45 @@ export default function App() {
     }
 
     if (isTrial && typeof route === 'object' && route.type === 'TRIAL_BATTLE') {
-      const rewardGems = route.rewardGems;
-      const rewardGold = route.rewardGold;
       const trialId = route.trialId;
+      const testId = route.testId;
+      const isTestRun = Boolean(route.isTestRun || testId);
 
-      setProfile(p => ({
-        ...p,
-        gems: p.gems + rewardGems,
-        gold: p.gold + rewardGold,
-        events: {
-          ...p.events,
-          completedTrials: [...(p.events.completedTrials || []), trialId]
-        },
-        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 }
-      }));
+      // Check if this test run or trial was already completed before
+      const alreadyCompleted = isTestRun && testId
+        ? ((profile.events && profile.events.completedTestRuns) || []).includes(testId)
+        : ((profile.events && profile.events.completedTrials) || []).includes(trialId);
 
-      setLastDrops({ exp: 0, gold: rewardGold, gems: rewardGems, artifacts: [] });
+      // Gems and gold rewards are granted ONLY on the FIRST successful completion
+      const actualGems = alreadyCompleted ? 0 : (route.rewardGems || 0);
+      const actualGold = alreadyCompleted ? 0 : (route.rewardGold || 0);
+
+      setProfile(p => {
+        const events = p.events || {};
+        const prevCompletedTestRuns: string[] = events.completedTestRuns || [];
+        const newCompletedTestRuns = (isTestRun && testId && !prevCompletedTestRuns.includes(testId))
+          ? [...prevCompletedTestRuns, testId]
+          : prevCompletedTestRuns;
+
+        const prevCompletedTrials: number[] = events.completedTrials || [];
+        const newCompletedTrials = (!isTestRun && !prevCompletedTrials.includes(trialId))
+          ? [...prevCompletedTrials, trialId]
+          : prevCompletedTrials;
+
+        return {
+          ...p,
+          gems: p.gems + actualGems,
+          gold: p.gold + actualGold,
+          events: {
+            ...events,
+            completedTestRuns: newCompletedTestRuns,
+            completedTrials: newCompletedTrials
+          },
+          dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 }
+        };
+      });
+
+      setLastDrops({ exp: 0, gold: actualGold, gems: actualGems, artifacts: [] });
       setLastDamageDealt(stats);
       setRoute('VICTORY');
       return;
@@ -687,7 +712,7 @@ export default function App() {
                   : route.type === 'GLITCH_BATTLE'
                     ? `glitch_hunt_${route.sectorId}`
                     : route.type === 'TRIAL_BATTLE'
-                      ? `trial_${route.trialId}`
+                      ? (route.testId ? `testrun_${route.testId}` : `trial_${route.trialId}`)
                       : `story_stage_${(route as any).stage?.id || 'stage'}`
           }
           playerParty={playerParty} 
@@ -1087,22 +1112,30 @@ export default function App() {
                       <Package className="w-4 h-4 text-white/50" /> Контейнер ресурсов
                     </h3>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
-                         <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Опыт героя</span>
-                         <span className="font-black text-green-400 text-lg">+{lastDrops.exp}</span>
+                    {lastDrops.gems === 0 && lastDrops.gold === 0 && lastDrops.exp === 0 ? (
+                      <div className="text-center py-3 px-4 bg-[#0a0a0a] rounded-2xl border border-white/5">
+                        <span className="text-white/40 text-xs font-mono">
+                          Повторный тестовый забег: награды за первый проход уже получены ранее
+                        </span>
                       </div>
-                      <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
-                         <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Золото</span>
-                         <span className="font-black text-yellow-400 text-lg">+{lastDrops.gold}</span>
-                      </div>
-                      {lastDrops.gems > 0 && (
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
-                           <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Кристаллы</span>
-                           <span className="font-black text-pink-400 text-lg">+{lastDrops.gems} 💎</span>
+                           <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Опыт героя</span>
+                           <span className="font-black text-green-400 text-lg">+{lastDrops.exp}</span>
                         </div>
-                      )}
-                    </div>
+                        <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
+                           <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Золото</span>
+                           <span className="font-black text-yellow-400 text-lg">+{lastDrops.gold}</span>
+                        </div>
+                        {lastDrops.gems > 0 && (
+                          <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
+                             <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Кристаллы</span>
+                             <span className="font-black text-pink-400 text-lg">+{lastDrops.gems} 💎</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {lastDrops.artifacts && lastDrops.artifacts.length > 0 && (
                       <div className="pt-5 mt-5 border-t border-white/5">
