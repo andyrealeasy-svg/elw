@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, Step, EventData, STATUS } from 'react-joyride';
 import { PlayerProfile, GameRoute } from '../types';
-import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle } from 'lucide-react';
+import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle, Sparkles } from 'lucide-react';
 import { characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import EventsMenu from './EventsMenu';
 import { cn } from '../lib/utils';
@@ -585,55 +585,85 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
             </button>
          </div>
          
-         <nav className="flex-1 flex flex-col gap-2 p-4">
-            <button onClick={() => setActiveTab('OVERVIEW')} className={`flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'OVERVIEW' ? 'bg-[#1a1a1a] text-white' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Compass className="w-5 h-5" /> Меню
+         <nav className="flex-1 flex flex-col gap-1.5 p-4 pb-20">
+            {/* Быстрый доступ (4 кнопки) */}
+            <div className="grid grid-cols-2 gap-2 mb-2">
+               <button onClick={() => setActiveTab('OVERVIEW')} className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium transition-colors ${activeTab === 'OVERVIEW' ? 'bg-[#1a1a1a] text-white' : 'hover:bg-[#1a1a1a]/50 text-white/50 bg-[#111111] border border-white/5'}`}>
+                  <Compass className="w-5 h-5" /> <span className="text-[10px] uppercase">Главная</span>
+               </button>
+               <button onClick={() => setRoute('ROSTER')} className="desk-tutorial-roster flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/50 bg-[#111111] border border-white/5 transition-colors">
+                  <Users className="w-5 h-5" /> <span className="text-[10px] uppercase">Отряд</span>
+               </button>
+               <button onClick={() => setActiveTab('DAILIES')} className={`desk-tutorial-dailies flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium transition-colors ${activeTab === 'DAILIES' ? 'bg-[#1a1a1a] text-green-400' : 'hover:bg-[#1a1a1a]/50 text-white/50 bg-[#111111] border border-white/5'}`}>
+                  <CheckCircle className="w-5 h-5" /> <span className="text-[10px] uppercase">Поручения</span>
+               </button>
+               <button onClick={() => setActiveTab('DUNGEONS')} className={`desk-tutorial-dungeons flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium transition-colors ${activeTab === 'DUNGEONS' ? 'bg-[#1a1a1a] text-blue-400' : 'hover:bg-[#1a1a1a]/50 text-white/50 bg-[#111111] border border-white/5'}`}>
+                  <Swords className="w-5 h-5" /> <span className="text-[10px] uppercase">Данжи</span>
+               </button>
+            </div>
+
+            <button onClick={() => setRoute('GACHA')} className="desk-tutorial-gacha mb-4 w-full flex items-center justify-center gap-2 p-2.5 rounded-xl font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors">
+               <Star className="w-4 h-4" /> <span className="text-sm">Молитвы</span>
             </button>
-            <button onClick={() => setRoute('STORY')} className="desk-tutorial-story flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-amber-500 transition-colors">
-               <Book className="w-5 h-5" /> Сюжет
-            </button>
-            <button onClick={() => setRoute('MAP')} className="desk-tutorial-map flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-indigo-400 transition-colors">
-               <Globe className="w-5 h-5 animate-spin-slow" /> Карта мира
-            </button>
-            <button onClick={() => setActiveTab('DUNGEONS')} className={`desk-tutorial-dungeons flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'DUNGEONS' ? 'bg-[#1a1a1a] text-blue-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Swords className="w-5 h-5" /> Подземелья
-            </button>
-            <button onClick={() => setRoute('META')} className="desk-tutorial-meta flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-white/50 group transition-colors">
-               <Trophy className="w-5 h-5 group-hover:rotate-12 transition-transform" /> Мета-гайд
-            </button>
-            <button onClick={() => setActiveTab('DAILIES')} className={`desk-tutorial-dailies flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'DAILIES' ? 'bg-[#1a1a1a] text-green-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <CheckCircle className="w-5 h-5" /> Поручения
-            </button>
-            <button onClick={() => setActiveTab('EXPEDITIONS')} className={`desk-tutorial-expeditions flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'EXPEDITIONS' ? 'bg-[#1a1a1a] text-orange-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Map className="w-5 h-5" /> Экспедиции
-            </button>
-            <button onClick={() => setActiveTab('EVENTS')} className={`desk-tutorial-events flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'EVENTS' ? 'bg-[#1a1a1a] text-purple-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Calendar className="w-5 h-5" /> События
-            </button>
-            <button onClick={() => setActiveTab('ACHIEVEMENTS')} className={`desk-tutorial-achievements flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'ACHIEVEMENTS' ? 'bg-[#1a1a1a] text-yellow-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Star className="w-5 h-5" /> Достижения
-            </button>
-            <button onClick={() => setActiveTab('SHOP')} className={`desk-tutorial-shop flex items-center gap-3 p-3 rounded-xl font-bold transition-colors ${activeTab === 'SHOP' ? 'bg-[#1a1a1a] text-pink-400' : 'hover:bg-[#1a1a1a]/50 text-white/50'}`}>
-               <Gift className="w-5 h-5" /> Магазин
-            </button>
-            
-            <div className="my-4 border-t border-white/5"></div>
-            
-            <button onClick={() => setRoute('ROSTER')} className="desk-tutorial-roster flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-white/50 transition-colors">
-               <Users className="w-5 h-5" /> Отряд ({Object.keys(profile.roster).length})
-            </button>
-            <button onClick={() => setRoute('GACHA')} className="desk-tutorial-gacha flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-white/50 transition-colors">
-               <Star className="w-5 h-5" /> Молитвы
-            </button>
-            <button onClick={() => setRoute('BP')} className="desk-tutorial-bp flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-white/50 transition-colors">
-               <Gift className="w-5 h-5" /> Бравл Пасс
-            </button>
-            <button onClick={() => setRoute('ABYSS')} className="desk-tutorial-abyss flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-[#1a1a1a]/50 text-purple-400 transition-colors">
-               <Layers className="w-5 h-5 text-purple-400" /> Бездна
-            </button>
-            <button onClick={() => setRoute('BOSS_RUSH_MENU')} className="desk-tutorial-bossrush flex items-center gap-3 p-3 rounded-xl font-bold hover:bg-fuchsia-950/40 text-fuchsia-300 transition-colors border border-fuchsia-500/30">
-               <Skull className="w-5 h-5 text-fuchsia-400" /> Теневой Натиск
-            </button>
+
+            {/* Путешествие */}
+            <div className="mt-1">
+               <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-1.5 px-2">Путешествие</h3>
+               <button onClick={() => setRoute('STORY')} className="desk-tutorial-story w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-amber-500 transition-colors">
+                  <Book className="w-4 h-4" /> <span className="text-sm">Сюжет</span>
+               </button>
+               <button onClick={() => setRoute('MAP')} className="desk-tutorial-map w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-indigo-400 transition-colors">
+                  <Globe className="w-4 h-4 animate-spin-slow" /> <span className="text-sm">Карта мира</span>
+               </button>
+            </div>
+
+            {/* Бой */}
+            <div className="mt-3">
+               <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-1.5 px-2">Бой</h3>
+               <button onClick={() => setRoute('ROSTER')} className="desk-tutorial-roster w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 transition-colors">
+                  <Users className="w-4 h-4" /> <span className="text-sm">Отряд ({Object.keys(profile.roster).length})</span>
+               </button>
+               <button onClick={() => setActiveTab('DUNGEONS')} className={`desk-tutorial-dungeons w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'DUNGEONS' ? 'bg-[#1a1a1a] text-blue-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <Swords className="w-4 h-4" /> <span className="text-sm">Подземелья</span>
+               </button>
+               <button onClick={() => setRoute('ABYSS')} className="desk-tutorial-abyss w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-purple-400 transition-colors">
+                  <Layers className="w-4 h-4" /> <span className="text-sm">Бездна</span>
+               </button>
+               <button onClick={() => setRoute('BOSS_RUSH_MENU')} className="desk-tutorial-bossrush w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 transition-colors">
+                  <Skull className="w-4 h-4" /> <span className="text-sm">Теневой Натиск</span>
+               </button>
+            </div>
+
+            {/* Активности */}
+            <div className="mt-3">
+               <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-1.5 px-2">Активности</h3>
+               <button onClick={() => setActiveTab('DAILIES')} className={`desk-tutorial-dailies w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'DAILIES' ? 'bg-[#1a1a1a] text-green-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <CheckCircle className="w-4 h-4" /> <span className="text-sm">Поручения</span>
+               </button>
+               <button onClick={() => setActiveTab('EXPEDITIONS')} className={`desk-tutorial-expeditions w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'EXPEDITIONS' ? 'bg-[#1a1a1a] text-orange-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <Map className="w-4 h-4" /> <span className="text-sm">Экспедиции</span>
+               </button>
+               <button onClick={() => setActiveTab('EVENTS')} className={`desk-tutorial-events w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'EVENTS' ? 'bg-[#1a1a1a] text-purple-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <Calendar className="w-4 h-4" /> <span className="text-sm">События</span>
+               </button>
+            </div>
+
+            {/* Прогресс */}
+            <div className="mt-3">
+               <h3 className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-1.5 px-2">Прогресс</h3>
+               <button onClick={() => setActiveTab('SHOP')} className={`desk-tutorial-shop w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'SHOP' ? 'bg-[#1a1a1a] text-pink-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <Gift className="w-4 h-4" /> <span className="text-sm">Магазин обмена</span>
+               </button>
+               <button onClick={() => setActiveTab('ACHIEVEMENTS')} className={`desk-tutorial-achievements w-full flex items-center gap-3 p-2.5 rounded-xl font-medium transition-colors ${activeTab === 'ACHIEVEMENTS' ? 'bg-[#1a1a1a] text-yellow-400' : 'hover:bg-[#1a1a1a]/50 text-white/70'}`}>
+                  <Star className="w-4 h-4" /> <span className="text-sm">Достижения</span>
+               </button>
+               <button onClick={() => setRoute('BP')} className="desk-tutorial-bp w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 transition-colors">
+                  <Gift className="w-4 h-4" /> <span className="text-sm">Бравл Пасс</span>
+               </button>
+               <button onClick={() => setRoute('META')} className="desk-tutorial-meta w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 group transition-colors">
+                  <Trophy className="w-4 h-4 group-hover:rotate-12 transition-transform" /> <span className="text-sm">Мета-гайд</span>
+               </button>
+            </div>
          </nav>
          {onLogout && (
            <div className="p-4 border-t border-white/5 flex flex-col gap-3">
@@ -682,183 +712,221 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
             </div>
 
             {/* Unified Scrollable Drawer Container */}
-            <div className="flex-1 overflow-y-auto pr-1 pb-6 space-y-4">
-               {/* Main Tabs Navigation Grid */}
-               <div className="grid grid-cols-2 gap-3">
-               <button 
-                  onClick={() => { setActiveTab('OVERVIEW'); setMenuOpen(false); }}
-                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'OVERVIEW' 
-                        ? 'border-blue-500/50 bg-blue-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Compass className="w-6 h-6 text-blue-400" />
-                  <span className="text-xs font-bold font-mono">Главная</span>
-               </button>
-
-               <button 
-                  onClick={() => { setRoute('STORY'); setMenuOpen(false); }}
-                  className="mob-tutorial-story flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111] transition-all gap-2 text-center h-24"
-               >
-                  <Book className="w-6 h-6 text-amber-500" />
-                  <span className="text-xs font-bold font-mono text-amber-400">Сюжет</span>
-               </button>
-
-               <button 
-                  onClick={() => { setRoute('MAP'); setMenuOpen(false); }}
-                  className="mob-tutorial-map flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111] transition-all gap-2 text-center h-24"
-               >
-                  <Globe className="w-6 h-6 text-indigo-400 animate-spin-slow" />
-                  <span className="text-xs font-bold font-mono text-indigo-400">Карта мира</span>
-               </button>
-
-               <button 
-                  onClick={() => { setRoute('BOSS_RUSH_MENU'); setMenuOpen(false); }}
-                  className="mob-tutorial-bossrush flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-fuchsia-500/50 bg-fuchsia-950/40 text-fuchsia-300 hover:bg-fuchsia-900/50 transition-all gap-1.5 text-center h-24 relative overflow-hidden"
-               >
-                  <div className="absolute top-1 right-1 px-1 bg-fuchsia-500 text-[8px] font-black text-white rounded uppercase">NEW</div>
-                  <Skull className="w-6 h-6 text-fuchsia-400" />
-                  <span className="text-xs font-bold font-mono text-fuchsia-200">Теневой Натиск</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('DUNGEONS'); setMenuOpen(false); }}
-                  className={`mob-tutorial-dungeons flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'DUNGEONS' 
-                        ? 'border-blue-500/50 bg-blue-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Swords className="w-6 h-6 text-blue-400" />
-                  <span className="text-xs font-bold font-mono">Подземелья</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('DAILIES'); setMenuOpen(false); }}
-                  className={`mob-tutorial-dailies flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'DAILIES' 
-                        ? 'border-green-500/50 bg-green-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <CheckCircle className="w-6 h-6 text-green-400" />
-                  <span className="text-xs font-bold font-mono">Поручения</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('EXPEDITIONS'); setMenuOpen(false); }}
-                  className={`mob-tutorial-expeditions flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'EXPEDITIONS' 
-                        ? 'border-orange-500/50 bg-orange-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Map className="w-6 h-6 text-orange-400" />
-                  <span className="text-xs font-bold font-mono">Экспедиции</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('EVENTS'); setMenuOpen(false); }}
-                  className={`mob-tutorial-events flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'EVENTS' 
-                        ? 'border-purple-500/50 bg-purple-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Calendar className="w-6 h-6 text-purple-400" />
-                  <span className="text-xs font-bold font-mono">События</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('ACHIEVEMENTS'); setMenuOpen(false); }}
-                  className={`mob-tutorial-achievements flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
-                     activeTab === 'ACHIEVEMENTS' 
-                        ? 'border-yellow-500/50 bg-yellow-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Star className="w-6 h-6 text-yellow-400" />
-                  <span className="text-xs font-bold font-mono">Достижения</span>
-               </button>
-
-               <button 
-                  onClick={() => { setActiveTab('SHOP'); setMenuOpen(false); }}
-                  className={`mob-tutorial-shop flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all col-span-2 gap-2 text-center h-20 ${
-                     activeTab === 'SHOP' 
-                        ? 'border-pink-500/50 bg-pink-500/10 text-white' 
-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
-                  }`}
-               >
-                  <Gift className="w-5 h-5 text-pink-400" />
-                  <span className="text-xs font-bold font-mono">Магазин обмена</span>
-               </button>
-               </div>
-
-               {/* Game Screen Direct Links */}
-               <div className="pt-2 border-t border-white/5">
-               <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2.5">Глобальные разделы</h3>
-               <div className="grid grid-cols-3 gap-2">
+            <div className="flex-1 overflow-y-auto pr-1 pb-6 space-y-6">
+               
+               {/* Быстрый доступ (4 кнопки) */}
+               <div className="grid grid-cols-4 gap-2">
+                  <button 
+                     onClick={() => { setActiveTab('OVERVIEW'); setMenuOpen(false); }}
+                     className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1.5 text-center ${
+                        activeTab === 'OVERVIEW' 
+                           ? 'border-blue-500/50 bg-blue-500/10 text-white' 
+                           : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+                     }`}
+                  >
+                     <Compass className="w-5 h-5 text-blue-400" />
+                     <span className="text-[9px] font-medium tracking-wide">Главная</span>
+                  </button>
                   <button 
                      onClick={() => { setRoute('ROSTER'); setMenuOpen(false); }}
-                     className="mob-tutorial-roster flex flex-col items-center justify-center py-2.5 px-1 bg-[#111111] border border-white/5 hover:bg-[#1a1a1a] active:scale-95 transition rounded-2xl text-white/70"
+                     className="mob-tutorial-roster flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111] transition-all gap-1.5 text-center"
                   >
-                     <Users className="w-4 h-4 mb-1 text-white/50" />
-                     <span className="text-[10px] font-bold truncate">Отряд</span>
+                     <Users className="w-5 h-5" />
+                     <span className="text-[9px] font-medium tracking-wide">Отряд</span>
                   </button>
                   <button 
-                     onClick={() => { setRoute('GACHA'); setMenuOpen(false); }}
-                     className="mob-tutorial-gacha flex flex-col items-center justify-center py-2.5 px-1 bg-[#111111] border border-white/5 hover:bg-[#1a1a1a] active:scale-95 transition rounded-2xl text-white/70"
+                     onClick={() => { setActiveTab('DAILIES'); setMenuOpen(false); }}
+                     className={`mob-tutorial-dailies flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1.5 text-center ${
+                        activeTab === 'DAILIES' 
+                           ? 'border-green-500/50 bg-green-500/10 text-white' 
+                           : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+                     }`}
                   >
-                     <Star className="w-4 h-4 mb-1 text-yellow-500 fill-yellow-500/20" />
-                     <span className="text-[10px] font-bold truncate">Молитвы</span>
+                     <CheckCircle className="w-5 h-5 text-green-400" />
+                     <span className="text-[9px] font-medium tracking-wide">Поручения</span>
                   </button>
                   <button 
-                     onClick={() => { setRoute('BP'); setMenuOpen(false); }}
-                     className="mob-tutorial-bp flex flex-col items-center justify-center py-2.5 px-1 bg-[#111111] border border-white/5 hover:bg-[#1a1a1a] active:scale-95 transition rounded-2xl text-white/70"
+                     onClick={() => { setActiveTab('DUNGEONS'); setMenuOpen(false); }}
+                     className={`mob-tutorial-dungeons flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1.5 text-center ${
+                        activeTab === 'DUNGEONS' 
+                           ? 'border-blue-500/50 bg-blue-500/10 text-white' 
+                           : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+                     }`}
                   >
-                     <Gift className="w-4 h-4 mb-1 text-pink-400" />
-                     <span className="text-[10px] font-bold truncate">Бравл Пасс</span>
-                  </button>
-                  <button 
-                     onClick={() => { setRoute('ABYSS'); setMenuOpen(false); }}
-                     className="mob-tutorial-abyss flex flex-col items-center justify-center py-2.5 px-1 bg-[#111111] border border-white/5 hover:bg-[#1a1a1a] active:scale-95 transition rounded-2xl text-white/70"
-                  >
-                     <Layers className="w-4 h-4 mb-1 text-purple-400" />
-                     <span className="text-[10px] font-bold truncate">Бездна</span>
-                  </button>
-                  <button 
-                     onClick={() => { setRoute('BOSS_RUSH_MENU'); setMenuOpen(false); }}
-                     className="flex flex-col items-center justify-center py-2.5 px-1 bg-fuchsia-950/50 border border-fuchsia-500/50 hover:bg-fuchsia-900/50 active:scale-95 transition rounded-2xl text-fuchsia-200"
-                  >
-                     <Skull className="w-4 h-4 mb-1 text-fuchsia-400" />
-                     <span className="text-[10px] font-bold truncate">Натиск</span>
-                  </button>
-                  <button 
-                     onClick={() => { setRoute('META'); setMenuOpen(false); }}
-                     className="mob-tutorial-meta flex flex-col items-center justify-center py-2.5 px-1 bg-[#111111] border border-white/5 hover:bg-[#1a1a1a] active:scale-95 transition rounded-2xl text-white/70"
-                  >
-                     <Trophy className="w-4 h-4 mb-1 text-yellow-400" />
-                     <span className="text-[10px] font-bold truncate">Мета</span>
+                     <Swords className="w-5 h-5 text-blue-400" />
+                     <span className="text-[9px] font-medium tracking-wide">Данжи</span>
                   </button>
                </div>
+
+               {/* Молитвы (сразу под доступом) */}
+               <div>
+                  <button 
+                     onClick={() => { setRoute('GACHA'); setMenuOpen(false); }}
+                     className="mob-tutorial-gacha flex items-center justify-center p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all gap-2 text-center w-full text-amber-400 active:scale-95"
+                  >
+                     <Star className="w-5 h-5" />
+                     <span className="text-sm font-medium uppercase tracking-widest">Молитвы</span>
+                  </button>
+               </div>
+
+               {/* Путешествие */}
+               <div>
+                  <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-1">Путешествие</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     <button 
+                        onClick={() => { setRoute('STORY'); setMenuOpen(false); }}
+                        className="mob-tutorial-story flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left"
+                     >
+                        <Book className="w-5 h-5 text-amber-500" />
+                        <span className="text-xs font-medium tracking-wide text-amber-400">Сюжет</span>
+                     </button>
+                     <button 
+                        onClick={() => { setRoute('MAP'); setMenuOpen(false); }}
+                        className="mob-tutorial-map flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left"
+                     >
+                        <Globe className="w-5 h-5 text-indigo-400 animate-spin-slow" />
+                        <span className="text-xs font-medium tracking-wide text-indigo-400">Карта мира</span>
+                     </button>
+                  </div>
+               </div>
+
+               {/* Бой */}
+               <div>
+                  <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-1">Бой</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     <button 
+                        onClick={() => { setRoute('ROSTER'); setMenuOpen(false); }}
+                        className="mob-tutorial-roster flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70"
+                     >
+                        <Users className="w-5 h-5" />
+                        <span className="text-xs font-medium tracking-wide">Отряд</span>
+                     </button>
+                     <button 
+                        onClick={() => { setActiveTab('DUNGEONS'); setMenuOpen(false); }}
+                        className={`mob-tutorial-dungeons flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
+                           activeTab === 'DUNGEONS' 
+                              ? 'border-blue-500/50 bg-blue-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <Swords className="w-5 h-5 text-blue-400" />
+                        <span className="text-xs font-medium tracking-wide">Подземелья</span>
+                     </button>
+                     <button 
+                        onClick={() => { setRoute('ABYSS'); setMenuOpen(false); }}
+                        className="mob-tutorial-abyss flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-purple-400"
+                     >
+                        <Layers className="w-5 h-5" />
+                        <span className="text-xs font-medium tracking-wide">Бездна</span>
+                     </button>
+                     <button 
+                        onClick={() => { setRoute('BOSS_RUSH_MENU'); setMenuOpen(false); }}
+                        className="mob-tutorial-bossrush flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70"
+                     >
+                        <Skull className="w-5 h-5 text-fuchsia-400" />
+                        <span className="text-xs font-medium tracking-wide truncate">Натиск</span>
+                     </button>
+                  </div>
+               </div>
+
+               {/* Активности */}
+               <div>
+                  <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-1">Активности</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     <button 
+                        onClick={() => { setActiveTab('DAILIES'); setMenuOpen(false); }}
+                        className={`mob-tutorial-dailies flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
+                           activeTab === 'DAILIES' 
+                              ? 'border-green-500/50 bg-green-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                        <span className="text-xs font-medium tracking-wide">Поручения</span>
+                     </button>
+                     <button 
+                        onClick={() => { setActiveTab('EXPEDITIONS'); setMenuOpen(false); }}
+                        className={`mob-tutorial-expeditions flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
+                           activeTab === 'EXPEDITIONS' 
+                              ? 'border-orange-500/50 bg-orange-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <Map className="w-5 h-5 text-orange-400" />
+                        <span className="text-xs font-medium tracking-wide">Экспедиции</span>
+                     </button>
+                     <button 
+                        onClick={() => { setActiveTab('EVENTS'); setMenuOpen(false); }}
+                        className={`mob-tutorial-events flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left col-span-2 ${
+                           activeTab === 'EVENTS' 
+                              ? 'border-purple-500/50 bg-purple-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <Calendar className="w-5 h-5 text-purple-400" />
+                        <span className="text-xs font-medium tracking-wide">События</span>
+                     </button>
+                  </div>
+               </div>
+
+               {/* Прогресс */}
+               <div>
+                  <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-3 px-1">Прогресс</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                     <button 
+                        onClick={() => { setActiveTab('SHOP'); setMenuOpen(false); }}
+                        className={`mob-tutorial-shop flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
+                           activeTab === 'SHOP' 
+                              ? 'border-pink-500/50 bg-pink-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <Gift className="w-5 h-5 text-pink-400" />
+                        <span className="text-xs font-medium tracking-wide">Магазин</span>
+                     </button>
+                     <button 
+                        onClick={() => { setActiveTab('ACHIEVEMENTS'); setMenuOpen(false); }}
+                        className={`mob-tutorial-achievements flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
+                           activeTab === 'ACHIEVEMENTS' 
+                              ? 'border-yellow-500/50 bg-yellow-500/10 text-white' 
+                              : 'border-white/5 bg-[#111111]/40 text-white/70 hover:bg-[#111111]'
+                        }`}
+                     >
+                        <Star className="w-5 h-5 text-yellow-400" />
+                        <span className="text-xs font-medium tracking-wide">Достижения</span>
+                     </button>
+                     <button 
+                        onClick={() => { setRoute('BP'); setMenuOpen(false); }}
+                        className="mob-tutorial-bp flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70"
+                     >
+                        <Gift className="w-5 h-5" />
+                        <span className="text-xs font-medium tracking-wide">Бравл Пасс</span>
+                     </button>
+                     <button 
+                        onClick={() => { setRoute('META'); setMenuOpen(false); }}
+                        className="mob-tutorial-meta flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70 group"
+                     >
+                        <Trophy className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                        <span className="text-xs font-medium tracking-wide">Мета-гайд</span>
+                     </button>
+                  </div>
+               </div>
                {onLogout && (
-                  <div className="mt-4 pt-4 border-t border-white/5 w-full flex flex-col gap-4">
-                     <div className="flex items-center justify-center gap-2 px-2 bg-[#111111] py-2 rounded-2xl border border-white/5">
-                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold uppercase text-[10px]">
+                  <div className="pt-4 border-t border-white/5 mt-auto flex flex-col gap-3">
+                     <div className="flex items-center gap-3 px-2">
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold uppercase text-xl shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                            {username?.charAt(0) || 'И'}
                         </div>
-                        <span className="text-sm font-bold text-white/90 truncate">{username || 'Игрок'}</span>
+                        <div className="flex-1 truncate">
+                           <div className="text-[10px] text-white/50 font-mono uppercase tracking-widest">Аккаунт</div>
+                           <div className="text-sm font-bold text-white truncate">{username || 'Игрок'}</div>
+                        </div>
                      </div>
-                     <button 
-                        onClick={() => { onLogout(); setMenuOpen(false); }}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 active:scale-95 transition rounded-2xl text-red-400 font-bold text-xs uppercase tracking-widest"
-                     >
-                        <X className="w-4 h-4" /> Выйти из аккаунта
+                     <button onClick={onLogout} className="flex items-center justify-center gap-3 p-4 w-full rounded-2xl font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors active:scale-95">
+                        <X className="w-5 h-5" /> Выйти
                      </button>
                   </div>
                )}
-               </div>
             </div>
          </div>
       )}
@@ -869,10 +937,10 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
          <div className="h-14 sm:h-16 border-b border-white/5 flex items-center justify-between px-3 sm:px-6 bg-[#111111] shrink-0 font-mono text-sm sm:text-base">
             
             {/* Mobile Header elements on the left */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-1.5">
                <button 
                   onClick={() => setMenuOpen(true)}
-                  className="flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-white/10 active:scale-95 transition border border-white/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-black whitespace-nowrap"
+                  className="flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-white/10 active:scale-95 transition border border-white/10 px-2.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap"
                >
                   <Menu className="w-4 h-4 text-blue-400" />
                   <span>МЕНЮ</span>
@@ -884,21 +952,13 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
                   <Skull className="w-3.5 h-3.5 text-fuchsia-400" />
                   <span>НАТИСК</span>
                </button>
-               <button 
-                  onClick={startTutorialManually}
-                  className="flex items-center gap-1 bg-[#1a1a1a] hover:bg-white/10 active:scale-95 transition border border-indigo-500/30 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-black text-indigo-400 whitespace-nowrap"
-                  title="Запустить интерактивное обучение"
-               >
-                  <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>ГИД</span>
-               </button>
             </div>
 
             {/* Desktop Center Header / Quick Boss Rush */}
             <div className="hidden md:flex items-center gap-2">
                <button 
                   onClick={startTutorialManually}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-bold transition"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-bold transition cursor-pointer"
                   title="Запустить интерактивное обучение"
                >
                   <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
@@ -906,7 +966,7 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
                </button>
                <button 
                   onClick={() => setRoute('BOSS_RUSH_MENU')}
-                  className="flex items-center gap-2 px-3 py-1 bg-fuchsia-950/40 hover:bg-fuchsia-900/60 border border-fuchsia-500/40 text-fuchsia-300 rounded-xl text-xs font-bold transition shadow-lg shadow-fuchsia-950/50"
+                  className="flex items-center gap-2 px-3 py-1 bg-fuchsia-950/40 hover:bg-fuchsia-900/60 border border-fuchsia-500/40 text-fuchsia-300 rounded-xl text-xs font-bold transition shadow-lg shadow-fuchsia-950/50 cursor-pointer"
                >
                   <Skull className="w-3.5 h-3.5 text-fuchsia-400" />
                   <span>Теневой Натиск</span>
@@ -1435,6 +1495,7 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
             )}
          </div>
       </div>
+
     </div>
   );
 }

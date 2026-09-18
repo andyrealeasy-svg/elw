@@ -1,5 +1,4 @@
 import React, { useState, useImperativeHandle, forwardRef, memo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "../lib/utils";
 
 export interface EffectsOverlayRef {
@@ -15,96 +14,334 @@ export const EffectsOverlay = memo(forwardRef<EffectsOverlayRef, { unitId: strin
     addFloatText: (targetUid: string, text: string, color: string) => {
       if (targetUid !== props.unitId) return;
       const id = Math.random().toString();
-      setFloatingTexts(prev => [...prev, { id, text, color }]);
+      // Keep at most 3 simultaneous floating texts to prevent DOM buildup
+      setFloatingTexts(prev => [...prev.slice(-2), { id, text, color }]);
       setTimeout(() => {
         setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
-      }, 1500);
+      }, 850);
     },
     playEffect: (targetUid: string, type: string) => {
       if (targetUid !== props.unitId) return;
       const id = Math.random().toString();
-      setVisualEffects(prev => [...prev, { id, type }]);
-      const duration = type.includes("ultimate") ? 2000 : 1000;
+      // Keep at most 2 simultaneous visual effects to avoid layout stress
+      setVisualEffects(prev => [...prev.slice(-1), { id, type }]);
       setTimeout(() => {
         setVisualEffects(prev => prev.filter(ve => ve.id !== id));
-      }, duration);
+      }, 500);
     }
   }));
+
+  const renderEffectGraphic = (type: string) => {
+    switch (type) {
+      case "Physical":
+        return <div className="anim-slash-burst absolute text-4xl select-none">⚔️</div>;
+      case "Hydro":
+        return <div className="anim-impact-burst absolute text-blue-400 text-6xl opacity-90 select-none">🌊</div>;
+      case "Pyro":
+        return <div className="anim-impact-burst absolute text-red-500 text-6xl select-none">🔥</div>;
+      case "Electro":
+        return <div className="anim-impact-burst absolute text-purple-400 text-6xl select-none">⚡</div>;
+      case "Cryo":
+        return <div className="anim-impact-burst absolute text-cyan-200 text-6xl select-none">❄️</div>;
+      case "Dendro":
+        return <div className="anim-impact-burst absolute text-emerald-400 text-6xl select-none">🌿</div>;
+      case "Geo":
+        return <div className="anim-impact-burst absolute text-amber-500 text-6xl select-none">☄️</div>;
+      case "hit":
+        return <div className="anim-impact-burst absolute text-5xl select-none">💥</div>;
+      case "heal":
+        return <div className="anim-heal-float absolute text-5xl select-none">💚</div>;
+      case "shield":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-emerald-400" />
+            <div className="anim-impact-burst text-emerald-300 text-5xl select-none">🛡️</div>
+          </div>
+        );
+      case "buff":
+        return <div className="anim-impact-burst absolute text-yellow-300 text-5xl select-none">✨</div>;
+      case "ultimate_aoe":
+        return <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-4 border-white/70 shadow-[0_0_20px_rgba(255,255,255,0.8)] z-50" />;
+      case "selina_rose":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-rose-500" />
+            <div className="anim-impact-burst text-6xl select-none">🌹</div>
+          </div>
+        );
+      case "asher_nature":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-emerald-500" />
+            <div className="anim-impact-burst text-5xl select-none">🌳</div>
+          </div>
+        );
+      case "krona_ice":
+      case "kairen_frost":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-16 h-16 overflow-visible anim-impact-burst" viewBox="0 0 64 64" fill="none">
+              <path d="M32 4 L35 29 L60 32 L35 35 L32 60 L29 35 L4 32 L29 29 Z" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="1.5" className="drop-shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
+              <circle cx="32" cy="32" r="3" fill="#ffffff" />
+            </svg>
+          </div>
+        );
+      case "kairen_ice_dance":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-28 h-28 overflow-visible" viewBox="0 0 120 120" fill="none">
+              {/* Primary diagonal slash */}
+              <line x1="15" y1="15" x2="105" y2="105" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-ice-slash drop-shadow-[0_0_10px_rgba(56,189,248,1)]" />
+              <line x1="20" y1="20" x2="100" y2="100" stroke="#38bdf8" strokeWidth="6" strokeLinecap="round" opacity="0.6" className="anim-ice-slash" />
+              {/* Counter diagonal slash */}
+              <line x1="105" y1="15" x2="15" y2="105" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" style={{ animationDelay: '0.04s' }} className="anim-ice-slash drop-shadow-[0_0_10px_rgba(56,189,248,1)]" />
+              {/* Center crystal diamond spark */}
+              <polygon points="60,48 68,60 60,72 52,60" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="1" className="anim-impact-burst drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
+            </svg>
+          </div>
+        );
+      case "kairen_frost_crown":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-32 h-32 overflow-visible anim-impact-burst" viewBox="0 0 140 140" fill="none">
+              {/* Hexagonal Frost Star / Crown Prisms */}
+              <polygon points="70,12 82,50 125,50 90,75 105,118 70,92 35,118 50,75 15,50 58,50" stroke="#38bdf8" strokeWidth="1.5" fill="rgba(34,211,238,0.12)" className="drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
+              {/* Inner Diamond Core */}
+              <polygon points="70,42 84,70 70,98 56,70" fill="#ffffff" stroke="#7dd3fc" strokeWidth="1" className="drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
+              {/* Clean Crystalline Shockwave */}
+              <circle cx="70" cy="70" r="44" stroke="#e0f2fe" strokeWidth="1.2" strokeDasharray="5 5" className="anim-shockwave-ring opacity-75" />
+            </svg>
+          </div>
+        );
+      case "kairen_winter_throne":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-44 h-44 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Center Tall Glacial Spire */}
+              <polygon points="80,10 92,140 80,150 68,140" fill="rgba(224,242,254,0.3)" stroke="#e0f2fe" strokeWidth="2" className="anim-impact-burst drop-shadow-[0_0_14px_rgba(56,189,248,1)]" />
+              {/* Left Spire */}
+              <polygon points="50,40 60,135 50,142 40,135" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" strokeWidth="1.5" style={{ animationDelay: '0.04s' }} className="anim-impact-burst" />
+              {/* Right Spire */}
+              <polygon points="110,40 120,135 110,142 100,135" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" strokeWidth="1.5" style={{ animationDelay: '0.04s' }} className="anim-impact-burst" />
+              {/* Sharp Horizontal Glacial Fracture */}
+              <line x1="10" y1="130" x2="150" y2="130" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" className="anim-ice-slash drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+            </svg>
+          </div>
+        );
+      case "kairen_ice_echo":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-28 h-28 overflow-visible anim-impact-burst" viewBox="0 0 100 100" fill="none">
+              {/* Resonant Diamond Rhombus */}
+              <polygon points="50,15 80,50 50,85 20,50" stroke="#38bdf8" strokeWidth="2" fill="rgba(56,189,248,0.15)" className="drop-shadow-[0_0_12px_rgba(56,189,248,0.9)]" />
+              {/* Inner Crystal Core */}
+              <polygon points="50,32 63,50 50,68 37,50" fill="#ffffff" opacity="0.9" />
+              {/* Radial Acoustic Needles */}
+              <line x1="50" y1="5" x2="50" y2="15" stroke="#7dd3fc" strokeWidth="1.5" />
+              <line x1="50" y1="85" x2="50" y2="95" stroke="#7dd3fc" strokeWidth="1.5" />
+              <line x1="5" y1="50" x2="20" y2="50" stroke="#7dd3fc" strokeWidth="1.5" />
+              <line x1="80" y1="50" x2="95" y2="50" stroke="#7dd3fc" strokeWidth="1.5" />
+            </svg>
+          </div>
+        );
+      case "kairen_c6_winter_end":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-44 h-44 overflow-visible anim-impact-burst" viewBox="0 0 160 160" fill="none">
+              {/* Expanding Octagonal Permafrost Prism */}
+              <polygon points="80,10 125,25 150,70 135,120 80,150 25,120 10,70 35,25" stroke="#ffffff" strokeWidth="2.5" fill="rgba(224,242,254,0.25)" className="drop-shadow-[0_0_20px_rgba(255,255,255,1)]" />
+              {/* Internal Crystal Fracture Web */}
+              <line x1="80" y1="10" x2="80" y2="150" stroke="#38bdf8" strokeWidth="1.5" />
+              <line x1="10" y1="70" x2="150" y2="70" stroke="#38bdf8" strokeWidth="1.5" />
+              <line x1="35" y1="25" x2="135" y2="120" stroke="#7dd3fc" strokeWidth="1.2" />
+              <line x1="125" y1="25" x2="25" y2="120" stroke="#7dd3fc" strokeWidth="1.2" />
+              {/* Blinding Center Diamond Core */}
+              <polygon points="80,45 100,75 80,105 60,75" fill="#ffffff" className="drop-shadow-[0_0_16px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+      case "kairen_winter_pulse":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-cyan-300 to-transparent anim-ice-slash shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+          </div>
+        );
+      case "aveline_nature":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-pink-400" />
+            <div className="anim-impact-burst text-5xl select-none">🌸</div>
+          </div>
+        );
+      case "aveline_azure_garden":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-2 border-sky-300 shadow-[0_0_16px_rgba(56,189,248,0.9)]" />
+            <div className="anim-shockwave-ring absolute w-20 h-20 rounded-full border border-cyan-200 shadow-[0_0_10px_rgba(103,232,249,0.7)]" style={{ animationDelay: '0.08s' }} />
+            <div className="anim-impact-burst text-6xl select-none filter drop-shadow-[0_0_10px_rgba(56,189,248,0.8)]">
+              🪷
+            </div>
+          </div>
+        );
+      case "aveline_eternal_bloom":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-36 h-36 rounded-full border-2 border-amber-300 shadow-[0_0_24px_rgba(251,191,36,0.9)]" />
+            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.85)]" style={{ animationDelay: '0.08s' }} />
+            <div className="anim-impact-burst text-6xl select-none filter drop-shadow-[0_0_14px_rgba(236,72,153,0.9)] flex items-center justify-center gap-1">
+              <span>🌺</span>
+              <span className="text-3xl text-yellow-300 -ml-3 -mt-4 animate-bounce">✨</span>
+            </div>
+          </div>
+        );
+      case "farina_snow_dust":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+            <div className="anim-impact-burst text-5xl select-none">❄️</div>
+          </div>
+        );
+      case "farina_white_field":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border border-cyan-200 shadow-[0_0_20px_rgba(224,242,254,0.7)]" />
+            <div className="anim-impact-burst text-6xl select-none">🌨️</div>
+          </div>
+        );
+      case "volta_pulse":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-yellow-300 shadow-[0_0_16px_rgba(253,224,71,0.8)]" />
+            <div className="anim-impact-burst text-5xl select-none">⚡</div>
+          </div>
+        );
+      case "snezhana_overcool":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.7)]" />
+            <div className="anim-impact-burst text-5xl select-none">❄️</div>
+          </div>
+        );
+      case "cyrus_duel":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              {/* Lightning-fast Piercing Rapier Thrust */}
+              <line x1="10" y1="60" x2="105" y2="60" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-duelist-thrust drop-shadow-[0_0_10px_rgba(239,68,68,1)]" />
+              <line x1="25" y1="60" x2="100" y2="60" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" opacity="0.6" className="anim-duelist-thrust" />
+              {/* Sharp Angled Counter-Slash */}
+              <line x1="90" y1="25" x2="30" y2="95" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" style={{ animationDelay: '0.04s' }} className="anim-ice-slash drop-shadow-[0_0_8px_rgba(244,63,94,1)]" />
+              {/* Center Diamond Penetration Spark */}
+              <polygon points="65,52 75,60 65,68 55,60" fill="#ffffff" stroke="#ef4444" strokeWidth="1" className="anim-impact-burst drop-shadow-[0_0_8px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+      case "cyrus_execute":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-40 h-40 overflow-visible" viewBox="0 0 140 140" fill="none">
+              {/* Devastating Vertical Guillotine Cleave */}
+              <line x1="70" y1="5" x2="70" y2="135" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" className="anim-execution-cleave drop-shadow-[0_0_14px_rgba(220,38,38,1)]" />
+              <line x1="70" y1="15" x2="70" y2="125" stroke="#b91c1c" strokeWidth="8" strokeLinecap="round" opacity="0.5" className="anim-execution-cleave" />
+              
+              {/* Heavy Cross-Cleave Shockwave (X-Cleave) */}
+              <line x1="20" y1="25" x2="120" y2="115" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" style={{ animationDelay: '0.04s' }} className="anim-ice-slash drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]" />
+              <line x1="120" y1="25" x2="20" y2="115" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" style={{ animationDelay: '0.06s' }} className="anim-ice-slash drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]" />
+              
+              {/* Horizontal Razor Shock Line */}
+              <line x1="10" y1="70" x2="130" y2="70" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" className="anim-ice-slash drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
+              
+              {/* Lethal Diamond Core Flare */}
+              <polygon points="70,48 82,70 70,92 58,70" fill="#ffffff" stroke="#ef4444" strokeWidth="1.5" className="anim-impact-burst drop-shadow-[0_0_12px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+      case "raven_shadow":
+      case "raven_throw":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              {/* Dual Phantom Shadow Daggers */}
+              <line x1="15" y1="20" x2="105" y2="100" stroke="#818cf8" strokeWidth="5" strokeLinecap="round" opacity="0.4" className="anim-phantom-thrust" />
+              <line x1="20" y1="25" x2="100" y2="95" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" className="anim-phantom-thrust drop-shadow-[0_0_8px_rgba(168,85,247,0.9)]" />
+              <line x1="30" y1="35" x2="95" y2="90" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" className="anim-phantom-thrust" />
+              
+              {/* Counter-Angle Shadow Spark */}
+              <line x1="95" y1="35" x2="35" y2="95" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" className="anim-ice-slash" />
+              
+              {/* Central Dark Electro Diamond */}
+              <polygon points="60,48 70,60 60,72 50,60" fill="#1e1b4b" stroke="#818cf8" strokeWidth="1.5" className="anim-impact-burst drop-shadow-[0_0_10px_rgba(129,140,248,1)]" />
+            </svg>
+          </div>
+        );
+      case "raven_sector":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-36 h-36 overflow-visible" viewBox="0 0 130 130" fill="none">
+              {/* Sweeping Blade Fan Trails */}
+              <path d="M 15 80 Q 65 20 115 80" stroke="#818cf8" strokeWidth="3" strokeLinecap="round" className="anim-shadow-fan drop-shadow-[0_0_10px_rgba(129,140,248,0.8)]" />
+              <path d="M 25 85 Q 65 35 105 85" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" className="anim-shadow-fan" />
+              
+              {/* Radiating Precision Shadow Blades */}
+              <line x1="65" y1="105" x2="25" y2="40" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" className="anim-phantom-thrust" />
+              <line x1="65" y1="105" x2="65" y2="25" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" className="anim-phantom-thrust" />
+              <line x1="65" y1="105" x2="105" y2="40" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" className="anim-phantom-thrust" />
+              
+              {/* Sharp Target Reticle Diamond */}
+              <polygon points="65,30 73,40 65,50 57,40" fill="#312e81" stroke="#c084fc" strokeWidth="1" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "raven_dance":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-44 h-44 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* High-Velocity Twin Shadow Scythe Cleave (Rotating Cyclone) */}
+              <g className="anim-shadow-cyclone origin-center">
+                {/* Upper Crescent Blade */}
+                <path d="M 20 80 A 60 60 0 0 1 140 80" stroke="#818cf8" strokeWidth="3.5" strokeLinecap="round" className="drop-shadow-[0_0_14px_rgba(129,140,248,0.9)]" />
+                <path d="M 30 80 A 50 50 0 0 1 130 80" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                
+                {/* Lower Crescent Blade */}
+                <path d="M 140 80 A 60 60 0 0 1 20 80" stroke="#a855f7" strokeWidth="3.5" strokeLinecap="round" className="drop-shadow-[0_0_14px_rgba(168,85,247,0.9)]" />
+                <path d="M 130 80 A 50 50 0 0 1 30 80" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" />
+                
+                {/* Radial Shadow Quills (Geometric Vectors, not emojis) */}
+                <line x1="80" y1="10" x2="80" y2="35" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                <line x1="80" y1="150" x2="80" y2="125" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                <line x1="10" y1="80" x2="35" y2="80" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                <line x1="150" y1="80" x2="125" y2="80" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+              </g>
+
+              {/* Central Geometric Phantom Core Flare */}
+              <polygon points="80,55 95,80 80,105 65,80" fill="#1e1b4b" stroke="#ffffff" strokeWidth="2" className="anim-impact-burst drop-shadow-[0_0_16px_rgba(192,132,252,1)]" />
+              <polygon points="80,65 89,80 80,95 71,80" fill="#a855f7" opacity="0.8" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
       <div className="absolute inset-0 pointer-events-none flex justify-center items-center z-40 overflow-visible">
         {visualEffects.map((ve) => (
           <React.Fragment key={ve.id}>
-            {ve.type === "Physical" && <motion.div initial={{scale:0, rotate: -45}} animate={{scale:[0, 2, 0], opacity:[1,1,0]}} transition={{duration: 0.4}} className="absolute text-4xl">⚔️</motion.div>}
-            {ve.type === "Hydro" && <motion.div initial={{scale:0}} animate={{scale:[0, 3, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-blue-500 text-6xl opacity-80 ">🌊</motion.div>}
-            {ve.type === "Pyro" && <motion.div initial={{scale:0}} animate={{scale:[0.5, 3.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-red-500 text-7xl ">🔥</motion.div>}
-            {ve.type === "Electro" && <motion.div initial={{scale:0, rotate: 15}} animate={{scale:[1, 4.5, 1.5], opacity:[0,1,0]}} transition={{duration: 0.4}} className="absolute text-purple-400 text-7xl  ">⚡</motion.div>}
-            {ve.type === "Cryo" && <motion.div initial={{scale:0, rotate: -25}} animate={{scale:[1, 3.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-cyan-200 text-6xl ">❄️</motion.div>}
-            {ve.type === "Dendro" && <motion.div initial={{scale:0}} animate={{scale:[0, 2.5, 1], opacity:[0,1,0]}} transition={{duration: 0.5}} className="absolute text-green-400 text-6xl">🌿</motion.div>}
-            {ve.type === "Geo" && <motion.div initial={{y:-100, opacity:0}} animate={{y:0, opacity:[0, 1, 0], scale:[1,1, 2]}} transition={{duration: 0.6}} className="absolute text-orange-500 text-8xl ">☄️</motion.div>}
-            
-            {ve.type === "selina_rose" && (
-              <motion.div initial={{ scale: 0, rotate: 180 }} animate={{ scale: [0, 4, 3, 0], rotate: [180, 0, -10, 0], opacity: [0, 1, 1, 0] }} transition={{ duration: 1.2 }} className="absolute flex items-center justify-center">
-                <span className="text-8xl  ">🌹</span>
-                <motion.div animate={{ scale: [1, 2], opacity: [0, 0.5, 0] }} transition={{ duration: 0.6, repeat: 2 }} className="absolute w-32 h-32 rounded-full border-4 border-rose-500/30 " />
-              </motion.div>
-            )}
-            {ve.type === "asher_nature" && (
-                <motion.div className="absolute flex items-center justify-center">
-                  <motion.div initial={{ scale: 0, y: 50 }} animate={{ scale: [0, 5, 0], y: [50, 0, -20] }} transition={{ duration: 0.8 }} className="absolute text-8xl  opacity-20">⚒️</motion.div>
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 4, 0], rotate: 360 }} transition={{ duration: 1 }} className="absolute text-7xl">🌳</motion.div>
-                  {[...Array(4)].map((_, i) => (
-                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*45) * 90, y: Math.cos(i*45) * 90, opacity: [1, 0], scale: [1, 0] }} transition={{ duration: 0.6, delay: i * 0.05 }} className="absolute text-xl">🌱</motion.div>
-                  ))}
-                </motion.div>
-            )}
-            {ve.type === "krona_ice" && (
-                <motion.div className="absolute flex items-center justify-center">
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 6, 4.5, 0], rotate: 45 }} transition={{ duration: 1 }} className="absolute text-8xl ">❄️</motion.div>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.4, 0], scale: [1, 2] }} transition={{ duration: 0.5 }} className="absolute w-40 h-40 bg-cyan-400/20 rounded-full " />
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*60) * 110, y: Math.cos(i*60) * 110, opacity: [1, 0], scale: [1.2, 0.5], rotate: 180 }} transition={{ duration: 0.7, delay: i * 0.05 }} className="absolute text-lg">💎</motion.div>
-                  ))}
-                </motion.div>
-            )}
-            {ve.type === "ultimate_aoe" && (
-              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 10, 15], opacity: [0, 0.4, 0] }} transition={{ duration: 1 }} className="absolute w-20 h-20 bg-white rounded-full  z-[60]" />
-            )}
-            {ve.type === "heal" && <motion.div initial={{y:20, opacity:0}} animate={{y:-50, opacity:[0, 1, 0]}} transition={{duration: 0.8}} className="absolute text-6xl">💚</motion.div>}
-            {ve.type === "shield" && <motion.div initial={{scale:0.5, opacity:0}} animate={{scale:2.5, opacity:[0, 0.8, 0]}} transition={{duration: 0.5}} className="absolute text-emerald-300 text-7xl opacity-50">🛡️</motion.div>}
-            {ve.type === "buff" && <motion.div initial={{scale:0.8, opacity:0}} animate={{scale:2, opacity:[0, 1, 0]}} transition={{duration: 0.6}} className="absolute text-yellow-300 text-6xl">✨</motion.div>}
-            {ve.type === "kairen_frost" && (
-                <motion.div className="absolute flex items-center justify-center">
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 6, 4.5, 0], rotate: 45 }} transition={{ duration: 1 }} className="absolute text-8xl ">❄️</motion.div>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0, 0.4, 0], scale: [1, 2] }} transition={{ duration: 0.5 }} className="absolute w-40 h-40 bg-cyan-400/20 rounded-full " />
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*60) * 110, y: Math.cos(i*60) * 110, opacity: [1, 0], scale: [1.2, 0.5], rotate: 180 }} transition={{ duration: 0.7, delay: i * 0.05 }} className="absolute text-lg">💎</motion.div>
-                  ))}
-                </motion.div>
-            )}            {ve.type === "aveline_nature" && (
-                <motion.div className="absolute flex items-center justify-center">
-                  <motion.div initial={{ scale: 0, y: 50 }} animate={{ scale: [0, 5, 0], y: [50, 0, -20] }} transition={{ duration: 0.8 }} className="absolute text-8xl  opacity-20">💧</motion.div>
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: [0, 4, 0], rotate: 360 }} transition={{ duration: 1 }} className="absolute text-7xl">🌸</motion.div>
-                  {[...Array(5)].map((_, i) => (
-                    <motion.div key={i} initial={{ x: 0, y: 0 }} animate={{ x: Math.sin(i*72) * 100, y: Math.cos(i*72) * 100, opacity: [1, 0], scale: [1, 0] }} transition={{ duration: 0.6, delay: i * 0.05 }} className="absolute text-xl">🌺</motion.div>
-                  ))}
-                </motion.div>
-            )}            {ve.type === "hit" && <motion.div initial={{ scale: 1 }} animate={{ scale: [1, 2, 0], opacity: [1, 1, 0] }} transition={{ duration: 0.3 }} className="absolute text-6xl">💥</motion.div>}
+            {renderEffectGraphic(ve.type)}
           </React.Fragment>
         ))}
       </div>
       <div className="absolute inset-0 pointer-events-none flex justify-center items-center z-50">
         {floatingTexts.map((ft) => (
-            <motion.div
-              key={ft.id}
-              initial={{ opacity: 0, scale: 0.5, y: 10 }}
-              animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1, 0.9], y: [10, -20, -40, -60] }}
-              transition={{ duration: 1.2, times: [0, 0.1, 0.8, 1], ease: "easeOut" }}
-              className={cn("absolute font-black text-lg sm:text-2xl  whitespace-nowrap", ft.color)} 
-              style={{ textShadow: "0 2px 4px rgba(0,0,0,1)" }}>
-              {ft.text}
-            </motion.div>
+          <div
+            key={ft.id}
+            className={cn("anim-float-damage absolute font-black whitespace-nowrap select-none", ft.color)} 
+            style={{ textShadow: "0 2px 4px rgba(0,0,0,1)" }}
+          >
+            {ft.text}
+          </div>
         ))}
       </div>
     </>

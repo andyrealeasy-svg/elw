@@ -12,7 +12,7 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash } from './data';
+import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage } from './types';
 import ArtifactDungeon from './components/ArtifactDungeon';
 import WorldMap from './components/WorldMap';
@@ -52,7 +52,7 @@ const defaultProfile: PlayerProfile = {
   bpResetTime: Date.now() + 3 * 24 * 60 * 60 * 1000,
   lunarAbyssClaimed: [],
   lunarAbyssResetTime: getNextThursdayResetTime(),
-  bossRushClaimed: false,
+  bossRushSeason2Claimed: false,
   achievements: {},
   expeditions: [],
   events: {
@@ -97,32 +97,65 @@ export default function App() {
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const [profile, setProfile] = useState<PlayerProfile>(() => {
     try {
-      const saved = localStorage.getItem('ed_profile_v3') || localStorage.getItem('ed_profile_v1');
+      const saved = localStorage.getItem('ed_profile_v3') || 
+                    localStorage.getItem('ed_profile_backup') || 
+                    localStorage.getItem('ed_profile_v2') || 
+                    localStorage.getItem('ed_profile_v1') || 
+                    localStorage.getItem('ed_profile') || 
+                    localStorage.getItem('game_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
         
+        const sanitizeArtifact = (a: any) => {
+          if (!a || !a.mainStat) return a;
+          const currentLevel = Math.min(a.level || 0, 20);
+
+          let mainVal = a.mainStat.value || 0;
+          if (a.mainStat.type === "critRate") {
+            mainVal = Math.min(mainVal, Math.round((3.1 + currentLevel * 1.4) * 10) / 10);
+          } else if (a.mainStat.type === "critDamage") {
+            mainVal = Math.min(mainVal, Math.round((6.2 + currentLevel * 2.8) * 10) / 10);
+          } else {
+            const cap = a.mainStat.type === "hp" ? 3500 : 2500;
+            if (mainVal > cap) mainVal = cap;
+          }
+
+          const subStats = (a.subStats || []).map((s: any) => {
+            if (!s) return s;
+            let sVal = s.value || 0;
+            if (s.type === "critRate") {
+              sVal = Math.min(sVal, 20);
+            } else if (s.type === "critDamage") {
+              sVal = Math.min(sVal, 40);
+            } else if (sVal > 800) {
+              sVal = 800;
+            }
+            return { ...s, value: sVal };
+          });
+
+          return {
+            ...a,
+            level: currentLevel,
+            mainStat: { ...a.mainStat, value: mainVal },
+            subStats
+          };
+        };
+
         // Migration: Cap artifact levels to 20 and normalize stats
         if (parsed.artifacts) {
-          parsed.artifacts = parsed.artifacts.map((a: any) => {
-            if (!a || !a.mainStat) return a;
-            const currentLevel = a.level || 0;
-            const needsClamp = currentLevel > 20 || a.mainStat.value > 3500;
-            
-            return {
-              ...a,
-              level: Math.min(currentLevel, 20),
-              mainStat: {
-                ...a.mainStat,
-                value: needsClamp ? Math.min(a.mainStat.value, a.mainStat.type === "hp" ? 3500 : 2500) : a.mainStat.value
-              },
-              subStats: (a.subStats || []).map((s: any) => {
-                if (!s) return s;
-                return {
-                  ...s,
-                  value: needsClamp ? Math.min(s.value || 0, 800) : (s.value || 0)
-                };
-              })
-            };
+          parsed.artifacts = parsed.artifacts.map(sanitizeArtifact);
+        }
+
+        if (parsed.roster) {
+          Object.keys(parsed.roster).forEach((charKey) => {
+            const charObj = parsed.roster[charKey];
+            if (charObj && charObj.artifacts) {
+              Object.keys(charObj.artifacts).forEach((slotKey) => {
+                if (charObj.artifacts[slotKey]) {
+                  charObj.artifacts[slotKey] = sanitizeArtifact(charObj.artifacts[slotKey]);
+                }
+              });
+            }
           });
         }
 
@@ -198,7 +231,7 @@ export default function App() {
 
 
   React.useEffect(() => {
-    if (isAuthenticated && userId) {
+    if (isAuthenticated && userId && userId !== 'local_user') {
       const loadProfile = async () => {
         try {
           const { data, error } = await supabase
@@ -228,13 +261,20 @@ export default function App() {
         }
       };
       loadProfile();
+    } else {
+      setIsProfileLoaded(true);
     }
   }, [isAuthenticated, userId]);
 
-  // Sync profile changes to Supabase
+  // Sync profile changes to Supabase and LocalStorage
   React.useEffect(() => {
-    if (isAuthenticated && userId && isProfileLoaded) {
+    // Always persist to local storage and backup
+    try {
       localStorage.setItem('ed_profile_v3', JSON.stringify(profile));
+      localStorage.setItem('ed_profile_backup', JSON.stringify(profile));
+    } catch(e) {}
+
+    if (isAuthenticated && userId && userId !== 'local_user' && isProfileLoaded) {
       const syncToDB = async () => {
         try {
           await supabase.from('profiles').upsert({
@@ -249,8 +289,6 @@ export default function App() {
       // Simple debounce
       const timer = setTimeout(syncToDB, 1000);
       return () => clearTimeout(timer);
-    } else if (!isAuthenticated || !userId) {
-       localStorage.setItem('ed_profile_v3', JSON.stringify(profile));
     }
   }, [profile, isAuthenticated, userId, isProfileLoaded]);
 
@@ -373,15 +411,18 @@ export default function App() {
       setLastDamageDealt(stats);
       setLastBattleParty(stageParty);
 
-      const alreadyClaimed = !!profile.bossRushClaimed;
+      const alreadyClaimed = !!profile.bossRushSeason2Claimed;
       const expReward = alreadyClaimed ? 5000 : 20000;
       const goldReward = alreadyClaimed ? 10000 : 50000;
-      const gemsDrop = alreadyClaimed ? 0 : 200;
-      const droppedArtifacts = alreadyClaimed ? [] : [generateArtifact("gladiator", 5), generateArtifact("noblesse", 5)];
+      const gemsDrop = alreadyClaimed ? 0 : 1200;
+      const droppedArtifacts = alreadyClaimed ? [] : [
+         ...Array.from({length: 5}, () => generateArtifact("ocean_song", 5)),
+         ...Array.from({length: 5}, () => generateArtifact("shattered_winter", 5))
+      ];
       
       setProfile(p => ({
          ...p,
-         bossRushClaimed: true,
+         bossRushSeason2Claimed: true,
          gems: p.gems + gemsDrop,
          gold: p.gold + goldReward,
          heroExp: p.heroExp + expReward,
@@ -656,6 +697,28 @@ export default function App() {
     setRoute('DEFEAT');
   };
 
+  const handleExitBattle = () => {
+    if (typeof route === 'object') {
+      if (route.type === 'STORY_STAGE') {
+        setRoute('STORY');
+        return;
+      }
+      if (route.type === 'ABYSS_FLOOR') {
+        setRoute('ABYSS');
+        return;
+      }
+      if (route.type === 'BOSS_RUSH_BATTLE') {
+        setRoute('BOSS_RUSH_MENU');
+        return;
+      }
+      if (route.type === 'DUNGEON' && route.dungeonType === 'ARTIFACT') {
+        setRoute('ARTIFACT_DUNGEON_SELECTOR');
+        return;
+      }
+    }
+    setRoute('HUB');
+  };
+
   const currentRouteName = typeof route === 'object' ? route.type : route;
 
   const currentBlessing = [
@@ -685,7 +748,7 @@ export default function App() {
           className="w-full flex justify-center items-center h-full min-h-screen"
         >
       {currentRouteName === 'HUB' && (
-        <HubMenu profile={profile} updateProfile={setProfile} setRoute={setRoute} username={username || 'Игрок'} onLogout={() => { supabase.auth.signOut().then(() => { localStorage.removeItem('ed_user'); localStorage.removeItem('ed_profile_v3'); setIsAuthenticated(false); setUserId(null); setUsername(null); }); }} />
+        <HubMenu profile={profile} updateProfile={setProfile} setRoute={setRoute} username={username || 'Игрок'} onLogout={() => { supabase.auth.signOut().then(() => { localStorage.removeItem('ed_user'); setIsAuthenticated(false); setUserId(null); setUsername(null); }); }} />
       )}
 
       {currentRouteName === 'ROSTER' && (
@@ -751,6 +814,7 @@ export default function App() {
           } 
           onDefeat={handleDefeat} 
           onVictory={handleVictory}
+          onExit={handleExitBattle}
           onSkillUse={() => setProfile(p => ({ ...p, dailies: { ...p.dailies, skillsUsed: p.dailies.skillsUsed + 1 } }))}
         />
       )}
@@ -1146,7 +1210,7 @@ export default function App() {
                           {lastDrops.artifacts.map((art, idx) => (
                             <div key={idx} className="bg-[#0a0a0a] p-3 rounded-2xl border border-white/5 flex justify-between items-center text-left">
                               <span className="text-xs text-white/70 font-bold truncate max-w-[140px] uppercase tracking-widest">{art.setName}</span>
-                              <span className="font-black text-white/90 text-xs">+{art.mainStat.value} {art.mainStat.type}</span>
+                              <span className="font-black text-white/90 text-xs">{formatStatValue(art.mainStat.type, art.mainStat.value)} {formatStatName(art.mainStat.type)}</span>
                             </div>
                           ))}
                         </div>

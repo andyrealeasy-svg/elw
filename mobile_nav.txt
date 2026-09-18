@@ -1,0 +1,101 @@
+684:            {/* Unified Scrollable Drawer Container */}
+685-            <div className="flex-1 overflow-y-auto pr-1 pb-6 space-y-4">
+686-               {/* Main Tabs Navigation Grid */}
+687-               <div className="grid grid-cols-2 gap-3">
+688-               <button 
+689-                  onClick={() => { setActiveTab('OVERVIEW'); setMenuOpen(false); }}
+690-                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+691-                     activeTab === 'OVERVIEW' 
+692-                        ? 'border-blue-500/50 bg-blue-500/10 text-white' 
+693-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+694-                  }`}
+695-               >
+696-                  <Compass className="w-6 h-6 text-blue-400" />
+697-                  <span className="text-xs font-bold font-mono">Главная</span>
+698-               </button>
+699-
+700-               <button 
+701-                  onClick={() => { setRoute('STORY'); setMenuOpen(false); }}
+702-                  className="mob-tutorial-story flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111] transition-all gap-2 text-center h-24"
+703-               >
+704-                  <Book className="w-6 h-6 text-amber-500" />
+705-                  <span className="text-xs font-bold font-mono text-amber-400">Сюжет</span>
+706-               </button>
+707-
+708-               <button 
+709-                  onClick={() => { setRoute('MAP'); setMenuOpen(false); }}
+710-                  className="mob-tutorial-map flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111] transition-all gap-2 text-center h-24"
+711-               >
+712-                  <Globe className="w-6 h-6 text-indigo-400 animate-spin-slow" />
+713-                  <span className="text-xs font-bold font-mono text-indigo-400">Карта мира</span>
+714-               </button>
+715-
+716-               <button 
+717-                  onClick={() => { setRoute('BOSS_RUSH_MENU'); setMenuOpen(false); }}
+718-                  className="mob-tutorial-bossrush flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-fuchsia-500/50 bg-fuchsia-950/40 text-fuchsia-300 hover:bg-fuchsia-900/50 transition-all gap-1.5 text-center h-24 relative overflow-hidden"
+719-               >
+720-                  <div className="absolute top-1 right-1 px-1 bg-fuchsia-500 text-[8px] font-black text-white rounded uppercase">NEW</div>
+721-                  <Skull className="w-6 h-6 text-fuchsia-400" />
+722-                  <span className="text-xs font-bold font-mono text-fuchsia-200">Теневой Натиск</span>
+723-               </button>
+724-
+725-               <button 
+726-                  onClick={() => { setActiveTab('DUNGEONS'); setMenuOpen(false); }}
+727-                  className={`mob-tutorial-dungeons flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+728-                     activeTab === 'DUNGEONS' 
+729-                        ? 'border-blue-500/50 bg-blue-500/10 text-white' 
+730-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+731-                  }`}
+732-               >
+733-                  <Swords className="w-6 h-6 text-blue-400" />
+734-                  <span className="text-xs font-bold font-mono">Подземелья</span>
+735-               </button>
+736-
+737-               <button 
+738-                  onClick={() => { setActiveTab('DAILIES'); setMenuOpen(false); }}
+739-                  className={`mob-tutorial-dailies flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+740-                     activeTab === 'DAILIES' 
+741-                        ? 'border-green-500/50 bg-green-500/10 text-white' 
+742-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+743-                  }`}
+744-               >
+745-                  <CheckCircle className="w-6 h-6 text-green-400" />
+746-                  <span className="text-xs font-bold font-mono">Поручения</span>
+747-               </button>
+748-
+749-               <button 
+750-                  onClick={() => { setActiveTab('EXPEDITIONS'); setMenuOpen(false); }}
+751-                  className={`mob-tutorial-expeditions flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+752-                     activeTab === 'EXPEDITIONS' 
+753-                        ? 'border-orange-500/50 bg-orange-500/10 text-white' 
+754-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+755-                  }`}
+756-               >
+757-                  <Map className="w-6 h-6 text-orange-400" />
+758-                  <span className="text-xs font-bold font-mono">Экспедиции</span>
+759-               </button>
+760-
+761-               <button 
+762-                  onClick={() => { setActiveTab('EVENTS'); setMenuOpen(false); }}
+763-                  className={`mob-tutorial-events flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+764-                     activeTab === 'EVENTS' 
+765-                        ? 'border-purple-500/50 bg-purple-500/10 text-white' 
+766-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+767-                  }`}
+768-               >
+769-                  <Calendar className="w-6 h-6 text-purple-400" />
+770-                  <span className="text-xs font-bold font-mono">События</span>
+771-               </button>
+772-
+773-               <button 
+774-                  onClick={() => { setActiveTab('ACHIEVEMENTS'); setMenuOpen(false); }}
+775-                  className={`mob-tutorial-achievements flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 text-center h-24 ${
+776-                     activeTab === 'ACHIEVEMENTS' 
+777-                        ? 'border-yellow-500/50 bg-yellow-500/10 text-white' 
+778-                        : 'border-white/5 bg-[#111111]/40 text-white/50 hover:bg-[#111111]'
+779-                  }`}
+780-               >
+781-                  <Star className="w-6 h-6 text-yellow-400" />
+782-                  <span className="text-xs font-bold font-mono">Достижения</span>
+783-               </button>
+784-

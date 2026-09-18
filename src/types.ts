@@ -6,6 +6,8 @@ export type StatBlock = {
   atk: number;
   def: number;
   spd: number; // Speed determines how fast ATB fills
+  critRate?: number;
+  critDamage?: number;
 };
 
 export type SkillType = "Attack" | "Skill1" | "Skill2";
@@ -18,6 +20,7 @@ export interface Skill {
   type: SkillType;
   cost: number; // Cooldown turns
   target: TargetType;
+  statsText?: string; // e.g. "Урон: 120% АТК\nЛечение: 20% HP"
   execute: (source: Combatant, target: Combatant[], battleState: BattleState, addLog: (msg: string) => void, addFloatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void) => void;
 }
 
@@ -92,11 +95,11 @@ export interface BattleState {
 export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string };
 
 export type ArtifactSlot = "flower" | "plume" | "sands" | "goblet" | "circlet";
-export type StatType = "hp" | "atk" | "def" | "spd";
+export type StatType = "hp" | "atk" | "def" | "spd" | "critRate" | "critDamage";
 export type Rarity = "S" | "A" | "B";
 
 export interface ArtifactSubStat {
-  type: StatType | "critRate" | "critDamage";
+  type: StatType;
   value: number;
 }
 
@@ -104,7 +107,7 @@ export interface Artifact {
   id: string;
   slot: ArtifactSlot;
   setName: string;
-  mainStat: { type: StatType | "critRate" | "critDamage"; value: number };
+  mainStat: { type: StatType; value: number };
   subStats: ArtifactSubStat[];
   rarity: number; // 1-5
   level: number; // 0-20
@@ -195,7 +198,7 @@ export interface PlayerProfile {
   bpClaimedLevelsPremium: number[];
   hasGoldenPass: boolean;
   bpResetTime?: number;
-  bossRushClaimed?: boolean; // Rewards for Boss Rush claimable once per update
+  bossRushSeason2Claimed?: boolean; // Rewards for Boss Rush claimable once per update
   lunarAbyssClaimed: number[]; // floors 9-12
   lunarAbyssResetTime: number; 
   achievements: Record<string, boolean>; // id -> claimed

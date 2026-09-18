@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlayerProfile, GameRoute, ArtifactSlot, Artifact } from '../types';
-import { characterBlueprints, getCharEmoji, getCharSplash, characterConstellations, ARTIFACT_SETS, scoreArtifact, charRarity, CHARACTER_PREFERENCES } from '../data';
+import { characterBlueprints, getCharEmoji, getCharSplash, characterConstellations, ARTIFACT_SETS, scoreArtifact, charRarity, CHARACTER_PREFERENCES, formatStatName, formatStatValue } from '../data';
 import { ArrowLeft, Zap, Shield, Users, Swords, Plus, TrendingUp, Package, Star, Sparkles, X, Check, Search, Flame, Droplets, Leaf, Snowflake, Mountain, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SquadBuilder } from './SquadBuilder';
@@ -376,11 +376,13 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
               <h3 className="font-bold text-white/50 mb-3 border-b border-white/5 pb-2 flex items-center gap-2 text-xs uppercase tracking-wider">
                  <Users className="w-4 h-4" /> Характеристики
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
                  <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">HP</span> <span className="font-bold text-green-400">{charDef.stats.maxHp}</span></div>
                  <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">ATK</span> <span className="font-bold text-red-400">{charDef.stats.atk}</span></div>
                  <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">DEF</span> <span className="font-bold text-blue-400">{charDef.stats.def}</span></div>
                  <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">SPD</span> <span className="font-bold text-yellow-400">{charDef.stats.spd}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ ШАНС</span> <span className="font-bold text-amber-400">{charDef.stats.critRate ?? 5}%</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ УРОН</span> <span className="font-bold text-orange-400">{charDef.stats.critDamage ?? 50}%</span></div>
               </div>
            </div>
 
@@ -395,7 +397,14 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                           <h4 className="font-bold text-white/90 text-sm">{skill.name}</h4>
                           <span className="text-[10px] px-2 py-1 bg-[#0a0a0a] rounded border border-white/5 text-white/50">COST: {skill.cost}</span>
                        </div>
-                       <p className="text-xs text-white/50">{skill.description}</p>
+                       <p className="text-xs text-white/50 leading-relaxed">{skill.description}</p>
+                       {skill.statsText && (
+                         <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-0.5">
+                           {skill.statsText.split('\n').map((line, i) => (
+                             <span key={i} className="text-[10px] sm:text-xs text-white/40 font-mono">{line}</span>
+                           ))}
+                         </div>
+                       )}
                     </div>
                  ))}
               </div>
@@ -454,12 +463,12 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                         <h4 className="font-black text-xs text-white/90 uppercase truncate">{ARTIFACT_SETS[art.setName]?.name || art.setName}</h4>
                                      </div>
                                      <div className="bg-[#0a0a0a]/50 p-2 rounded-xl border border-white/5">
-                                        <div className="text-[10px] font-black text-indigo-400 uppercase mb-1">{art.mainStat.type}: +{art.mainStat.value}</div>
+                                        <div className="text-[10px] font-black text-indigo-400 uppercase mb-1">{formatStatName(art.mainStat.type)}: {formatStatValue(art.mainStat.type, art.mainStat.value)}</div>
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                            {art.subStats?.map((s, i) => (
                                               <div key={i} className="text-[9px] font-mono text-white/40 flex justify-between">
-                                                 <span className="uppercase opacity-70">{s.type}</span>
-                                                 <span className="text-white/70">+{s.value}</span>
+                                                 <span className="uppercase opacity-70">{formatStatName(s.type)}</span>
+                                                 <span className="text-white/70">{formatStatValue(s.type, s.value)}</span>
                                               </div>
                                            ))}
                                         </div>
@@ -488,11 +497,27 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                              if (artIdx !== -1) {
                                                 const target = { ...n.artifacts[artIdx] };
                                                 target.level = (target.level || 0) + 1;
-                                                target.mainStat.value = Math.floor(target.mainStat.value * 1.1) + 1;
-                                                // Occasionally boost sub-stats
-                                                if (target.level % 4 === 0 && target.subStats) {
-                                                   const sIdx = Math.floor(Math.random() * target.subStats.length);
-                                                   target.subStats[sIdx].value = Math.floor(target.subStats[sIdx].value * 1.2) + 1;
+                                                if (target.mainStat.type === 'critRate') {
+                                                   target.mainStat = { ...target.mainStat, value: Math.round((target.mainStat.value + 1.4) * 10) / 10 };
+                                                } else if (target.mainStat.type === 'critDamage') {
+                                                   target.mainStat = { ...target.mainStat, value: Math.round((target.mainStat.value + 2.8) * 10) / 10 };
+                                                } else {
+                                                   target.mainStat = { ...target.mainStat, value: Math.floor(target.mainStat.value * 1.1) + 1 };
+                                                }
+                                                // Boost sub-stats at +4, +8, +12, +16, +20
+                                                if (target.level % 4 === 0 && target.subStats && target.subStats.length > 0) {
+                                                   const newSubStats = [...target.subStats];
+                                                   const sIdx = Math.floor(Math.random() * newSubStats.length);
+                                                   const sub = { ...newSubStats[sIdx] };
+                                                   if (sub.type === 'critRate') {
+                                                      sub.value = Math.round((sub.value + Math.random() * 1.2 + 2.7) * 10) / 10;
+                                                   } else if (sub.type === 'critDamage') {
+                                                      sub.value = Math.round((sub.value + Math.random() * 2.4 + 5.4) * 10) / 10;
+                                                   } else {
+                                                      sub.value = Math.floor(sub.value * 1.2) + 1;
+                                                   }
+                                                   newSubStats[sIdx] = sub;
+                                                   target.subStats = newSubStats;
                                                 }
                                                 n.artifacts[artIdx] = target;
                                              }
@@ -557,8 +582,8 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                             const q = artifactSearchQuery.toLowerCase();
                             const setName = (ARTIFACT_SETS[a.setName]?.name || "").toLowerCase();
                             const setRaw = a.setName.toLowerCase();
-                            const mainStat = a.mainStat.type.toLowerCase();
-                            const subStats = a.subStats.map(s => s.type.toLowerCase()).join(" ");
+                            const mainStat = (formatStatName(a.mainStat.type) + " " + a.mainStat.type).toLowerCase();
+                            const subStats = a.subStats.map(s => formatStatName(s.type) + " " + s.type).join(" ").toLowerCase();
                             return setName.includes(q) || setRaw.includes(q) || mainStat.includes(q) || subStats.includes(q);
                           })
                           .sort((a, b) => scoreArtifact(b, selectedId) - scoreArtifact(a, selectedId));
@@ -597,12 +622,12 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                                   <span className="text-[10px] font-mono text-white/40 uppercase tracking-tighter">Счет: {score}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                  <div className="text-xs font-black text-indigo-400 uppercase">{art.mainStat.type}: +{art.mainStat.value}</div>
+                                  <div className="text-xs font-black text-indigo-400 uppercase">{formatStatName(art.mainStat.type)}: {formatStatValue(art.mainStat.type, art.mainStat.value)}</div>
                                   <div className="space-y-0.5">
                                     {art.subStats.map((s, i) => (
                                       <div key={i} className="text-[10px] font-mono text-white/40 flex justify-between">
-                                        <span className="uppercase opacity-70">{s.type}</span>
-                                        <span className="text-white/70">+{s.value}</span>
+                                        <span className="uppercase opacity-70">{formatStatName(s.type)}</span>
+                                        <span className="text-white/70">{formatStatValue(s.type, s.value)}</span>
                                       </div>
                                     ))}
                                   </div>

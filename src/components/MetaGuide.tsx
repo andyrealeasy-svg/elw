@@ -17,7 +17,7 @@ import {
   Search
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { charRarity, getCharEmoji, getCharSplash } from '../data';
+import { charRarity, getCharEmoji, getCharSplash, characterBlueprints } from '../data';
 import { Rarity } from '../types';
 
 interface TeamComposition {
@@ -143,16 +143,22 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       { id: 'raven' },
       { id: 'moyan' },
       { id: 'aelita' },
+      { id: 'cyrus', c: 2 },
+      { id: 'selina', c: 2 },
+      { id: 'fenris', c: 2 },
       { id: 'selva', c: 6 },
       { id: 'neuron', c: 2 }
     ],
     'T0.5': [
       { id: 'cyrus' },
+      { id: 'selina' },
       { id: 'asher' },
-      { id: 'selina', c: 6 },
+      { id: 'fenris' },
+      { id: 'rix', c: 2 },
+      { id: 'gotka', c: 1 },
+      { id: 'echo', c: 6 },
       { id: 'krona', c: 6 },
       { id: 'nova', c: 6 },
-      { id: 'fenris' },
       { id: 'selva' },
       { id: 'neuron' }
     ],
@@ -160,32 +166,37 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       { id: 'rix' },
       { id: 'gotka' },
       { id: 'snezhana' },
-      { id: 'echo', c: 6 },
+      { id: 'claymore', c: 1 },
+      { id: 'glacier', c: 6 },
+      { id: 'aegis', c: 6 },
+      { id: 'echo', c: 2 },
       { id: 'viper', c: 6 },
+      { id: 'nova', c: 2 },
       { id: 'blaze' },
       { id: 'tide' },
       { id: 'pulse' },
       { id: 'krona' },
-      { id: 'selina' }
+      { id: 'farina', c: 6 }
     ],
     'T2': [
-      { id: 'kopro' },
+      { id: 'farina', c: 2 },
       { id: 'claymore' },
-      { id: 'aegis', c: 6 },
-      { id: 'glacier', c: 6 },
-      { id: 'spark', c: 6 },
+      { id: 'glacier' },
+      { id: 'aegis' },
+      { id: 'gaia' },
+      { id: 'patch', c: 6 },
+      { id: 'kopro' },
       { id: 'echo' },
-      { id: 'viper' }
+      { id: 'viper' },
+      { id: 'spark', c: 6 }
     ],
     'T3': [
-      { id: 'volosatinya' },
-      { id: 'kamikaze' },
+      { id: 'farina' },
       { id: 'patch' },
       { id: 'nova' },
-      { id: 'gaia' },
-      { id: 'aegis' },
-      { id: 'glacier' },
-      { id: 'spark' }
+      { id: 'spark' },
+      { id: 'kamikaze' },
+      { id: 'volosatinya' }
     ]
   };
 
@@ -207,6 +218,13 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       members: ['kairen', 'aveline', 'glacier', 'snezhana'],
       tags: ["FREEZE", "CRYO", "AOE", "T0"]
     },
+    {
+      name: "Снежный Покров",
+      description: "Смертоносная синергия Заморозки и Переохлаждения. Снежана снижает защиту противников на 50% и накладывает «Переохлаждение», Фарина баффает реакции «Белым полем» и наносит постоянный урон «Снежной пылью», а Кайрен и Авелин непрерывно замораживают врагов и активируют лепестки прилива.",
+      members: ['kairen', 'aveline', 'farina', 'snezhana'],
+      tags: ["FREEZE", "CRYO", "OVERCOOL", "SYNERGY", "T0"]
+    },
+
     {
       name: "Танец Океана",
       description: "Команда, играющая от непрерывных реакций с Гидро. Авелин выступает идеальным саппортом, создавая Лепестки Прилива при любой элементальной атаке союзников.",
@@ -302,6 +320,24 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       description: "Фенрис и его зверь доминируют на поле, продлевая статусы. Идеально сочетается с Пиро/Электро саппортами.",
       members: ['fenris', 'selva', 'blaze', 'moyan'],
       tags: ["COMPANION", "DENDRO", "EXTEND"]
+    },
+    {
+      name: "Таяние Белого Поля",
+      description: "Отряд на реакции Таяние (Melt). «Снежная пыль» Фарины срабатывает на каждый удар союзника, стабильно подготавливая врагов к мощнейшим Пиро-атакам Селины и Блейза под бонусом реакций от «Белого поля».",
+      members: ['selina', 'farina', 'blaze', 'moyan'],
+      tags: ["MELT", "CRYO", "PYRO", "BURST"]
+    },
+    {
+      name: "Минный Перехват",
+      description: "Команда абсолютного контроля через ловушки Минёра. Минёр полностью отменяет смертоносные ультимейты боссов ловушками, пока Вольта и Зефир защищают и ускоряют команду.",
+      members: ['claymore', 'volta', 'zephyr', 'moyan'],
+      tags: ["INTERCEPT", "TRAP", "BOSS-COUNTER", "T1"]
+    },
+    {
+      name: "Театр Безмолвия",
+      description: "Контроль и колоссальный Пиро взрыв. Готка глушит навыки противников марионетками, Ашер снижает сопротивление и баффает, а Селина добивает уцелевших.",
+      members: ['gotka', 'asher', 'selina', 'moyan'],
+      tags: ["MUTE", "PYRO", "BURST", "CONTROL"]
     }
   ];
 
@@ -311,7 +347,9 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
     if (['selva', 'neuron', 'spark', 'pulse', 'raven', 'volta', 'zephyr', 'maestro', 'rix'].includes(char)) return 'text-purple-400 border-purple-500/20 bg-purple-500/5';
     if (['moyan', 'claymore', 'aegis', 'aurum'].includes(char)) return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
     if (['gotka', 'selina', 'blaze', 'ineffa'].includes(char)) return 'text-red-400 border-red-500/20 bg-red-500/5';
-    if (['krona', 'glacier', 'snezhana'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
+    if (['krona', 'glacier', 'snezhana', 'farina', 'kairen'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
+    if (['aveline', 'tide', 'volosatinya'].includes(char)) return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
+    if (['aelita', 'kopro', 'fenris'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
     return 'text-white border-white/10 bg-white/5';
   };
 
@@ -439,7 +477,9 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
                                 <span className="text-xs font-bold uppercase text-white/80">{entry.id.slice(0, 2)}</span>
                               )}
                             </div>
-                            <div className="relative z-10 text-[10px] font-black uppercase tracking-tighter truncate w-full text-white/80 drop-shadow-md">{entry.id}</div>
+                            <div className="relative z-10 text-[10px] font-black uppercase tracking-tighter truncate w-full text-white/80 drop-shadow-md">
+                              {characterBlueprints[entry.id] ? characterBlueprints[entry.id]("", 1, 0).name : entry.id}
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -505,7 +545,9 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
                                <span className="text-xs font-bold uppercase text-white/80">{memberId.slice(0, 2)}</span>
                              )}
                            </div>
-                           <div className="text-[8px] font-black uppercase text-white/30 truncate w-full text-center">{memberId}</div>
+                           <div className="text-[8px] font-black uppercase text-white/30 truncate w-full text-center">
+                             {characterBlueprints[memberId] ? characterBlueprints[memberId]("", 1, 0).name : memberId}
+                           </div>
                         </div>
                       ))}
                     </div>

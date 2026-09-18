@@ -846,6 +846,20 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                            })}
                         </div>
                      </section>
+
+                     <section>
+                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 3★ Персонажей (B-ранг)</h3>
+                        <div className="flex flex-wrap gap-2">
+                           {B_POOL.map(id => {
+                              const bp = characterBlueprints[id]?.("temp", 1, 0);
+                              return (
+                                 <div key={id} className="bg-blue-500/10 border border-blue-500/20 text-blue-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                    {getCharEmoji(id)} {bp ? bp.name : id}
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     </section>
                   </div>
                </motion.div>
             </motion.div>

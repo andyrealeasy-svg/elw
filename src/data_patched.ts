@@ -3,48 +3,41 @@ import { playCritSound } from "./lib/sound";
 import { SPLASH_IMAGES } from "./lib/images";
 
 
-export const triggerKairenIceEcho = (s, state, ft, log, c, pl) => {
+export const triggerKairenIceEcho = (s, state, ft, log, c) => {
   s.buffs.kairenShards = 0;
-  if (ft) ft(s.uid, "❄️ ЛЕДЯНОЕ ЭХО", "text-cyan-300 font-black");
-  if (pl) pl(s.uid, "kairen_ice_echo");
+  if (ft) ft(s.uid, "❄️ ЛЕДЯНОЕ ЭХО", "text-blue-400 font-bold");
   let baseMult = 1.5;
   if (state && state.enemyParty) {
     state.isKairenEchoing = true;
     state.enemyParty.forEach(e => {
       if (e.stats.hp > 0) {
-        if (pl) pl(e.uid, "kairen_ice_echo");
         let debuffCount = (e.aura ? 1 : 0) + (e.buffs.frozen ? 1 : 0);
-        dealDamage(s, e, baseMult + (debuffCount * 0.5), 'Cryo', log, ft, pl, 1, state);
-        if (c >= 4) {
-          e.buffs.kairenColdMark = 2;
-          if (ft) ft(e.uid, "❄️ ХОЛОДНАЯ МЕТКА", "text-cyan-200 text-xs font-bold");
-        }
+        dealDamage(s, e, baseMult + (debuffCount * 0.5), 'Cryo', log, null, null, 1, state);
+        if (c >= 4) e.buffs.kairenColdMark = 2;
       }
     });
     state.isKairenEchoing = false;
   }
 };
 
-export const triggerKairenC6 = (s, state, ft, log, pl) => {
+export const triggerKairenC6 = (s, state, ft, log) => {
   s.buffs.kairenShards = 0;
   s.buffs.kairenC6UsedThisWinter = true;
   s.buffs.kairenC6CryoBuff = 2;
-  if (ft) ft(s.uid, "🏔️ КОНЕЦ ВЕЧНОЙ ЗИМЫ", "text-cyan-200 font-black text-sm");
-  if (pl) pl(s.uid, "kairen_c6_winter_end");
+  if (ft) ft(s.uid, "🏔️ КОНЕЦ ВЕЧНОЙ ЗИМЫ", "text-cyan-300 font-bold text-xs");
   if (state && state.enemyParty) {
     state.isKairenEchoing = true;
     state.enemyParty.forEach(e => {
       if (e.stats.hp > 0) {
-        if (pl) pl(e.uid, "kairen_c6_winter_end");
         let extra = (e.buffs.frozen || e.isBoss) ? 1.5 : 0;
-        dealDamage(s, e, 3.0 + extra, 'Cryo', log, ft, pl, 1, state);
+        dealDamage(s, e, 3.0 + extra, 'Cryo', log, null, null, 1, state);
       }
     });
     state.isKairenEchoing = false;
   }
 };
 
-export const addKairenShards = (s, amount, c, state, ft, log, pl) => {
+export const addKairenShards = (s, amount, c, state, ft, log) => {
   let actualAmount = amount;
   for (let i=0; i<amount; i++) {
     if (c >= 3 && Math.random() < 0.2) actualAmount++;
@@ -55,9 +48,9 @@ export const addKairenShards = (s, amount, c, state, ft, log, pl) => {
 
   if (s.buffs.kairenShards >= maxShards) {
     if (c >= 6 && maxShards === 7 && !s.buffs.kairenC6UsedThisWinter) {
-      triggerKairenC6(s, state, ft, log, pl);
+      triggerKairenC6(s, state, ft, log);
     } else {
-      triggerKairenIceEcho(s, state, ft, log, c, pl);
+      triggerKairenIceEcho(s, state, ft, log, c);
     }
   }
   s.buffs.kairenShards = Math.min(s.buffs.kairenShards || 0, maxShards);
@@ -68,12 +61,10 @@ export const kairenTurnStart = (s, t, state, log, ft, pl, c) => {
     s.buffs.kairenWinterTurns--;
     if (state && state.enemyParty) {
        state.isKairenEchoing = true;
-       if (ft) ft(s.uid, '❄️ ВЕЧНАЯ ЗИМА', 'text-cyan-300 text-xs font-bold');
-       if (pl) pl(s.uid, 'kairen_winter_pulse');
        state.enemyParty.forEach(e => {
          if (e.stats.hp > 0) {
            let extra = (e.buffs.frozen || e.isBoss) ? 0.5 : 0;
-           dealDamage(s, e, 1.0 + extra, 'Cryo', log, ft, pl, 1, state);
+           dealDamage(s, e, 1.0 + extra, 'Cryo', log, null, null, 1, state);
          }
        });
        state.isKairenEchoing = false;
@@ -114,8 +105,7 @@ export const avelineTurnStart = (s, t, state, log, ft, pl, c) => {
           }
         });
       }
-      if (ft) ft(s.uid, '🪷 САД: УРОН И ЛЕЧЕНИЕ', 'text-sky-300 text-xs font-bold');
-      if (pl) pl(s.uid, 'aveline_azure_garden');
+      if (ft) ft(s.uid, '🌸 САД: УРОН И ЛЕЧЕНИЕ', 'text-blue-300 text-xs');
     }
   }
   if (s.buffs.avelineGreatFlowerTurns && s.buffs.avelineGreatFlowerTurns > 0) {
@@ -187,8 +177,7 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
     setTimeout(() => {
       if (target.stats.hp <= 0 && i > 0) return; 
       
-      let baseCritRate = source.stats.critRate ?? 5;
-      let critChance = (baseCritRate + (source.buffs.critChance || 0)) / 100;
+      let critChance = 0.25 + (source.buffs.critChance || 0) / 100;
       
       // Snezhana C3: +15% crit rate against overcooled targets
       if (state && state.playerParty.some(p => p.id === 'snezhana' && p.constellation >= 3) && target.buffs && (target.buffs.overcool || target.buffs.critOvercool)) {
@@ -196,8 +185,7 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
       
       // Maestro (Isolation Mark) & Asher Passive Logic 
-      let baseCritDamage = source.stats.critDamage ?? 50;
-      let bonusCritDamage = (source.buffs.critDamage || 0) + (source.buffs.critDamageBoost || 0);
+      let bonusCritDamage = source.buffs.critDamage || 0;
       if (source.buffs.shatteredWinter4pc) {
          let stacks = (source.buffs.kairenShards || 0) + (source.buffs.avelinePetals || 0);
          bonusCritDamage += Math.min(40, stacks * 10);
@@ -270,7 +258,7 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
 
       const isCrit = guaranteedCrit || Math.random() < critChance; 
-      const critMult = isCrit ? (1.0 + ((baseCritDamage + bonusCritDamage) / 100)) : 1.0;
+      const critMult = isCrit ? (1.5 + (bonusCritDamage / 100)) : 1.0;
       
       if (isCrit) {
         playCritSound();
@@ -380,19 +368,6 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
                }
             }
          }
-
-         // Kairen Winter Throne Passive: +1 shard on ally reactions
-         const kairen = state.playerParty.find(p => p.id === 'kairen' && p.stats.hp > 0);
-         if (kairen && (kairen.buffs.kairenWinterTurns ?? 0) > 0) {
-           addKairenShards(kairen, 1, kairen.constellation, state, floatText, log, playEffect);
-         }
-         // Kairen C4 Cold Mark Retribution
-         if (target.buffs.kairenColdMark && target.buffs.kairenColdMark > 0 && kairen) {
-           if (playEffect) playEffect(target.uid, "kairen_ice_dance");
-           if (floatText) floatText(target.uid, "❄️ ОТВЕТНЫЙ УДАР", "text-cyan-200 text-xs font-bold");
-           dealDamage(kairen, target, 0.8, "Cryo", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
-           addKairenShards(kairen, 1, kairen.constellation, state, floatText, log, playEffect);
-         }
       }
 
       if (reactionMsg) rxnMult += farinaBonus;
@@ -482,30 +457,18 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
 
       if (floatText) {
-        const elemColorMap: Record<Element, string> = {
-          Physical: 'text-slate-100',
-          Hydro: 'text-blue-400',
-          Pyro: 'text-red-500',
-          Dendro: 'text-emerald-400',
-          Electro: 'text-purple-400',
-          Cryo: 'text-cyan-300',
-          Geo: 'text-amber-400'
-        };
-
-        const baseElemColor = elemColorMap[element] || 'text-yellow-400';
-
-        let tColor = `${baseElemColor} text-sm sm:text-base font-bold`;
+        let tColor = element === 'Physical' ? 'text-white' : element === 'Hydro' ? 'text-blue-400' : element === 'Pyro' ? 'text-red-500' : element === 'Dendro' ? 'text-green-400' : element === 'Electro' ? 'text-purple-400' : element === 'Cryo' ? 'text-cyan-300' : 'text-yellow-400';
         if (isCrit) {
-          tColor = `${baseElemColor} text-2xl sm:text-4xl font-black drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] z-20 scale-125`;
-          if (playEffect) playEffect(target.uid, "shake");
+          tColor = 'text-amber-300 text-lg sm:text-xl font-black  z-20';
+          if(playEffect) playEffect(target.uid, "shake");
         } else if (rxnMult > 1) {
-          tColor = `${baseElemColor} text-lg sm:text-2xl font-black z-10`;
+          tColor = 'text-orange-400 text-xl font-black  z-10'; // Reaction color
         }
-
-        const textLabel = `-${dmg}`;
+        
+        const textLabel = isCrit ? `💥КРИТ! -${dmg}` : `-${dmg}`;
         floatText(target.uid, textLabel, tColor);
         if (reactionMsg) {
-           setTimeout(() => floatText(target.uid, reactionMsg, `${baseElemColor} text-xs sm:text-sm font-bold`), 300);
+           setTimeout(() => floatText(target.uid, reactionMsg, tColor), 300);
         }
       }
 
@@ -769,7 +732,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_frozen_tide",
     name: "Храм Замерзшего Прилива",
-    description: 'Древний храм, где океан навеки скован льдами. Здесь добываются сеты Песнь Океана и Расколотая Зима.',
+    description: "Древний храм, где океан навеки скован льдами. Здесь добываются сеты Песнь Океана и Расколотая Зима.",
     level: 90,
     entryCost: 20,
     rewardSets: ["ocean_song", "shattered_winter"],
@@ -784,7 +747,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_illusions",
     name: "Врата Иллюзий",
-    description: 'Пространство обмана и зеркальных копий. Здесь добываются сеты Грозовое Зеркало и Кристаллический Резонанс.',
+    description: "Пространство обмана и зеркальных копий. Здесь добываются сеты Грозовое Зеркало и Кристаллический Резонанс.",
     level: 85,
     entryCost: 20,
     rewardSets: ["storm_mirror", "crystal_resonance"],
@@ -800,7 +763,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_dawn",
     name: "Обитель Рассвета",
-    description: 'Зеркальное святилище, искажающее свет. Здесь добываются сеты Осколки Последнего Рассвета и Эхо Одиночества.',
+    description: "Зеркальное святилище, искажающее свет. Здесь добываются сеты Осколки Последнего Рассвета и Эхо Одиночества.",
     level: 85,
     entryCost: 20,
     rewardSets: ["shards_of_dawn", "echo_of_solitude"],
@@ -813,7 +776,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_flame",
     name: "Пик Розы",
-    description: 'Дворец, объятый пламенем. Здесь добываются сеты Алой Розы и Гладиатора.',
+    description: "Дворец, объятый пламенем. Здесь добываются сеты Алой Розы и Гладиатора.",
     level: 80,
     entryCost: 20,
     rewardSets: ["blazing_rose", "gladiator"],
@@ -826,7 +789,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_frost",
     name: "Шпиль Времени",
-    description: 'Замерзшая башня, где время течет иначе. Сеты Замёрзшего Времени и Знати.',
+    description: "Замерзшая башня, где время течет иначе. Сеты Замёрзшего Времени и Знати.",
     level: 80,
     entryCost: 20,
     rewardSets: ["frozen_time", "noblesse"],
@@ -839,7 +802,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_ashes",
     name: "Кузница Пепла",
-    description: 'Древний горн, где рождаются легенды. Здесь добываются сеты Пепла Запретного Горна и Инстинкта Волка.',
+    description: "Древний горн, где рождаются легенды. Здесь добываются сеты Пепла Запретного Горна и Инстинкта Волка.",
     level: 90,
     entryCost: 20,
     rewardSets: ["ashes_of_forge", "wolf_instinct"],
@@ -856,7 +819,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_neon",
     name: "Сектор Неона",
-    description: 'Заброшенный кибер-сектор, освещённый неоном. Обитель протоколов безопасности. Здесь добываются сеты Протокол Изоляции и Церемония Древней Знати.',
+    description: "Заброшенный кибер-сектор, освещённый неоном. Обитель протоколов безопасности. Здесь добываются сеты Протокол Изоляции и Церемония Древней Знати.",
     level: 85,
     entryCost: 20,
     rewardSets: ["isolation_protocol", "noblesse"],
@@ -870,7 +833,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_duel",
     name: "Арена Охотников",
-    description: 'Старый амфитеатр, где проливалась кровь лучших бойцов. Сеты Гордость Дуэлянта и Конец Гладиатора.',
+    description: "Старый амфитеатр, где проливалась кровь лучших бойцов. Сеты Гордость Дуэлянта и Конец Гладиатора.",
     level: 85,
     entryCost: 20,
     rewardSets: ["bounty_hunter", "gladiator"],
@@ -888,7 +851,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_symphony",
     name: "Театр Иллюзий",
-    description: 'Старый театр, где эхо прошлых выступлений сводит с ума. Добываются сеты Протокол Изоляции и Эхо Одиночества.',
+    description: "Старый театр, где эхо прошлых выступлений сводит с ума. Добываются сеты Протокол Изоляции и Эхо Одиночества.",
     level: 85,
     entryCost: 20,
     rewardSets: ["isolation_protocol", "echo_of_solitude"],
@@ -905,7 +868,7 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   {
     id: "domain_cryothunder",
     name: "Шпиль Сверхпроводимости",
-    description: 'Древний пик, окутанный вечной грозой и ледяным штормом. Здесь добываются новые комплекты артефактов Проводящий Контур и Абсолютный Ноль, идеально подходящие для Вольты и Снежаны.',
+    description: "Древний пик, окутанный вечной грозой и ледяным штормом. Здесь добываются новые комплекты артефактов Проводящий Контур и Абсолютный Ноль, идеально подходящие для Вольты и Снежаны.",
     level: 85,
     entryCost: 20,
     rewardSets: ["voltage_circuit", "absolute_zero"],
@@ -921,76 +884,21 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
   }
 ];
 
-export const formatStatName = (type: string): string => {
-  switch (type) {
-    case 'hp': return 'HP';
-    case 'atk': return 'ATK';
-    case 'def': return 'DEF';
-    case 'spd': return 'SPD';
-    case 'critRate': return 'Крит Шанс';
-    case 'critDamage': return 'Крит Урон';
-    default: return type.toUpperCase();
-  }
-};
-
-export const formatStatValue = (type: string, value: number): string => {
-  if (type === 'critRate' || type === 'critDamage') {
-    return `+${value}%`;
-  }
-  return `+${value}`;
-};
-
 export const generateArtifact = (setName: string, rarity: number = 5): Artifact => {
   const slots: ArtifactSlot[] = ["flower", "plume", "sands", "goblet", "circlet"];
   const slot = slots[Math.floor(Math.random() * slots.length)];
-
-  let mainStatType: StatType | "critRate" | "critDamage";
-  if (slot === "flower") {
-    mainStatType = "hp";
-  } else if (slot === "plume") {
-    mainStatType = "atk";
-  } else if (slot === "circlet") {
-    const circletPool: (StatType | "critRate" | "critDamage")[] = ["hp", "atk", "def", "spd", "critRate", "critDamage", "critRate", "critDamage"];
-    mainStatType = circletPool[Math.floor(Math.random() * circletPool.length)];
-  } else {
-    const mainPool: (StatType | "critRate" | "critDamage")[] = ["hp", "atk", "def", "spd", "critRate", "critDamage"];
-    mainStatType = mainPool[Math.floor(Math.random() * mainPool.length)];
-  }
-
+  const stats: StatType[] = ["hp", "atk", "def", "spd"];
+  
+  const mainStatType = slot === "flower" ? "hp" : slot === "plume" ? "atk" : stats[Math.floor(Math.random() * stats.length)];
   let mainVal = rarity * 50 + (slot === "flower" ? 100 : 20);
-  if (mainStatType === "spd") {
-    mainVal = Math.floor(mainVal * 0.12);
-  } else if (mainStatType === "critRate") {
-    // Genshin 5★ CR main stat: 3.1% at lvl 0 (+1.4% per lvl -> 31.1% at lvl 20)
-    mainVal = Number((rarity * 0.62).toFixed(1));
-  } else if (mainStatType === "critDamage") {
-    // Genshin 5★ CD main stat: 6.2% at lvl 0 (+2.8% per lvl -> 62.2% at lvl 20)
-    mainVal = Number((rarity * 1.24).toFixed(1));
-  }
+  if (mainStatType === "spd") mainVal = Math.floor(mainVal * 0.12); // Reduced from 0.2 to 0.12
 
   const subStats: ArtifactSubStat[] = [];
-  const numSubs = Math.floor(Math.random() * 3) + 2; // 2..4 substats
-  const allSubTypes: (StatType | "critRate" | "critDamage")[] = ["hp", "atk", "def", "spd", "critRate", "critDamage"];
-  const availableSubTypes = allSubTypes.filter(t => t !== mainStatType);
-
-  for (let i = 0; i < numSubs; i++) {
-    if (availableSubTypes.length === 0) break;
-    const pickIdx = Math.floor(Math.random() * availableSubTypes.length);
-    const type = availableSubTypes.splice(pickIdx, 1)[0];
-
-    let value = Math.floor(Math.random() * 20 * rarity) + 5;
-    if (type === "spd") {
-      value = Math.floor(Math.random() * 1.5 * rarity) + 1;
-    } else if (type === "critRate") {
-      // Genshin 5★ CR substat initial roll: 2.7% - 3.9%
-      const roll = (Math.random() * 1.2 + 2.7) * (rarity / 5);
-      value = Number(roll.toFixed(1));
-    } else if (type === "critDamage") {
-      // Genshin 5★ CD substat initial roll: 5.4% - 7.8%
-      const roll = (Math.random() * 2.4 + 5.4) * (rarity / 5);
-      value = Number(roll.toFixed(1));
-    }
-
+  const numSubs = Math.floor(Math.random() * 3) + 2;
+  for(let i=0; i<numSubs; i++) {
+    const type = stats[Math.floor(Math.random() * stats.length)];
+    let value = Math.floor(Math.random() * 30 * rarity) + 5;
+    if (type === "spd") value = Math.floor(Math.random() * 1.5 * rarity) + 1; // Reduced from 3 to 1.5
     subStats.push({ type, value });
   }
 
@@ -1082,12 +990,9 @@ const scaleStats = (baseHp: number, baseAtk: number, baseDef: number, baseSpd: n
   let def = Math.floor(baseDef * (1 + (level - 1) * 0.05 + c * 0.1) * (isAbyss ? 1.2 : 1));
   let spd = baseSpd + Math.floor(c * 2) + (isAbyss ? 2 : 0);
 
-  let critRate = 5; // Base 5%
-  let critDamage = 50; // Base 50%
-
   // Stats from artifacts
   artifacts.forEach(art => {
-    if (!art) return;
+    // Main stat
     const subStats = art.subStats || [];
     const stats = [art.mainStat, ...subStats];
     stats.forEach(s => {
@@ -1096,15 +1001,11 @@ const scaleStats = (baseHp: number, baseAtk: number, baseDef: number, baseSpd: n
       if (s.type === 'atk') atk += s.value || 0;
       if (s.type === 'def') def += s.value || 0;
       if (s.type === 'spd') spd += s.value || 0;
-      if (s.type === 'critRate') critRate += s.value || 0;
-      if (s.type === 'critDamage') critDamage += s.value || 0;
     });
   });
 
   const finalSpd = Math.min(180, spd); // Hard cap speed to prevent infinite turns
-  const finalCritRate = Math.round(critRate * 10) / 10;
-  const finalCritDamage = Math.round(critDamage * 10) / 10;
-  return { hp, maxHp: hp, atk, def, spd: finalSpd, critRate: finalCritRate, critDamage: finalCritDamage };
+  return { hp, maxHp: hp, atk, def, spd: finalSpd };
 };
 
 export const charRarity: Record<string, Rarity> = {
@@ -1275,7 +1176,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'farina_e', name: 'Белый покров', type: 'Skill1', cost: 3, target: 'SingleEnemy',
         description: 'Наносит Cryo DMG и накладывает «Снежная пыль» на 2 хода. Доп. атаки от союзников.',
-        statsText: "Урон: 90% АТК\nДлительность: 2 хода, 2 хода (3 на C2)",
+        statsText: "Урон: 90% АТК",
         execute: (s, t, state, log, ft, pl) => {
           let target = t[0];
           dealDamage(s, target, 0.9, 'Cryo', log, ft, pl, 1, state);
@@ -1287,7 +1188,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'farina_q', name: 'Безмолвие белого поля', type: 'Skill2', cost: 5, target: 'AllEnemies',
         description: 'AoE Cryo DMG всем врагам. Создаёт «Белое поле» на 2 хода.',
-        statsText: "Урон: 150% АТК\nДлительность: 2 хода",
+        statsText: "Урон: 150% АТК",
         execute: (s, t, state, log, ft, pl) => {
           let mult = 1.5;
           if (c >= 4) {
@@ -1318,35 +1219,35 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'ka_atk', name: 'Ледяной танец', type: 'Attack', cost: 0, target: 'SingleEnemy',
         description: 'Cryo DMG + сплеш урон. Дает 1 Осколок инея за каждого пораженного (2 по замороженным).',
-        statsText: "Урон: 100% АТК / 40% АТК",
+        statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           kairenTurnStart(s, t, state, log, ft, pl, c);
           let target = t[0];
-          if (pl) pl(target.uid, 'kairen_ice_dance');
+          if (pl) pl(target.uid, 'kairen_frost');
           dealDamage(s, target, 1.0, 'Cryo', log, ft, pl, 1, state);
           let shardsGained = target.buffs.frozen ? 2 : 1;
           
           if (state && state.enemyParty) {
             state.enemyParty.forEach(e => {
               if (e.uid !== target.uid && e.stats.hp > 0) {
-                dealDamage(s, e, 0.4, 'Cryo', log, ft, pl, 1, state);
+                dealDamage(s, e, 0.4, 'Cryo', log, null, null, 1, state);
                 shardsGained += (e.buffs.frozen ? 2 : 1);
               }
             });
           }
-          addKairenShards(s, shardsGained, c, state, ft, log, pl);
+          addKairenShards(s, shardsGained, c, state, ft, log);
         }
       },
       {
         id: 'ka_e', name: 'Венец вечной зимы', type: 'Skill1', cost: 3, target: 'AllEnemies',
         description: 'AoE Cryo. Поглощает все Осколки (+урон, +случайные доп. удары). Накладывает «Иней» (2 хода: +20% Cryo DMG).',
-        statsText: "Урон: 150% АТК (Базово) / 50% АТК / 100% АТК\nДлительность: 2 хода",
+        statsText: "Урон: 150% АТК",
         execute: (s, t, state, log, ft, pl) => {
           kairenTurnStart(s, t, state, log, ft, pl, c);
           let shards = s.buffs.kairenShards || 0;
           s.buffs.kairenShards = 0;
           let hasFrozen = false;
-          if (pl) pl(s.uid, 'kairen_frost_crown');
+          if (pl) pl(s.uid, 'kairen_frost');
           
           t.forEach(e => {
             if (e.stats.hp > 0) {
@@ -1360,7 +1261,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
             for(let i=0; i<shards; i++) {
                if (aliveEnemies.length > 0) {
                  let rndTarget = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-                 dealDamage(s, rndTarget, 0.5, 'Cryo', log, ft, pl, 1, state);
+                 dealDamage(s, rndTarget, 0.5, 'Cryo', log, null, null, 1, state);
                  aliveEnemies = state.enemyParty.filter(e => e.stats.hp > 0);
                }
             }
@@ -1369,35 +1270,35 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           if (hasFrozen) {
             t.forEach(e => {
                if (e.stats.hp > 0 && e.buffs.frozen) {
-                 dealDamage(s, e, 1.0, 'Cryo', log, ft, pl, 1, state);
+                 dealDamage(s, e, 1.0, 'Cryo', log, null, null, 1, state);
                }
             });
           }
           
           s.buffs.kairenFrostTurns = 3; 
-          if (ft) ft(s.uid, '❄️ ИНЕЙ (+20% CRYO)', 'text-cyan-300 font-bold');
+          if (ft) ft(s.uid, 'ИНЕЙ', 'text-cyan-400');
           
           if (c >= 1) {
              let bonusShards = 2 + (hasFrozen ? 1 : 0);
-             addKairenShards(s, bonusShards, c, state, ft, log, pl);
+             addKairenShards(s, bonusShards, c, state, ft, log);
           }
         }
       },
       {
         id: 'ka_q', name: 'Трон безмолвной зимы', type: 'Skill2', cost: 5, target: 'AllEnemies',
         description: 'Мощный AoE Cryo DMG. «Вечная зима» (3 хода): урон в начале хода, +1 Осколок за реакции союзников. При 5 осколках срабатывает Ледяное эхо.',
-        statsText: "Урон: 250% АТК\nДлительность: 3 хода",
+        statsText: "Урон: 250% АТК",
         execute: (s, t, state, log, ft, pl) => {
           kairenTurnStart(s, t, state, log, ft, pl, c);
-          if (pl) pl(s.uid, 'kairen_winter_throne');
+          if (pl) pl(s.uid, 'kairen_frost');
           t.forEach(e => {
             if (e.stats.hp > 0) dealDamage(s, e, 2.5, 'Cryo', log, ft, pl, 1, state);
           });
           s.buffs.kairenWinterTurns = 4;
-          if (ft) ft(s.uid, '👑 ВЕЧНАЯ ЗИМА', 'text-cyan-200 font-black text-sm');
+          if (ft) ft(s.uid, 'ВЕЧНАЯ ЗИМА', 'text-blue-500 font-bold');
           
           if (c >= 5) {
-            addKairenShards(s, 3, c, state, ft, log, pl);
+            addKairenShards(s, 3, c, state, ft, log);
           }
         }
       }
@@ -1417,7 +1318,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'av_atk', name: 'Лепесток прилива', type: 'Attack', cost: 0, target: 'SingleEnemy',
         description: 'Hydro DMG (зависит от макс. ХП). Создаёт 1 Лепесток прилива.',
-        statsText: "Урон: 12% HP",
+        statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           avelineTurnStart(s, t, state, log, ft, pl, c);
           if (pl) pl(t[0].uid, 'aveline_nature');
@@ -1428,13 +1329,13 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'av_e', name: 'Цветение лазурного сада', type: 'Skill1', cost: 3, target: 'AllEnemies',
         description: 'Лазурный сад (3 хода). В начале хода: Hydro AoE DMG (от макс. ХП), лечение от макс. ХП, +1 Лепесток.',
-        statsText: "Урон: 10% HP\nЛечение: 10% HP\nДлительность: 3 хода",
+        statsText: "Урон: 80% АТК\nЛечение: 10% HP",
         execute: (s, t, state, log, ft, pl) => {
           avelineTurnStart(s, t, state, log, ft, pl, c);
-          if (pl) pl(s.uid, 'aveline_azure_garden');
+          if (pl) pl(s.uid, 'aveline_nature');
           s.buffs.avelineGardenTurns = 4; // +1 for next turn tick
           addPetals(s, c >= 3 ? 2 : 1, ft, c);
-          if (ft) ft(s.uid, '🪷 ЛАЗУРНЫЙ САД', 'text-sky-300 font-bold');
+          if (ft) ft(s.uid, 'ЛАЗУРНЫЙ САД', 'text-blue-400');
           t.forEach(e => {
             if (e.stats.hp > 0) dealDamage(s, e, 0.8, 'Hydro', log, ft, pl, 1, state);
           });
@@ -1450,14 +1351,12 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       {
         id: 'av_q', name: 'Вечное цветение', type: 'Skill2', cost: 5, target: 'AllAllies',
         description: '+20% Elemental DMG отряду (4 хода). В начале хода: +1 Лепесток. Реакции копят цветы для Великого цветения.',
-        statsText: "Длительность: 4 хода\nБафф: +20% Элем. Урон",
         execute: (s, t, state, log, ft, pl) => {
           avelineTurnStart(s, t, state, log, ft, pl, c);
-          if (pl) pl(s.uid, 'aveline_eternal_bloom');
           s.buffs.avelineGreatFlowerTurns = 5; // +1 for next turn tick
           s.buffs.avelineElementalFlowers = 0;
           if (c < 6) s.buffs.avelineC6Bonus = 0;
-          if (ft) ft(s.uid, '🌺 ВЕЧНОЕ ЦВЕТЕНИЕ', 'text-fuchsia-300 font-bold');
+          if (ft) ft(s.uid, 'ВЕЧНОЕ ЦВЕТЕНИЕ', 'text-indigo-400');
           state?.playerParty.forEach(a => {
             a.buffs.dmgBoost = (a.buffs.dmgBoost || 0) + 20;
           });
@@ -1473,8 +1372,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "ineffa_atk", name: "Осколки памяти", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Физ. урон или Пиро урон (если в Отраженной форме). Атаки Пиро по Электро целям вызывают Отражение, дающее Фрагмент зеркала.',
-        statsText: "Урон: 90% АТК (110% на C5, +15% за фрагмент в Пиро-форме)\nОтражение (по Электро): +125% АТК и +1 фрагмент\nИгнор ЗАЩ (C6): 30%",
+        description: "Физ. урон или Пиро урон (если в Отраженной форме). Атаки Пиро по Электро целям вызывают Отражение, дающее Фрагмент зеркала.",
         execute: (s, t, state, log, ft, pl) => {
           const isPyro = s.buffs.reflectedForm && s.buffs.reflectedForm > 0;
           let element: Element = isPyro ? "Pyro" : "Physical";
@@ -1520,8 +1418,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "ineffa_e", name: "Зеркало Рассветного Утра", type: "Skill1", cost: 3, target: "SingleEnemy",
-        description: 'Наносит Пиро урон и дает Отраженную форму, меняя атаки на Пиро. Фрагменты усиливают урон.',
-        statsText: "Урон: 30% АТК / 150% АТК\nБафф: +15 СКОР",
+        description: "Наносит Пиро урон и дает Отраженную форму, меняя атаки на Пиро. Фрагменты усиливают урон.",
         execute: (s, t, state, log, ft, pl) => {
           s.buffs.reflectedForm = 4;
           s.buffs.spd = (s.buffs.spd || 0) + 15; // Passive 1 representation
@@ -1534,8 +1431,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "ineffa_q", name: "Гибридная Энергия", type: "Skill2", cost: 6, target: "SingleEnemy",
-        description: 'Использует фрагменты для огромного Пиро урона. Чем больше фрагментов, тем больше урон.',
-        statsText: "Урон: 30% АТК / 350% АТК / 400% АТК",
+        description: "Использует фрагменты для огромного Пиро урона. Чем больше фрагментов, тем больше урон.",
         execute: (s, t, state, log, ft, pl) => {
           let fragments = s.buffs.mirrorFragment || 0;
           let mult = 3.5 + fragments * 0.9;
@@ -1560,8 +1456,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "sn_atk", name: "Ледяной укол", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Крио урон. Накладывает 1 стак [Переохлаждения] (макс. 4 стака). Каждый стак снижает Защиту врага на 10%, наносимый им урон на 10% и увеличивает получаемый им урон на 12%. При 4 стаках вызывает [Критическое переохлаждение] на 2 хода (-50% DEF, -50% урон, +60% входящий урон).',
-        statsText: "Урон: 90% АТК\nДлительность: 2 хода\nСтаки: 1 стак, 4 стака/ов\nДебафф: -50% ЗАЩ, -50% Урон, +60% Получ. Урон",
+        description: "Крио урон. Накладывает 1 стак [Переохлаждения] (макс. 4 стака). Каждый стак снижает Защиту врага на 10%, наносимый им урон на 10% и увеличивает получаемый им урон на 12%. При 4 стаках вызывает [Критическое переохлаждение] на 2 хода (-50% DEF, -50% урон, +60% входящий урон).",
+        statsText: "Урон: 90% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (pl) pl(t[0].uid, "snezhana_overcool");
           dealDamage(s, t[0], 0.9, "Cryo", log, ft, pl, 1, state);
@@ -1570,8 +1466,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "sn_e", name: "Морозное дыхание", type: "Skill1", cost: 2, target: "SingleEnemy",
-        description: 'Крио урон. Накладывает сразу 2 стака [Переохлаждения]. Если цель уже находится под действием Критического переохлаждения, продвигает ATB выбранного союзника с наивысшей Атакой на 35%.',
-        statsText: "Урон: 120% АТК\nПродвижение хода: 35%\nСтаки: 2 стака/ов",
+        description: "Крио урон. Накладывает сразу 2 стака [Переохлаждения]. Если цель уже находится под действием Критического переохлаждения, продвигает ATB выбранного союзника с наивысшей Атакой на 35%.",
+        statsText: "Урон: 120% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (pl) pl(t[0].uid, "snezhana_overcool");
           dealDamage(s, t[0], 1.2, "Cryo", log, ft, pl, 2, state);
@@ -1591,8 +1487,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "sn_q", name: "Вечная мерзлота", type: "Skill2", cost: 4, target: "AllEnemies",
-        description: 'AoE Крио урон. Накладывает 1 стак [Переохлаждения] на всех врагов. Замораживает на 1 ход тех, у кого уже было Критическое переохлаждение.',
-        statsText: "Урон: 140% АТК\nДлительность: 1 ход\nСтаки: 1 стак",
+        description: "AoE Крио урон. Накладывает 1 стак [Переохлаждения] на всех врагов. Замораживает на 1 ход тех, у кого уже было Критическое переохлаждение.",
+        statsText: "Урон: 140% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (pl) pl(s.uid, "snezhana_overcool");
           t.forEach(enemy => {
@@ -1619,7 +1515,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "ze_atk", name: "Иллюзорный выпад", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Электро урон. Зефир превращает Перегрузку в Отражение.',
+        description: "Электро урон. Зефир превращает Перегрузку в Отражение.",
         statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 1.0, "Electro", log, ft, pl, 2, state, c >= 6 ? 0.2 : 0);
@@ -1627,8 +1523,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "ze_e", name: "Грозовая призма", type: "Skill1", cost: 3, target: "AllEnemies",
-        description: 'Электро урон по всем врагам, накладывает статус Электро. Повышает урон Отражения отряда на 15%.',
-        statsText: "Урон: 120% АТК\nПродвижение хода: 10%",
+        description: "Электро урон по всем врагам, накладывает статус Электро. Повышает урон Отражения отряда на 15%.",
+        statsText: "Урон: 120% АТК",
         execute: (s, t, state, log, ft, pl) => {
           t.forEach(e => {
             if (e.stats.hp > 0) {
@@ -1641,8 +1537,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "ze_q", name: "Зеркальный шторм", type: "Skill2", cost: 6, target: "AllEnemies",
-        description: 'Колоссальный Электро урон. При активации Отражения или Перегрузки снижает защиту врагов.',
-        statsText: "Урон: 280% АТК\nДебафф: -20% Сопротивление, -20% ЗАЩ",
+        description: "Колоссальный Электро урон. При активации Отражения или Перегрузки снижает защиту врагов.",
+        statsText: "Урон: 280% АТК",
         execute: (s, t, state, log, ft, pl) => {
           t.forEach(e => {
             if (e.stats.hp > 0) {
@@ -1663,16 +1559,15 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "au_atk", name: "Золотой блеск", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Гео урон. Аурум превращает Перегрузку в Отражение.',
-        statsText: "Урон: 90% АТК (множитель растёт от ЗАЩ)",
+        description: "Гео урон. Аурум превращает Перегрузку в Отражение.",
+        statsText: "Урон: 90% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 0.9, "Geo", log, ft, pl, 1, state);
         }
       },
       {
         id: "au_e", name: "Золотая эгида", type: "Skill1", cost: 3, target: "AllAllies",
-        description: 'Накладывает щит на всех союзников, зависящий от Защиты Аурума. Усиливает Крит. урон отряда на 15%.',
-        statsText: "Щит: 150% ЗАЩ\nБафф: +15% Крит. Урон",
+        description: "Накладывает щит на всех союзников, зависящий от Защиты Аурума. Усиливает Крит. урон отряда на 15%.",
         execute: (s, t, state, log, ft, pl) => {
           const shieldVal = s.stats.def * 2.5;
           t.forEach(a => {
@@ -1684,8 +1579,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "au_q", name: "Осколки роскоши", type: "Skill2", cost: 5, target: "AllEnemies",
-        description: 'Огромный Гео урон, зависящий от Защиты. Дает отряду бафф Силы Атаки.',
-        statsText: "Урон: 180% АТК (множитель растёт от ЗАЩ)\nБафф: +40% ЗАЩ в АТК отряду",
+        description: "Огромный Гео урон, зависящий от Защиты. Дает отряду бафф Силы Атаки.",
+        statsText: "Урон: 180% АТК",
         execute: (s, t, state, log, ft, pl) => {
           t.forEach(e => {
             if (e.stats.hp > 0) {
@@ -1708,8 +1603,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "rx_atk", name: "Шок", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Электро урон. Слегка восстанавливает HP союзнику с наименьшим здоровьем.',
-        statsText: "Урон: 100% АТК\nЛечение: 50% АТК (союзнику с мин. HP)",
+        description: "Электро урон. Слегка восстанавливает HP союзнику с наименьшим здоровьем.",
+        statsText: "Урон: 100% АТК\nЛечение: 50% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 1.0, "Electro", log, ft, pl, 1, state);
           if (state) {
@@ -1722,8 +1617,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "rx_e", name: "Дефибриллятор", type: "Skill1", cost: 3, target: "SingleAlly",
-        description: 'Лечит выбранного союзника и ускоряет его действия (дает ATB).',
-        statsText: "Лечение: 20% HP\nПродвижение хода: 30%",
+        description: "Лечит выбранного союзника и ускоряет его действия (дает ATB).",
+        statsText: "Лечение: 20% HP",
         execute: (s, t, state, log, ft, pl) => {
           const heal = s.stats.maxHp * 0.2;
           t[0].stats.hp = Math.min(t[0].stats.maxHp, t[0].stats.hp + heal);
@@ -1733,8 +1628,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "rx_q", name: "Перезагрузка", type: "Skill2", cost: 5, target: "AllAllies",
-        description: 'Лечит отряд и повышает Скорость. Электро-реакции наносят больше урона.',
-        statsText: "Лечение: 25% HP (35% на C4)\nБафф: +15 СКОР",
+        description: "Лечит отряд и повышает Скорость. Электро-реакции наносят больше урона.",
+        statsText: "Лечение: 150% АТК",
         execute: (s, t, state, log, ft, pl) => {
           t.forEach(a => {
             a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + (s.stats.atk * 1.5));
@@ -1757,7 +1652,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Одиночный укол. Наносит выбранному противнику небольшой урон.',
+        description: "Одиночный укол. Наносит выбранному противнику небольшой урон.",
         statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 1.0, "Electro", log, ft, pl, 1, state);
@@ -1770,8 +1665,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 3,
         target: "SingleEnemy",
-        description: 'Накладывает [Метку Изоляции] на 2 хода. Противник получает на 40% больше урона от одиночных атак.',
-        statsText: "Урон: 120% АТК\nДлительность: 2 хода",
+        description: "Накладывает [Метку Изоляции] на 2 хода. Противник получает на 40% больше урона от одиночных атак.",
+        statsText: "Урон: 120% АТК",
         execute: (s, t, state, log, ft, pl) => {
           t[0].buffs.isolationMark = 2;
           if (ft) ft(t[0].uid, "🎯 Метка Изоляции", "text-purple-400 font-bold");
@@ -1785,8 +1680,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 6,
         target: "AllAllies",
-        description: 'Продвигает АТВ союзников на 20%. Если есть враж. дебаффы - союзник с макс. ATK получает мгновенный ход.',
-        statsText: "Продвижение хода: 20% / 100%",
+        description: "Продвигает АТВ союзников на 20%. Если есть враж. дебаффы - союзник с макс. ATK получает мгновенный ход.",
         execute: (s, t, state, log, ft, pl) => {
           t.forEach(ally => {
             if (ally.stats.hp > 0 && ally.uid !== s.uid) {
@@ -1821,12 +1715,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('volosatinya') || undefined,
     stats: scaleStats(1200, 180, 80, 40, l, c, arts), atb: 0, cooldowns: {}, buffs: { lastHitBlocked: false },
     skills: [
-      { id: "v_atk", name: "Обычная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удар мечами (Гидро урон).',
+      { id: "v_atk", name: "Обычная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: "Удар мечами (Гидро урон).",
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Hydro", log, ft, pl, 2, state); } },
-      { id: "v_e", name: "Волосатый разрез", type: "Skill1", cost: 3, target: "SingleEnemy", description: 'Гидро урон, замедляет врага.',
-        statsText: "Урон: 150% АТК (210% по Пиро)\nДебафф: -10 СКОР", execute: (s, t, state, log, ft, pl) => { let mult = 1.5; if (c >= 6 && t[0].aura === "Pyro") mult *= 1.4; dealDamage(s, t[0], mult, "Hydro", log, ft, pl, 3, state); t[0].buffs.spd = (t[0].buffs.spd || 0) - 10; if(ft) ft(t[0].uid, '↓Скорость', 'text-blue-300'); } },
-      { id: "v_q", name: "Поляна лобковых волос", type: "Skill2", cost: 5, target: "AllEnemies", description: 'AoE Гидро урон, усиливает атаку отряда.',
-        statsText: "Урон: 200% АТК (280% по Пиро)\nБафф: +30 АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { let mult = 2.0; if (c >= 6 && enemy.aura === "Pyro") mult *= 1.4; dealDamage(s, enemy, mult, "Hydro", log, ft, pl, 4, state); } }); state.playerParty.forEach(p => { p.buffs.atk = (p.buffs.atk || 0) + 30; if(ft) ft(p.uid, '+АТК', 'text-red-400'); if(pl) pl(p.uid, 'buff'); }); } }
+      { id: "v_e", name: "Волосатый разрез", type: "Skill1", cost: 3, target: "SingleEnemy", description: "Гидро урон, замедляет врага.", execute: (s, t, state, log, ft, pl) => { let mult = 1.5; if (c >= 6 && t[0].aura === "Pyro") mult *= 1.4; dealDamage(s, t[0], mult, "Hydro", log, ft, pl, 3, state); t[0].buffs.spd = (t[0].buffs.spd || 0) - 10; if(ft) ft(t[0].uid, '↓Скорость', 'text-blue-300'); } },
+      { id: "v_q", name: "Поляна лобковых волос", type: "Skill2", cost: 5, target: "AllEnemies", description: "AoE Гидро урон, усиливает атаку отряда.", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { let mult = 2.0; if (c >= 6 && enemy.aura === "Pyro") mult *= 1.4; dealDamage(s, enemy, mult, "Hydro", log, ft, pl, 4, state); } }); state.playerParty.forEach(p => { p.buffs.atk = (p.buffs.atk || 0) + 30; if(ft) ft(p.uid, '+АТК', 'text-red-400'); if(pl) pl(p.uid, 'buff'); }); } }
     ]
   }),
   gotka: (uid, l, c, arts = []) => ({
@@ -1834,12 +1726,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('gotka') || undefined,
     stats: scaleStats(900, 250, 60, 35, l, c, arts), atb: 0, cooldowns: {}, buffs: { puppets: 0 },
     skills: [
-      { id: "g_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Урон выше с марионетками.',
-        statsText: "Урон: 100% АТК (+50% за марионетку)", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; dealDamage(s, t[0], 1.0 + (p * 0.5), "Pyro", log, ft, pl, 1, state, c >= 6 ? 0.3 : 0); } },
-      { id: "g_e", name: "Театр искаженных теней", type: "Skill1", cost: 2, target: "Self", description: 'Призывает марионеток.',
-        statsText: "Призыв: +2 марионетки (+3 на C1, макс. 4)\nШанс безмолвия (C1): 50%", execute: (s, t, state, log, ft, pl) => { s.buffs.puppets = Math.min((s.buffs.puppets || 0) + (c >= 1 ? 3 : 2), 4); if (c >= 1 && Math.random() < 0.5) state.enemyParty.forEach(e => { if (e.stats.hp > 0) e.buffs.mute = 1; }); if(ft) ft(s.uid, `+${s.buffs.puppets} Кукол`, 'text-purple-300'); if(pl) pl(s.uid, 'buff'); } },
-      { id: "g_q", name: "Разрыв нитей", type: "Skill2", cost: 5, target: "AllEnemies", description: 'Взрывает марионеток для огромного AoE урона.',
-        statsText: "Урон: 150% АТК (+150% за марионетку)", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.5 + (p * 1.5), "Pyro", log, ft, pl, p > 0 ? p + 1 : 1, state, c >= 6 ? 0.3 : 0); }); s.buffs.puppets = 0; } }
+      { id: "g_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: "Урон выше с марионетками.",
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; dealDamage(s, t[0], 1.0 + (p * 0.5), "Pyro", log, ft, pl, 1, state, c >= 6 ? 0.3 : 0); } },
+      { id: "g_e", name: "Театр искаженных теней", type: "Skill1", cost: 2, target: "Self", description: "Призывает марионеток.", execute: (s, t, state, log, ft, pl) => { s.buffs.puppets = Math.min((s.buffs.puppets || 0) + (c >= 1 ? 3 : 2), 4); if (c >= 1 && Math.random() < 0.5) state.enemyParty.forEach(e => { if (e.stats.hp > 0) e.buffs.mute = 1; }); if(ft) ft(s.uid, `+${s.buffs.puppets} Кукол`, 'text-purple-300'); if(pl) pl(s.uid, 'buff'); } },
+      { id: "g_q", name: "Разрыв нитей", type: "Skill2", cost: 5, target: "AllEnemies", description: "Взрывает марионеток для огромного AoE урона.",
+        statsText: "Урон: 150% АТК", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.5 + (p * 1.5), "Pyro", log, ft, pl, p > 0 ? p + 1 : 1, state, c >= 6 ? 0.3 : 0); }); s.buffs.puppets = 0; } }
     ]
   }),
   kopro: (uid, l, c, arts = []) => ({
@@ -1847,12 +1738,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('kopro') || undefined,
     stats: scaleStats(1100, 210, 75, 38, l, c, arts), atb: 0, cooldowns: {}, buffs: { frenzyStacks: 0 },
     skills: [
-      { id: "k_atk", name: "Атака копьем", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удары Дендро копьем.',
-        statsText: "Урон: 120% АТК\nЛечение: 20% HP", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = s.stats.atk * 0.2; s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
-      { id: "k_e", name: "Приступ истерики", type: "Skill1", cost: c >= 1 ? 1 : 3, target: "Self", description: 'Входит в Безумие, повышая скорость и силу.',
-        statsText: "Бафф: +40 АТК, +15 СКОР", execute: (s, t, state, log, ft, pl) => { s.buffs.frenzyStacks = Math.min((s.buffs.frenzyStacks || 0) + 2, 5); s.buffs.spd = (s.buffs.spd || 0) + 15; s.buffs.atk = (s.buffs.atk || 0) + 40; if(ft) ft(s.uid, 'БЕЗУМИЕ!', 'text-green-500'); if(pl) pl(s.uid, 'buff'); } },
-      { id: "k_q", name: "Время дендродов!", type: "Skill2", cost: c >= 1 ? 4 : 6, target: "AllEnemies", description: 'Дендро-взрыв, тратит Безумие.',
-        statsText: "Урон: 100% АТК (растёт от стаков ловушек)", execute: (s, t, state, log, ft, pl) => { const stacks = s.buffs.frenzyStacks || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.0 + (stacks * 0.8), "Dendro", log, ft, pl, 5, state); }); s.buffs.frenzyStacks = 0; } }
+      { id: "k_atk", name: "Атака копьем", type: "Attack", cost: 0, target: "SingleEnemy", description: "Удары Дендро копьем.",
+        statsText: "Урон: 120% АТК\nЛечение: 20% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = s.stats.atk * 0.2; s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
+      { id: "k_e", name: "Приступ истерики", type: "Skill1", cost: c >= 1 ? 1 : 3, target: "Self", description: "Входит в Безумие, повышая скорость и силу.", execute: (s, t, state, log, ft, pl) => { s.buffs.frenzyStacks = Math.min((s.buffs.frenzyStacks || 0) + 2, 5); s.buffs.spd = (s.buffs.spd || 0) + 15; s.buffs.atk = (s.buffs.atk || 0) + 40; if(ft) ft(s.uid, 'БЕЗУМИЕ!', 'text-green-500'); if(pl) pl(s.uid, 'buff'); } },
+      { id: "k_q", name: "Время дендродов!", type: "Skill2", cost: c >= 1 ? 4 : 6, target: "AllEnemies", description: "Дендро-взрыв, тратит Безумие.",
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { const stacks = s.buffs.frenzyStacks || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.0 + (stacks * 0.8), "Dendro", log, ft, pl, 5, state); }); s.buffs.frenzyStacks = 0; } }
     ]
   }),
   selva: (uid, l, c, arts = []) => ({
@@ -1860,12 +1750,12 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('selva') || undefined,
     stats: scaleStats(1000, 220, 70, 45, l, c, arts), atb: 0, cooldowns: {}, buffs: { joyStacks: 0 },
     skills: [
-      { id: "s_atk", name: "Панч!", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Электро удар из-под земли.',
+      { id: "s_atk", name: "Панч!", type: "Attack", cost: 0, target: "SingleEnemy", description: "Электро удар из-под земли.",
         statsText: "Урон: 110% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.1, "Electro", log, ft, pl, 1, state); } },
-      { id: "s_e", name: "Любитель пострелять", type: "Skill1", cost: 2, target: "AllEnemies", description: 'AoE Электро урон, дает Срытый рейтинг.',
-        statsText: "Урон: 120% АТК\nБафф: +5 СКОР", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 4, state); }); s.buffs.joyStacks = Math.min((s.buffs.joyStacks || 0) + 1, c >= 2 ? 15 : 10); if (c >= 1) s.buffs.spd = (s.buffs.spd || 0) + 5; if(ft) ft(s.uid, '+Рейтинг', 'text-yellow-300'); if(pl) pl(s.uid, 'buff'); } },
-      { id: "s_q", name: "Режим Бога!", type: "Skill2", cost: 6, target: "AllEnemies", description: 'Тратит Радость на мега-атаки.',
-        statsText: "Урон: 200% АТК (Базово)", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + (s.stats.maxHp * 0.02)); } } }); s.buffs.joyStacks = 0; } }
+      { id: "s_e", name: "Любитель пострелять", type: "Skill1", cost: 2, target: "AllEnemies", description: "AoE Электро урон, дает Срытый рейтинг.",
+        statsText: "Урон: 120% АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 4, state); }); s.buffs.joyStacks = Math.min((s.buffs.joyStacks || 0) + 1, c >= 2 ? 15 : 10); if (c >= 1) s.buffs.spd = (s.buffs.spd || 0) + 5; if(ft) ft(s.uid, '+Рейтинг', 'text-yellow-300'); if(pl) pl(s.uid, 'buff'); } },
+      { id: "s_q", name: "Режим Бога!", type: "Skill2", cost: 6, target: "AllEnemies", description: "Тратит Радость на мега-атаки.",
+        statsText: "Урон: 200% АТК\nЛечение: 2% HP", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + (s.stats.maxHp * 0.02)); } } }); s.buffs.joyStacks = 0; } }
     ]
   }),
   moyan: (uid, l, c, arts = []) => ({
@@ -1873,12 +1763,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('moyan') || undefined,
     stats: scaleStats(1500, 120, 150, 30, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "m_atk", name: "Взмах чернилами", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Гео урон чернилами.',
-        statsText: "Урон: 80% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 0.8, "Geo", log, ft, pl, 2, state); if (c >= 2 && Math.random() < 0.5) { s.atb += 15; if(ft) ft(s.uid, 'C2: ATB UP', 'text-yellow-400'); } } },
-      { id: "m_e", name: "Запись Контракта", type: "Skill1", cost: 4, target: "AllAllies", description: 'Щит на всех союзников.',
-        statsText: "Щит: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { const shieldMult = c >= 4 ? 1.3 : 1.0; ally.buffs.shield = (ally.buffs.shield || 0) + 400 * (1 + l * 0.05) * shieldMult; if(ft) ft(ally.uid, '+Щит', 'text-yellow-500'); if(pl) pl(ally.uid, 'shield'); }); } },
-      { id: "m_q", name: "Оживление рукописи", type: "Skill2", cost: 6, target: "AllAllies", description: 'Лечит отряд и наносит AoE Гео урон врагам.',
-        statsText: "Урон: 250% АТК\nЛечение: 500 (базово)\nПродвижение хода: 40%", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { if(ally.stats.hp > 0) { const heal = 500 * (1 + l * 0.05); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
+      { id: "m_atk", name: "Взмах чернилами", type: "Attack", cost: 0, target: "SingleEnemy", description: "Гео урон чернилами.",
+        statsText: "Урон: 80% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 0.8, "Geo", log, ft, pl, 2, state); if (c >= 2 && Math.random() < 0.5) { s.atb += 15; if(ft) ft(s.uid, 'C2: ATB UP', 'text-yellow-400'); } } },
+      { id: "m_e", name: "Запись Контракта", type: "Skill1", cost: 4, target: "AllAllies", description: "Щит на всех союзников.", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { const shieldMult = c >= 4 ? 1.3 : 1.0; ally.buffs.shield = (ally.buffs.shield || 0) + 400 * (1 + l * 0.05) * shieldMult; if(ft) ft(ally.uid, '+Щит', 'text-yellow-500'); if(pl) pl(ally.uid, 'shield'); }); } },
+      { id: "m_q", name: "Оживление рукописи", type: "Skill2", cost: 6, target: "AllAllies", description: "Лечит отряд и наносит AoE Гео урон врагам.",
+        statsText: "Урон: 250% АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { if(ally.stats.hp > 0) { const heal = 500 * (1 + l * 0.05); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
     ]
   }),
   aelita: (uid, l, c, arts = []) => ({
@@ -1886,12 +1775,12 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('aelita') || undefined,
     stats: scaleStats(1350, 240, 60, 42, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "a_atk", name: "Шипы Справедливости", type: "Attack", cost: 0, target: "SingleEnemy", description: '4 удара. Накладывает 1 стак [Шипы].',
-        statsText: "Урон: 100% АТК\nСтаки: 1 стак\nДебафф: -5 СКОР", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 4, state); t[0].buffs.thorns = Math.min((t[0].buffs.thorns || 0) + 1, 3); if (c >= 1) t[0].buffs.spd = (t[0].buffs.spd || 0) - 5; if(ft) ft(t[0].uid, '+Шипы', 'text-emerald-400'); } },
-      { id: "a_e", name: "Связь с флорой", type: "Skill1", cost: 3, target: "SingleEnemy", description: 'Снимает все Шипы с врага. Огромный урон за каждый стак.',
-        statsText: "Урон: 120% АТК (+150% АТК за каждый стак Шипов)\nЛечение (C4): 150 HP за стак", execute: (s, t, state, log, ft, pl) => { const thorns = t[0].buffs.thorns || 0; dealDamage(s, t[0], 1.2 + (thorns * 1.5), "Dendro", log, ft, pl, 1, state); t[0].buffs.thorns = 0; if (c >= 4) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + 150 * thorns); if(ft) ft(s.uid, 'Облегчение', 'text-green-300'); } } },
-      { id: "a_q", name: "Теорема о Дикой Природе", type: "Skill2", cost: 6, target: "AllEnemies", description: 'AоE урон. Баффает АТК Аэлиты, дает всем врагам Шипы.',
-        statsText: "Урон: 200% АТК\nЩит: 200% ЗАЩ (на C6)\nБафф: +100 АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0, "Dendro", log, ft, pl, 2, state); enemy.buffs.thorns = Math.min((enemy.buffs.thorns || 0) + 1, 3); } }); s.buffs.atk = (s.buffs.atk || 0) + 100 + (l * 5); if (c >= 6) { s.buffs.shield = (s.buffs.shield || 0) + s.stats.def * 2; if(ft) ft(s.uid, 'C6: SHIELD', 'text-emerald-300'); } if(ft) ft(s.uid, 'Оранжерея Знаний!', 'text-emerald-300'); if(pl) pl(s.uid, 'buff'); } }
+      { id: "a_atk", name: "Шипы Справедливости", type: "Attack", cost: 0, target: "SingleEnemy", description: "4 удара. Накладывает 1 стак [Шипы].",
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 4, state); t[0].buffs.thorns = Math.min((t[0].buffs.thorns || 0) + 1, 3); if (c >= 1) t[0].buffs.spd = (t[0].buffs.spd || 0) - 5; if(ft) ft(t[0].uid, '+Шипы', 'text-emerald-400'); } },
+      { id: "a_e", name: "Связь с флорой", type: "Skill1", cost: 3, target: "SingleEnemy", description: "Снимает все Шипы с врага. Огромный урон за каждый стак.",
+        statsText: "Урон: 120% АТК", execute: (s, t, state, log, ft, pl) => { const thorns = t[0].buffs.thorns || 0; dealDamage(s, t[0], 1.2 + (thorns * 1.5), "Dendro", log, ft, pl, 1, state); t[0].buffs.thorns = 0; if (c >= 4) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + 150 * thorns); if(ft) ft(s.uid, 'Облегчение', 'text-green-300'); } } },
+      { id: "a_q", name: "Теорема о Дикой Природе", type: "Skill2", cost: 6, target: "AllEnemies", description: "AоE урон. Баффает АТК Аэлиты, дает всем врагам Шипы.",
+        statsText: "Урон: 200% АТК\nЩит: (Специальный)", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0, "Dendro", log, ft, pl, 2, state); enemy.buffs.thorns = Math.min((enemy.buffs.thorns || 0) + 1, 3); } }); s.buffs.atk = (s.buffs.atk || 0) + 100 + (l * 5); if (c >= 6) { s.buffs.shield = (s.buffs.shield || 0) + s.stats.def * 2; if(ft) ft(s.uid, 'C6: SHIELD', 'text-emerald-300'); } if(ft) ft(s.uid, 'Оранжерея Знаний!', 'text-emerald-300'); if(pl) pl(s.uid, 'buff'); } }
     ]
   }),
   asher: (uid, l, c, arts = []) => ({
@@ -1900,16 +1789,14 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1400, 180, 120, 48, l, c, arts),
     atb: 0, buffs: { shield: 0 }, cooldowns: {},
     skills: [
-      { id: "sm_atk", name: "Молот Тления", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Дендро урон, вешает Дендро ауру.',
+      { id: "sm_atk", name: "Молот Тления", type: "Attack", cost: 0, target: "SingleEnemy", description: "Дендро урон, вешает Дендро ауру.",
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 1, state); } },
-      { id: "sm_e", name: "Цепи Тлеющего Угля", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Связывает союзника. Селина получает 3 стака вместо 1. Крит. Урон по Горящим врагам +50%.',
-        statsText: "Стаки: 3 стака/ов", execute: (s, t, state, log, ft, pl) => { 
+      { id: "sm_e", name: "Цепи Тлеющего Угля", type: "Skill1", cost: 3, target: "SingleAlly", description: "Связывает союзника. Селина получает 3 стака вместо 1. Крит. Урон по Горящим врагам +50%.", execute: (s, t, state, log, ft, pl) => { 
         t[0].buffs.smolderLink = 3; 
         if(ft) ft(t[0].uid, "🔗 ТЛЕЮЩАЯ СВЯЗЬ", "text-emerald-400 font-black");
         if(pl) pl(t[0].uid, "asher_nature");
       } },
-      { id: "sm_q", name: "Сердце Печи", type: "Skill2", cost: 6, target: "AllAllies", description: 'Замораживает ОЗ на 45% (для баффов). Дает щит за каждый взрыв Углей Селины.',
-        statsText: "Продвижение хода: 100%", execute: (s, t, state, log, ft, pl) => { 
+      { id: "sm_q", name: "Сердце Печи", type: "Skill2", cost: 6, target: "AllAllies", description: "Замораживает ОЗ на 45% (для баффов). Дает щит за каждый взрыв Углей Селины.", execute: (s, t, state, log, ft, pl) => { 
         t.forEach(ally => {
           ally.buffs.hpFreeze = 45;
           if (ally.stats.hp / ally.stats.maxHp > 0.45) {
@@ -1938,8 +1825,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack", 
         cost: 0, 
         target: "SingleEnemy", 
-        description: 'Серия быстрых уколов огненным копьем (2 удара). Накладывает 1 стак [Угли Розы] (макс. 5).',
-        statsText: "Урон: 110% АТК\nСтаки: 1 стак", 
+        description: "Серия быстрых уколов огненным копьем (2 удара). Накладывает 1 стак [Угли Розы] (макс. 5).",
+        statsText: "Урон: 110% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           dealDamage(s, t[0], 1.1, "Pyro", log, ft, pl, 2, state); 
           const stackInc = s.buffs.smolderLink || 1;
@@ -1954,8 +1841,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1", 
         cost: 3, 
         target: "AllEnemies", 
-        description: 'Призывает огненный бутон, взрывающийся в гуще врагов. Наносит AoE Pyro урон. Каждый стак [Угли Розы] усиливает урон на 30%.',
-        statsText: "Урон: 130% АТК\nЩит: 15% HP", 
+        description: "Призывает огненный бутон, взрывающийся в гуще врагов. Наносит AoE Pyro урон. Каждый стак [Угли Розы] усиливает урон на 30%.",
+        statsText: "Щит: (Специальный)", 
         execute: (s, t, state, log, ft, pl) => { 
           const embers = s.buffs.roseEmbers || 0;
           const multiplier = 1.3 + (embers * 0.3);
@@ -1983,8 +1870,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2", 
         cost: 6, 
         target: "AllAllies", 
-        description: 'Танец пламенного вихря. Дает всем союзникам щит [Алая Роза] и восстанавливает им HP, а врагам наносит сокрушительный Pyro урон.',
-        statsText: "Урон: 220% АТК\nЩит: 20% HP", 
+        description: "Танец пламенного вихря. Дает всем союзникам щит [Алая Роза] и восстанавливает им HP, а врагам наносит сокрушительный Pyro урон.",
+        statsText: "Урон: 220% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           if(pl) {
             pl(s.uid, "selina_rose");
@@ -2034,8 +1921,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Удары током (коэфф. 0.6). Если на цели есть любой элементальный статус или дебафф, урон возрастает в 2.5 раза (коэфф. 1.5).',
-        statsText: "Урон: 250% АТК / 60% АТК",
+        description: "Удары током (коэфф. 0.6). Если на цели есть любой элементальный статус или дебафф, урон возрастает в 2.5 раза (коэфф. 1.5).",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const hasAura = !!target.aura;
@@ -2053,8 +1939,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 3,
         target: "SingleEnemy",
-        description: 'Волна разряда. Если на враге есть статус или дебафф, наносит сокрушительный урон (коэфф. 3.5), рассеивает статус и снижает скорость врага на 15.',
-        statsText: "Урон: 350% АТК / 100% АТК\nДебафф: -15 СКОР",
+        description: "Волна разряда. Если на враге есть статус или дебафф, наносит сокрушительный урон (коэфф. 3.5), рассеивает статус и снижает скорость врага на 15.",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const hasAura = !!target.aura;
@@ -2079,8 +1964,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 6,
         target: "AllEnemies",
-        description: 'Грандиозный запуск импульсов по всем врагам. Урон по целям со статусами увеличивается в 3 раза (коэфф. 3.3). Дает Нейрону +25% силы атаки за каждый триггер.',
-        statsText: "Урон: 330% АТК / 110% АТК",
+        description: "Грандиозный запуск импульсов по всем врагам. Урон по целям со статусами увеличивается в 3 раза (коэфф. 3.3). Дает Нейрону +25% силы атаки за каждый триггер.",
         execute: (s, t, state, log, ft, pl) => {
           let triggersCount = 0;
           t.forEach(enemy => {
@@ -2120,8 +2004,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Укол шпагой времени (коэфф. 0.9). Отбрасывает шкалу ходов (ATB) врага назад на 15%.',
-        statsText: "Урон: 90% АТК\nЗадержка хода: 15%",
+        description: "Укол шпагой времени (коэфф. 0.9). Отбрасывает шкалу ходов (ATB) врага назад на 15%.",
+        statsText: "Урон: 90% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           dealDamage(s, target, 0.9, "Cryo", log, ft, pl, 2, state, (c >= 6 && target.aura === "Cryo") ? 1.0 : 0);
@@ -2137,8 +2021,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 3,
         target: "SingleEnemy",
-        description: 'Заморозка шкалы врага (коэфф. 1.8). Отбрасывает ATB врага на 35% и замедляет его (-20 к скорости) до конца боя.',
-        statsText: "Урон: 180% АТК\nЗадержка хода: 35%\nДебафф: -20 СКОР",
+        description: "Заморозка шкалы врага (коэфф. 1.8). Отбрасывает ATB врага на 35% и замедляет его (-20 к скорости) до конца боя.",
+        statsText: "Урон: 180% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           dealDamage(s, target, 1.8, "Cryo", log, ft, pl, 1, state);
@@ -2158,8 +2042,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 6,
         target: "AllEnemies",
-        description: 'Ледяной хроно-взрыв по всем врагам (коэфф. 2.2). Продвигает шкалу ходов (ATB) союзников вперед на 30%!',
-        statsText: "Урон: 220% АТК\nПродвижение хода: 30%\nЗадержка хода: 15%",
+        description: "Ледяной хроно-взрыв по всем врагам (коэфф. 2.2). Продвигает шкалу ходов (ATB) союзников вперед на 30%!",
+        statsText: "Урон: 220% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if(pl) {
             pl(s.uid, "krona_ice");
@@ -2195,8 +2079,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     skills: [
       {
         id: "cy_atk", name: "Холодный выпад", type: "Attack", cost: 0, target: "SingleEnemy",
-        description: 'Физ удар. Метка дуэли: урон x2, бонус крита. Отбрасывает ATB врага.',
-        statsText: "Урон: 200% АТК / 70% АТК\nПродвижение хода: 10%\nЗадержка хода: 20%\nБафф: +40% Крит. Урон",
+        description: "Физ удар. Метка дуэли: урон x2, бонус крита. Отбрасывает ATB врага.",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const marked = target.buffs.duelMark;
@@ -2218,13 +2101,13 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "cy_e", name: "Вызов на дуэль", type: "Skill1", cost: 2, target: "SingleEnemy",
-        description: 'Снимает все метки, вешает метку [Дуэль] на цель. Сразу делает выпад с 50% игнором защиты.',
+        description: "Снимает все метки, вешает метку [Дуэль] на цель. Сразу делает выпад с 50% игнором защиты.",
         statsText: "Урон: 150% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           if (state) state.enemyParty.forEach(e => e.buffs.duelMark = 0);
           target.buffs.duelMark = 1;
-          if (ft) ft(target.uid, "ДУЭЛЬ", "text-rose-500 font-black tracking-widest text-xl");
+          if (ft) ft(target.uid, "🎯 ДУЭЛЬ", "text-red-500 font-black text-xl ");
           if (pl) {
             pl(target.uid, "cyrus_duel");
             pl(target.uid, "shake");
@@ -2236,8 +2119,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       },
       {
         id: "cy_q", name: "Казнь", type: "Skill2", cost: 6, target: "SingleEnemy",
-        description: 'Огромный удар (коэфф 4.5 с меткой). Если у цели в процентах ХП <30% - гарант. Крит и игнор Щитов! Если убивает, Сайрус восстанавливает 6 Энергии и 100 ATB.',
-        statsText: "Урон: 450% АТК / 250% АТК\nПродвижение хода: 100%",
+        description: "Огромный удар (коэфф 4.5 с меткой). Если у цели в процентах ХП <30% - гарант. Крит и игнор Щитов! Если убивает, Сайрус восстанавливает 6 Энергии и 100 ATB.",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const marked = target.buffs.duelMark;
@@ -2246,13 +2128,13 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const isExecute = target.stats.hp > 0 && target.stats.hp < target.stats.maxHp * limit;
           
           if (isExecute) {
-             if (ft) ft(s.uid, "КАЗНЬ!", "text-red-500 font-black tracking-widest text-2xl drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]");
+             if (ft) ft(s.uid, "☠️ КАЗНЬ!", "text-red-600 font-black  text-2xl");
              if (pl) {
                pl(target.uid, "cyrus_execute");
                pl(target.uid, "shake");
              }
           } else {
-             if (ft) ft(s.uid, "Последний Удар", "text-rose-400 font-bold tracking-wide");
+             if (ft) ft(s.uid, "🔪 Последний Удар", "text-rose-400 font-bold");
              if (pl) pl(target.uid, "cyrus_duel");
           }
           
@@ -2261,7 +2143,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           if (target.stats.hp <= 0 && state) {
             setTimeout(() => { s.cooldowns['cy_q'] = 0; }, 10);
             s.atb = 100;
-            if (ft) setTimeout(() => ft(s.uid, "ГОНОРАР (+100% ATB)", "text-amber-400 font-bold tracking-wide text-sm"), 400);
+            if (ft) setTimeout(() => ft(s.uid, "♻️ ГОНОРАР", "text-yellow-400 font-bold text-lg "), 400);
           }
         }
       }
@@ -2278,8 +2160,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Удар звуковой волной (коэфф. 0.7). Если у врага есть стихийная аура, Эхо запоминает её. Если ауры нет, но у Эха есть сохраненная аура, он передает её врагу.',
-        statsText: "Урон: 70% АТК\nПродвижение хода: 5%",
+        description: "Удар звуковой волной (коэфф. 0.7). Если у врага есть стихийная аура, Эхо запоминает её. Если ауры нет, но у Эха есть сохраненная аура, он передает её врагу.",
+        statsText: "Урон: 70% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const initialAura = target.aura;
@@ -2302,7 +2184,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 2,
         target: "SingleEnemy",
-        description: 'Радиус Эха. Наносит Hydro-урон цели (коэфф. 1.0). Запоминает её ауру и распыляет её (дублирует) на ВСЕХ остальных противников на поле боя!',
+        description: "Радиус Эха. Наносит Hydro-урон цели (коэфф. 1.0). Запоминает её ауру и распыляет её (дублирует) на ВСЕХ остальных противников на поле боя!",
         statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
@@ -2329,8 +2211,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 5,
         target: "AllEnemies",
-        description: 'Потоки иллюзий (коэфф. 1.3). Дублирует запомненную ауру на всех врагов без стихийных статусов, и дает +20% силы атаки всему отряду на 2 хода.',
-        statsText: "Урон: 130% АТК\nБафф: +20% АТК отряду (2 хода)\nБонус (C6): +20 СКОР",
+        description: "Потоки иллюзий (коэфф. 1.3). Дублирует запомненную ауру на всех врагов без стихийных статусов, и дает +20% силы атаки всему отряду на 2 хода.",
+        statsText: "Урон: 130% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (c >= 6) { s.buffs.spd = (s.buffs.spd || 0) + 20; if(ft) ft(s.uid, 'ГАРМОНИЯ!', 'text-cyan-400'); }
           const auraToSpread = s.buffs.echoAura;
@@ -2371,8 +2253,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Удар наотмашь (коэфф. 1.6). Камикадзе наносит огромный урон, но теряет 15% своего текущего HP.',
-        statsText: "Урон: 160% АТК\nРасход: 15% HP\nБафф: +200 АТК",
+        description: "Удар наотмашь (коэфф. 1.6). Камикадзе наносит огромный урон, но теряет 15% своего текущего HP.",
+        statsText: "Урон: 160% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           if (c >= 6) {
@@ -2395,8 +2277,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 2,
         target: "SingleEnemy",
-        description: 'Стеклянный таран (коэфф. 3.0), наносящий колоссальный удар по одной цели. Камикадзе теряет 25% своего текущего HP.',
-        statsText: "Урон: 300% АТК\nРасход: 25% HP",
+        description: "Стеклянный таран (коэфф. 3.0), наносящий колоссальный удар по одной цели. Камикадзе теряет 25% своего текущего HP.",
+        statsText: "Урон: 300% DEF / АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const hpCost = Math.floor(s.stats.hp * 0.25);
@@ -2414,8 +2296,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 5,
         target: "SingleEnemy",
-        description: 'Сокрушительный суицидальный удар невероятной мощи (коэфф. 5.5). Камикадзе теряет 45% своего текущего HP.',
-        statsText: "Урон: 550% АТК\nРасход: 45% HP",
+        description: "Сокрушительный суицидальный удар невероятной мощи (коэфф. 5.5). Камикадзе теряет 45% своего текущего HP.",
+        statsText: "Урон: 550% АТК",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           const hpCost = Math.floor(s.stats.hp * 0.45);
@@ -2440,8 +2322,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Неуклюжий удар медицинской сумкой (коэфф. 0.5). Наносит совсем немного Dendro-урона.',
-        statsText: "Урон: 50% АТК (множитель растёт от ЗАЩ)",
+        description: "Неуклюжий удар медицинской сумкой (коэфф. 0.5). Наносит совсем немного Dendro-урона.",
+        statsText: "Урон: 50% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 0.5, "Dendro", log, ft, pl, 1, state);
         }
@@ -2453,8 +2335,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: 2,
         target: "SingleAlly",
-        description: 'Простое лечение. Моментально восстанавливает фиксированное количество HP выбранному союзнику (база 500).',
-        statsText: "Лечение: 500 базово (+10% за уровень, +30% на C1)",
+        description: "Простое лечение. Моментально восстанавливает фиксированное количество HP выбранному союзнику (база 500).",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           if (target.stats.hp > 0) {
@@ -2471,8 +2352,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: 4,
         target: "SingleAlly",
-        description: 'Мощная доза исцеления. Восстанавливает огромное количество здоровья цели (база 1500).',
-        statsText: "Лечение: 1500 базово (+12% за уровень, +30% на C1)\nВоскрешение (C6): 10% HP",
+        description: "Мощная доза исцеления. Восстанавливает огромное количество здоровья цели (база 1500).",
         execute: (s, t, state, log, ft, pl) => {
           const target = t[0];
           if (target.stats.hp > 0 || (c >= 6 && target.stats.hp === 0)) {
@@ -2497,7 +2377,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack", 
         cost: 0, 
         target: "SingleEnemy", 
-        description: 'Физический удар киркой (коэфф. 1.0).',
+        description: "Физический удар киркой (коэфф. 1.0).",
         statsText: "Урон: 100% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           dealDamage(s, t[0], 1.0, "Physical", log, ft, pl, 1, state); 
@@ -2509,8 +2389,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1", 
         cost: 3, 
         target: "SingleEnemy", 
-        description: 'Устанавливает на врага [Ловушку]. Ловушка наноситGeo-урон (коэфф. 2.0) и отменяет ход врага, когда его ATB достигает максимума.',
-        statsText: "Ловушка: +1 стак (+2 на C1)\nУрон взрыва: 200% АТК\nЭффект: отмена хода врага", 
+        description: "Устанавливает на врага [Ловушку]. Ловушка наноситGeo-урон (коэфф. 2.0) и отменяет ход врага, когда его ATB достигает максимума.", 
         execute: (s, t, state, log, ft, pl) => { 
           const target = t[0];
           target.buffs.trapStacks = (target.buffs.trapStacks || 0) + (c >= 1 ? 2 : 1);
@@ -2524,8 +2403,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2", 
         cost: 6, 
         target: "AllEnemies", 
-        description: 'Наносит небольшой AoE Geo-урон (коэфф. 0.8) и устанавливает [Ловушку] на всех выживших врагов.',
-        statsText: "Урон: 80% АТК\nДоп. урон: 100% АТК за ловушку", 
+        description: "Наносит небольшой AoE Geo-урон (коэфф. 0.8) и устанавливает [Ловушку] на всех выживших врагов.",
+        statsText: "Урон: 80% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           t.forEach(enemy => {
             if (enemy.stats.hp > 0) {
@@ -2551,12 +2430,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('viper') || undefined,
     stats: scaleStats(1100, 220, 65, 45, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "vi_atk", name: "Змеиный укус", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Дендро урон, шанс отравить.',
-        statsText: "Урон: 100% АТК\nСтаки яда: +1 стак (+2 на C1, шанс 50%/80%)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 2, state); if(Math.random() < (c >= 1 ? 0.8 : 0.5)) t[0].buffs.poison = (t[0].buffs.poison || 0) + (c >= 1 ? 2 : 1); } },
-      { id: "vi_e", name: "Токсичное облако", type: "Skill1", cost: 3, target: "AllEnemies", description: 'Отравивает всех врагов.',
-        statsText: "Стаки яда: +2 стака всем врагам (+4 на C1)", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { e.buffs.poison = (e.buffs.poison || 0) + (c >= 1 ? 4 : 2); if(ft) ft(e.uid, 'ЯД x4', 'text-green-400'); } }); } },
-      { id: "vi_q", name: "Пир яда", type: "Skill2", cost: 5, target: "SingleEnemy", description: 'Огромный урон, зависящий от стаков яда.',
-        statsText: "Урон: 150% АТК (+120% АТК за каждый стак яда)\nИгнор ЗАЩ (C6): 30%", execute: (s, t, state, log, ft, pl) => { const p = t[0].buffs.poison || 0; dealDamage(s, t[0], 1.5 + (p * 1.2), "Dendro", log, ft, pl, 5, state, c >= 6 ? 0.3 : 0); t[0].buffs.poison = 0; } }
+      { id: "vi_atk", name: "Змеиный укус", type: "Attack", cost: 0, target: "SingleEnemy", description: "Дендро урон, шанс отравить.",
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 2, state); if(Math.random() < (c >= 1 ? 0.8 : 0.5)) t[0].buffs.poison = (t[0].buffs.poison || 0) + (c >= 1 ? 2 : 1); } },
+      { id: "vi_e", name: "Токсичное облако", type: "Skill1", cost: 3, target: "AllEnemies", description: "Отравивает всех врагов.", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { e.buffs.poison = (e.buffs.poison || 0) + (c >= 1 ? 4 : 2); if(ft) ft(e.uid, 'ЯД x4', 'text-green-400'); } }); } },
+      { id: "vi_q", name: "Пир яда", type: "Skill2", cost: 5, target: "SingleEnemy", description: "Огромный урон, зависящий от стаков яда.",
+        statsText: "Урон: 150% АТК", execute: (s, t, state, log, ft, pl) => { const p = t[0].buffs.poison || 0; dealDamage(s, t[0], 1.5 + (p * 1.2), "Dendro", log, ft, pl, 5, state, c >= 6 ? 0.3 : 0); t[0].buffs.poison = 0; } }
     ]
   }),
   spark: (uid, l, c, arts = []) => ({
@@ -2564,12 +2442,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('spark') || undefined,
     stats: scaleStats(950, 180, 55, 55, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "sp_atk", name: "Разряд", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Быстрый удар током.',
-        statsText: "Урон: 80% АТК\nПродвижение хода: 10%", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 0.8, "Electro", log, ft, pl, 1, state); s.atb = Math.min(100, s.atb + 10); } },
-      { id: "sp_e", name: "Перегрузка цепи", type: "Skill1", cost: 2, target: "Self", description: 'Увеличивает свою скорость.',
-        statsText: "Бафф: +20 СКОР", execute: (s, t, state, log, ft, pl) => { s.buffs.spd = (s.buffs.spd || 0) + 20; if(ft) ft(s.uid, '↑СКОРОСТЬ', 'text-yellow-400'); } },
-      { id: "sp_q", name: "Короткое замыкание", type: "Skill2", cost: 4, target: "SingleEnemy", description: 'Шанс мгновенно получить ход.',
-        statsText: "Урон: 200% АТК\nПродвижение хода: ~100% (Мгновенно)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 2.0, "Electro", log, ft, pl, 3, state); if(Math.random() < 0.4) s.atb = 99; } }
+      { id: "sp_atk", name: "Разряд", type: "Attack", cost: 0, target: "SingleEnemy", description: "Быстрый удар током.",
+        statsText: "Урон: 80% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 0.8, "Electro", log, ft, pl, 1, state); s.atb = Math.min(100, s.atb + 10); } },
+      { id: "sp_e", name: "Перегрузка цепи", type: "Skill1", cost: 2, target: "Self", description: "Увеличивает свою скорость.", execute: (s, t, state, log, ft, pl) => { s.buffs.spd = (s.buffs.spd || 0) + 20; if(ft) ft(s.uid, '↑СКОРОСТЬ', 'text-yellow-400'); } },
+      { id: "sp_q", name: "Короткое замыкание", type: "Skill2", cost: 4, target: "SingleEnemy", description: "Шанс мгновенно получить ход.",
+        statsText: "Урон: 200% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 2.0, "Electro", log, ft, pl, 3, state); if(Math.random() < 0.4) s.atb = 99; } }
     ]
   }),
   aegis: (uid, l, c, arts = []) => ({
@@ -2577,12 +2454,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('aegis') || undefined,
     stats: scaleStats(1400, 140, 160, 32, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "ae_atk", name: "Удар щитом", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Гео урон, зависит от защиты.',
-        statsText: "Урон: 50% АТК (множитель растёт от ЗАЩ)", execute: (s, t, state, log, ft, pl) => { const mult = 0.5 + (s.stats.def / 200); dealDamage(s, t[0], mult, "Geo", log, ft, pl, 1, state); } },
-      { id: "ae_e", name: "Непоколебимость", type: "Skill1", cost: 3, target: "AllAllies", description: 'Дает щит, зависящий от защиты.',
-        statsText: "Щит: 400% ЗАЩ (560% на C1)", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const shieldVal = (s.stats.def * 4) * (c >= 1 ? 1.4 : 1.0); a.buffs.shield = (a.buffs.shield || 0) + shieldVal; if(ft) ft(a.uid, '+ЩИТ', 'text-amber-200'); }); } },
-      { id: "ae_q", name: "Бастион", type: "Skill2", cost: 5, target: "Self", description: 'Разворачивает абсолютную защиту.',
-        statsText: "Щит: 50% HP\nБафф: +100 ЗАЩ, +50 Сопротивление", execute: (s, t, state, log, ft, pl) => { s.buffs.def = (s.buffs.def || 0) + 100; s.buffs.shield = (s.buffs.shield || 0) + (s.stats.hp * 0.5); if (c >= 6) s.buffs.res = (s.buffs.res || 0) + 50; if(ft) ft(s.uid, 'БАСТИОН', 'text-amber-400'); } }
+      { id: "ae_atk", name: "Удар щитом", type: "Attack", cost: 0, target: "SingleEnemy", description: "Гео урон, зависит от защиты.", execute: (s, t, state, log, ft, pl) => { const mult = 0.5 + (s.stats.def / 200); dealDamage(s, t[0], mult, "Geo", log, ft, pl, 1, state); } },
+      { id: "ae_e", name: "Непоколебимость", type: "Skill1", cost: 3, target: "AllAllies", description: "Дает щит, зависящий от защиты.", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const shieldVal = (s.stats.def * 4) * (c >= 1 ? 1.4 : 1.0); a.buffs.shield = (a.buffs.shield || 0) + shieldVal; if(ft) ft(a.uid, '+ЩИТ', 'text-amber-200'); }); } },
+      { id: "ae_q", name: "Бастион", type: "Skill2", cost: 5, target: "Self", description: "Разворачивает абсолютную защиту.",
+        statsText: "Щит: (Специальный)", execute: (s, t, state, log, ft, pl) => { s.buffs.def = (s.buffs.def || 0) + 100; s.buffs.shield = (s.buffs.shield || 0) + (s.stats.hp * 0.5); if (c >= 6) s.buffs.res = (s.buffs.res || 0) + 50; if(ft) ft(s.uid, 'БАСТИОН', 'text-amber-400'); } }
     ]
   }),
   blaze: (uid, l, c, arts = []) => ({
@@ -2590,12 +2465,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('blaze') || undefined,
     stats: scaleStats(1150, 240, 65, 42, l, c, arts), atb: 0, cooldowns: {}, buffs: { critStacks: 0 },
     skills: [
-      { id: "bl_atk", name: "Огненный взмах", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Пиро урон, шанс поджечь.',
+      { id: "bl_atk", name: "Огненный взмах", type: "Attack", cost: 0, target: "SingleEnemy", description: "Пиро урон, шанс поджечь.",
         statsText: "Урон: 110% АТК", execute: (s, t, state, log, ft, pl) => { if (c >= 1) s.buffs.critStacks = (s.buffs.critStacks || 0) + 1; dealDamage(s, t[0], 1.1, "Pyro", log, ft, pl, 2, state); if(Math.random() < 0.3) t[0].buffs.burn = (t[0].buffs.burn || 0) + 1; } },
-      { id: "bl_e", name: "Инферно", type: "Skill1", cost: 3, target: "AllEnemies", description: 'AoE Пиро урон, поджигает врагов.',
+      { id: "bl_e", name: "Инферно", type: "Skill1", cost: 3, target: "AllEnemies", description: "AoE Пиро урон, поджигает врагов.",
         statsText: "Урон: 80% АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { dealDamage(s, e, 0.8, "Pyro", log, ft, pl, 3, state); e.buffs.burn = (e.buffs.burn || 0) + 1; } }); } },
-      { id: "bl_q", name: "Новая звезда", type: "Skill2", cost: 6, target: "AllEnemies", description: 'Огромный взрыв Пиро энергии.',
-        statsText: "Урон: 300% АТК / 600% АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { let mult = 3.0; if (c >= 6 && e.stats.hp < e.stats.maxHp * 0.5) mult *= 2.0; dealDamage(s, e, mult, "Pyro", log, ft, pl, 1, state); } }); } }
+      { id: "bl_q", name: "Новая звезда", type: "Skill2", cost: 6, target: "AllEnemies", description: "Огромный взрыв Пиро энергии.", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { let mult = 3.0; if (c >= 6 && e.stats.hp < e.stats.maxHp * 0.5) mult *= 2.0; dealDamage(s, e, mult, "Pyro", log, ft, pl, 1, state); } }); } }
     ]
   }),
   tide: (uid, l, c, arts = []) => ({
@@ -2603,12 +2477,12 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('tide') || undefined,
     stats: scaleStats(1250, 160, 80, 38, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "ti_atk", name: "Струя воды", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Гидро урон.',
+      { id: "ti_atk", name: "Струя воды", type: "Attack", cost: 0, target: "SingleEnemy", description: "Гидро урон.",
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Hydro", log, ft, pl, 3, state); } },
-      { id: "ti_e", name: "Восстановление", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Сильное лечение и бафф.',
-        statsText: "Лечение: 300% АТК\nПродвижение хода: 10%", execute: (s, t, state, log, ft, pl) => { const heal = s.stats.atk * 3; t[0].stats.hp = Math.min(t[0].stats.maxHp, t[0].stats.hp + heal); t[0].buffs.atk = (t[0].buffs.atk || 0) + 30; if (c >= 1) t[0].atb = Math.min(100, t[0].atb + 10); if(ft) ft(t[0].uid, `+${Math.floor(heal)}`, 'text-green-400'); } },
-      { id: "ti_q", name: "Океанская молитва", type: "Skill2", cost: 6, target: "AllAllies", description: 'Лечит весь отряд и дает регенерацию.',
-        statsText: "Лечение: 200% АТК\nПродвижение хода: 10%\nБафф: +30 Сопротивление", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = s.stats.atk * 2; a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); a.buffs.regen = (a.buffs.regen || 0) + 3; if (c >= 1) a.atb = Math.min(100, a.atb + 10); if(ft) ft(a.uid, 'РЕГЕН', 'text-cyan-300'); }); if (c >= 6) { s.buffs.res = (s.buffs.res || 0) + 30; if(ft) ft(s.uid, 'C6: OCEAN', 'text-blue-300'); } } }
+      { id: "ti_e", name: "Восстановление", type: "Skill1", cost: 3, target: "SingleAlly", description: "Сильное лечение и бафф.",
+        statsText: "Лечение: 300% АТК", execute: (s, t, state, log, ft, pl) => { const heal = s.stats.atk * 3; t[0].stats.hp = Math.min(t[0].stats.maxHp, t[0].stats.hp + heal); t[0].buffs.atk = (t[0].buffs.atk || 0) + 30; if (c >= 1) t[0].atb = Math.min(100, t[0].atb + 10); if(ft) ft(t[0].uid, `+${Math.floor(heal)}`, 'text-green-400'); } },
+      { id: "ti_q", name: "Океанская молитва", type: "Skill2", cost: 6, target: "AllAllies", description: "Лечит весь отряд и дает регенерацию.",
+        statsText: "Лечение: 200% АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = s.stats.atk * 2; a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); a.buffs.regen = (a.buffs.regen || 0) + 3; if (c >= 1) a.atb = Math.min(100, a.atb + 10); if(ft) ft(a.uid, 'РЕГЕН', 'text-cyan-300'); }); if (c >= 6) { s.buffs.res = (s.buffs.res || 0) + 30; if(ft) ft(s.uid, 'C6: OCEAN', 'text-blue-300'); } } }
     ]
   }),
   nova: (uid, l, c, arts = []) => ({
@@ -2616,12 +2490,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('nova') || undefined,
     stats: scaleStats(1000, 300, 40, 48, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "no_atk", name: "Сокрушение", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Массивный физ урон.',
-        statsText: "Урон: 130% АТК\nЛечение: 8% HP (на C1)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.3, "Physical", log, ft, pl, 1, state); if (c >= 1) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + s.stats.maxHp * 0.08); if(ft) ft(s.uid, 'C1: REGEN', 'text-green-400'); } } },
-      { id: "no_e", name: "Боевой азарт", type: "Skill1", cost: 2, target: "Self", description: 'Тратит HP для баффа атаки.',
-        statsText: "Расход: 20% HP\nБафф: +100 АТК, +30 СКОР", execute: (s, t, state, log, ft, pl) => { const cost = s.stats.hp * 0.2; s.stats.hp -= cost; s.buffs.atk = (s.buffs.atk || 0) + 100; if (c >= 2) s.buffs.spd = (s.buffs.spd || 0) + 30; if(ft) ft(s.uid, 'ЯРОСТЬ', 'text-red-600'); } },
-      { id: "no_q", name: "Удар сверхновой", type: "Skill2", cost: 5, target: "SingleEnemy", description: 'Ультимативный физический удар.',
-        statsText: "Урон: 450% АТК (доп. +50% игнор. ЗАЩ на C6)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 4.5, "Physical", log, ft, pl, 1, state, c >= 6 ? 0.5 : 0); } }
+      { id: "no_atk", name: "Сокрушение", type: "Attack", cost: 0, target: "SingleEnemy", description: "Массивный физ урон.",
+        statsText: "Урон: 130% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.3, "Physical", log, ft, pl, 1, state); if (c >= 1) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + s.stats.maxHp * 0.08); if(ft) ft(s.uid, 'C1: REGEN', 'text-green-400'); } } },
+      { id: "no_e", name: "Боевой азарт", type: "Skill1", cost: 2, target: "Self", description: "Тратит HP для баффа атаки.", execute: (s, t, state, log, ft, pl) => { const cost = s.stats.hp * 0.2; s.stats.hp -= cost; s.buffs.atk = (s.buffs.atk || 0) + 100; if (c >= 2) s.buffs.spd = (s.buffs.spd || 0) + 30; if(ft) ft(s.uid, 'ЯРОСТЬ', 'text-red-600'); } },
+      { id: "no_q", name: "Удар сверхновой", type: "Skill2", cost: 5, target: "SingleEnemy", description: "Ультимативный физический удар.",
+        statsText: "Урон: 450% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 4.5, "Physical", log, ft, pl, 1, state, c >= 6 ? 0.5 : 0); } }
     ]
   }),
   glacier: (uid, l, c, arts = []) => ({
@@ -2629,12 +2502,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('glacier') || undefined,
     stats: scaleStats(1100, 200, 75, 40, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "gl_atk", name: "Осколок льда", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Крио урон.',
-        statsText: "Урон: 100% АТК (множитель растёт от ЗАЩ)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.1, "Cryo", log, ft, pl, 2, state); } },
-      { id: "gl_e", name: "Обморожение", type: "Skill1", cost: 3, target: "SingleEnemy", description: 'Замораживает врага (пропуск хода).',
-        statsText: "Урон: 150% АТК (множитель растёт от ЗАЩ)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.5, "Cryo", log, ft, pl, 1, state); t[0].buffs.frozen = 1; t[0].atb = 0; if(ft) ft(t[0].uid, 'ЗАМОРОЗКА', 'text-cyan-400'); } },
-      { id: "gl_q", name: "Ледниковый период", type: "Skill2", cost: 6, target: "AllEnemies", description: 'AoE Крио урон, шанс заморозить всех.',
-        statsText: "Урон: 200% АТК (множитель растёт от ЗАЩ)\nШанс заморозить: 30%", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { let mult = 2.0; if (c >= 6 && e.aura === "Cryo") mult = 3.0; dealDamage(s, e, mult, "Cryo", log, ft, pl, 4, state); if(Math.random() < 0.3) e.buffs.frozen = 1; } }); } }
+      { id: "gl_atk", name: "Осколок льда", type: "Attack", cost: 0, target: "SingleEnemy", description: "Крио урон.",
+        statsText: "Урон: 110% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.1, "Cryo", log, ft, pl, 2, state); } },
+      { id: "gl_e", name: "Обморожение", type: "Skill1", cost: 3, target: "SingleEnemy", description: "Замораживает врага (пропуск хода).",
+        statsText: "Урон: 150% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.5, "Cryo", log, ft, pl, 1, state); t[0].buffs.frozen = 1; t[0].atb = 0; if(ft) ft(t[0].uid, 'ЗАМОРОЗКА', 'text-cyan-400'); } },
+      { id: "gl_q", name: "Ледниковый период", type: "Skill2", cost: 6, target: "AllEnemies", description: "AoE Крио урон, шанс заморозить всех.", execute: (s, t, state, log, ft, pl) => { t.forEach(e => { if(e.stats.hp > 0) { let mult = 2.0; if (c >= 6 && e.aura === "Cryo") mult = 3.0; dealDamage(s, e, mult, "Cryo", log, ft, pl, 4, state); if(Math.random() < 0.3) e.buffs.frozen = 1; } }); } }
     ]
   }),
   pulse: (uid, l, c, arts = []) => ({
@@ -2642,12 +2514,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('pulse') || undefined,
     stats: scaleStats(1050, 170, 70, 50, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "pu_atk", name: "Импульс", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Электро урон, дает ATB.',
-        statsText: "Урон: 90% АТК / 120% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { let mult = 0.9; if (c >= 6 && s.stats.hp > s.stats.maxHp * 0.8) mult = 1.2; dealDamage(s, t[0], mult, "Electro", log, ft, pl, 2, state); s.atb += 15; } },
-      { id: "pu_e", name: "Подзарядка", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Дает 50 ATB союзнику.',
-        statsText: "Продвижение хода: 50%", execute: (s, t, state, log, ft, pl) => { t[0].atb = Math.min(100, t[0].atb + 50); if(ft) ft(t[0].uid, 'ATB +50', 'text-yellow-400'); } },
-      { id: "pu_q", name: "Тотальный разряд", type: "Skill2", cost: 5, target: "AllAllies", description: 'Дает ATB всему отряду.',
-        statsText: "Продвижение хода: 30%", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { if(a.stats.hp > 0) a.atb = Math.min(100, a.atb + 30); }); } }
+      { id: "pu_atk", name: "Импульс", type: "Attack", cost: 0, target: "SingleEnemy", description: "Электро урон, дает ATB.", execute: (s, t, state, log, ft, pl) => { let mult = 0.9; if (c >= 6 && s.stats.hp > s.stats.maxHp * 0.8) mult = 1.2; dealDamage(s, t[0], mult, "Electro", log, ft, pl, 2, state); s.atb += 15; } },
+      { id: "pu_e", name: "Подзарядка", type: "Skill1", cost: 3, target: "SingleAlly", description: "Дает 50 ATB союзнику.", execute: (s, t, state, log, ft, pl) => { t[0].atb = Math.min(100, t[0].atb + 50); if(ft) ft(t[0].uid, 'ATB +50', 'text-yellow-400'); } },
+      { id: "pu_q", name: "Тотальный разряд", type: "Skill2", cost: 5, target: "AllAllies", description: "Дает ATB всему отряду.", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { if(a.stats.hp > 0) a.atb = Math.min(100, a.atb + 30); }); } }
     ]
   }),
   gaia: (uid, l, c, arts = []) => ({
@@ -2655,12 +2524,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     image: getCharSplash('gaia') || undefined,
     stats: scaleStats(1300, 150, 90, 35, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
-      { id: "ga_atk", name: "Лоза", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Дендро урон.',
+      { id: "ga_atk", name: "Лоза", type: "Attack", cost: 0, target: "SingleEnemy", description: "Дендро урон.",
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 2, state); } },
-      { id: "ga_e", name: "Рост", type: "Skill1", cost: 3, target: "AllAllies", description: 'Лечит отряд в зависимости от макс HP.',
+      { id: "ga_e", name: "Рост", type: "Skill1", cost: 3, target: "AllAllies", description: "Лечит отряд в зависимости от макс HP.",
         statsText: "Лечение: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = s.stats.maxHp * 0.15; a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); }); } },
-      { id: "ga_q", name: "Дух леса", type: "Skill2", cost: 5, target: "AllAllies", description: 'Огромное лечение.',
-        statsText: "Лечение: 30% HP (+5% HP на C1)", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + s.stats.maxHp * 0.3); if (c >= 1) { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + a.stats.maxHp * 0.05); if(ft) ft(a.uid, '+5% HP', 'text-green-400'); } }); } }
+      { id: "ga_q", name: "Дух леса", type: "Skill2", cost: 5, target: "AllAllies", description: "Огромное лечение.", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + s.stats.maxHp * 0.3); if (c >= 1) { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + a.stats.maxHp * 0.05); if(ft) ft(a.uid, '+5% HP', 'text-green-400'); } }); } }
     ]
   }),
   fenris: (uid, l, c, arts = []) => ({
@@ -2674,8 +2542,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack", 
         cost: 0, 
         target: "SingleEnemy", 
-        description: 'Двойная атака: выстрел Охотника (Дендро), затем укус Зверя (Физ). Продлевает статусы врага.',
-        statsText: "Урон: 70% АТК + 60% АТК\nДебафф: -15% Сопротивление", 
+        description: "Двойная атака: выстрел Охотника (Дендро), затем укус Зверя (Физ). Продлевает статусы врага.",
+        statsText: "Урон: 70% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           const target = t[0];
           // Part 1: Hunter
@@ -2713,8 +2581,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1", 
         cost: 3, 
         target: "SingleEnemy", 
-        description: 'Смена режима зверя. Агрессия: мощный удар и кровотечение. Защита: щит для Охотника.',
-        statsText: "Урон (Атака): 180% АТК\nЩит (Защита): 20% HP", 
+        description: "Смена режима зверя. Агрессия: мощный удар и кровотечение. Защита: щит для Охотника.",
+        statsText: "Урон: 180% АТК\nЩит: (Специальный)", 
         execute: (s, t, state, log, ft, pl) => { 
           const target = t[0];
           const mode = s.buffs.beastMode || 'Aggressive';
@@ -2744,8 +2612,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2", 
         cost: 6, 
         target: "AllEnemies", 
-        description: 'Охотник выпускает стрелы, Зверь разрывает всех. Наносит огромный Dendro и Physical урон.',
-        statsText: "Урон: 120% АТК + 150% АТК", 
+        description: "Охотник выпускает стрелы, Зверь разрывает всех. Наносит огромный Dendro и Physical урон.",
+        statsText: "Урон: 120% АТК", 
         execute: (s, t, state, log, ft, pl) => { 
           t.forEach(enemy => { 
             if (enemy.stats.hp > 0) {
@@ -2774,17 +2642,16 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack", 
         cost: 0, 
         target: "SingleEnemy", 
-        description: 'Электро урон (1.0x). Если на цели нет дебаффов, урон х1.5. При убийстве цели без дебаффов продвигает союзников на 15 ATB.',
-        statsText: "Урон: 100% АТК / 150% АТК\nПродвижение хода: 15%", 
+        description: "Электро урон (1.0x). Если на цели нет дебаффов, урон х1.5. При убийстве цели без дебаффов продвигает союзников на 15 ATB.", 
         execute: (s, t, state, log, ft, pl) => { 
           const target = t[0];
           const hasDebuff = (target.buffs.thorns ?? 0) > 0 || (target.buffs.poison ?? 0) > 0 || (target.buffs.frozen ?? 0) > 0 || (target.buffs.burn ?? 0) > 0 || (target.buffs.mute ?? 0) > 0 || (target.buffs.resDown ?? 0) > 0 || (target.buffs.bleed ?? 0) > 0 || (target.buffs.duelMark ?? 0) > 0 || (target.buffs.spd ?? 0) < 0 || (target.buffs.def ?? 0) < 0 || (target.buffs.atk ?? 0) < 0;
           const mult = hasDebuff ? 1.0 : 1.5;
-          if (pl) pl(target.uid, "raven_throw");
+          if (pl) pl(target.uid, "raven_shadow");
           dealDamage(s, target, mult, "Electro", log, ft, pl, 2, state);
           if (target.stats.hp <= 0 && !hasDebuff && state) {
              state.playerParty.forEach(a => { if(a.uid !== s.uid && a.stats.hp > 0) a.atb = Math.min(100, a.atb + 15); });
-             if (ft) ft(s.uid, "АТБ +15", "text-indigo-400 font-bold");
+             if (ft) ft(s.uid, "АТБ +15", "text-indigo-400");
           }
         } 
       },
@@ -2794,13 +2661,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1", 
         cost: 2, 
         target: "AllEnemies", 
-        description: 'AoE Электро урон. Враги с дебаффами игнорируются (0 урона). Базовый урон (1.2x) умножается на (Всего живых врагов / Врагов без дебаффов). При убийстве врага без дебаффов союзники получают 20 ATB.',
-        statsText: "Урон: 120% АТК\nПродвижение хода: 20%", 
+        description: "AoE Электро урон. Враги с дебаффами игнорируются (0 урона). Базовый урон (1.2x) умножается на (Всего живых врагов / Врагов без дебаффов). При убийстве врага без дебаффов союзники получают 20 ATB.", 
         execute: (s, t, state, log, ft, pl) => { 
-          if (pl) {
-            pl(s.uid, "raven_sector");
-            pl(s.uid, "shake");
-          }
+          if (pl) pl(s.uid, "raven_shadow");
           const aliveEnemies = t.filter(e => e.stats.hp > 0);
           const totalAlive = aliveEnemies.length;
           if (totalAlive === 0) return;
@@ -2811,7 +2674,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           let kills = 0;
 
           if (noDebuffCount === 0) {
-            if (ft) ft(s.uid, "Изоляция целей...", "text-indigo-400 font-semibold");
+            if (ft) ft(s.uid, "Изоляция целей...", "text-indigo-500");
             return;
           }
 
@@ -2838,13 +2701,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2", 
         cost: 6, 
         target: "AllEnemies", 
-        description: 'Огромный AoE Электро урон (2.5x). Враги с дебаффами игнорируются, но за каждого проигнорированного врага Крит. урон Рейвена повышается на 20%. Убивая цели, дает 30 ATB союзникам.',
-        statsText: "Урон: 250% АТК / 400% АТК\nПродвижение хода: 30%", 
+        description: "Огромный AoE Электро урон (2.5x). Враги с дебаффами игнорируются, но за каждого проигнорированного врага Крит. урон Рейвена повышается на 20%. Убивая цели, дает 30 ATB союзникам.", 
         execute: (s, t, state, log, ft, pl) => { 
-          if (pl) {
-            pl(s.uid, "raven_dance");
-            pl(s.uid, "shake");
-          }
+          if (pl) pl(s.uid, "raven_shadow");
           const aliveEnemies = t.filter(e => e.stats.hp > 0);
           let ignoredCount = 0;
           let kills = 0;
@@ -2888,8 +2747,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Электро урон (0.6x ATK + 15% от макс. HP Вольты). Если есть ≥2 стака Вольтажа, тратит 2 стака для лечения союзника с наименьшим HP на 10% от макс. HP Вольты.',
-        statsText: "Урон: 60% АТК + 15% HP\nЛечение: 10% HP (при 2 Вольтаже)",
+        description: "Электро урон (0.6x ATK + 15% от макс. HP Вольты). Если есть ≥2 стака Вольтажа, тратит 2 стака для лечения союзника с наименьшим HP на 10% от макс. HP Вольты.",
         execute: (s, t, state, log, ft, pl) => {
           let baseHpDmg = s.stats.maxHp * 0.15;
           if (c >= 6) baseHpDmg += s.stats.maxHp * 0.10;
@@ -2924,8 +2782,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill1",
         cost: c >= 5 ? 2 : 3,
         target: "AllAllies",
-        description: 'Накладывает метку «Проводящий контур» на всех союзников на 3 хода (-15% входящего урона, накапливает Вольтаж при атаках и уроне). Мгновенно лечит команду от макс. HP Вольты и заряда.',
-        statsText: "Лечение: от 6% HP (зависит от Вольтажа)\nДлительность: 3 хода\nБафф: +15 СКОР",
+        description: "Накладывает метку «Проводящий контур» на всех союзников на 3 хода (-15% входящего урона, накапливает Вольтаж при атаках и уроне). Мгновенно лечит команду от макс. HP Вольты и заряда.",
         execute: (s, t, state, log, ft, pl) => {
           const currentV = s.buffs.voltage || 0;
           let healBasePct = 0.06 + (currentV * 0.015);
@@ -2961,8 +2818,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         type: "Skill2",
         cost: c >= 5 ? 4 : 5,
         target: "AllAllies",
-        description: 'Разряжает весь накопленный Вольтаж! Массово исцеляет отряд (15% HP + 3.5% за каждый стак Вольтажа), накладывает Щит Сверхпроводимости и заливает ATB. При ≥6 стаках поражает всех врагов током.',
-        statsText: "Лечение: от 15% HP (зависит от Вольтажа)\nЩит: от 10% HP (зависит от Вольтажа)",
+        description: "Разряжает весь накопленный Вольтаж! Массово исцеляет отряд (15% HP + 3.5% за каждый стак Вольтажа), накладывает Щит Сверхпроводимости и заливает ATB. При ≥6 стаках поражает всех врагов током.",
         execute: (s, t, state, log, ft, pl) => {
           const currentV = s.buffs.voltage || 0;
           let healPct = 0.15 + (currentV * 0.035);
@@ -3073,7 +2929,7 @@ export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbys
     cooldowns: {}, 
     buffs: {},
     skills: [
-      { id: "e_atk", name: "Пакетная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удар данными.', execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], isBoss ? 2.0 : 1.2, "Physical", log, ft, pl, isBoss ? 4 : 1, state); } }
+      { id: "e_atk", name: "Пакетная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: "Удар данными.", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], isBoss ? 2.0 : 1.2, "Physical", log, ft, pl, isBoss ? 4 : 1, state); } }
     ]
   };
 };
@@ -3211,7 +3067,8 @@ export const createGlitchSectorEnemy = (sectorId: number): Combatant => {
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Наносит урон и может снизить атаку цели.',
+        description: "Наносит урон и может снизить атаку цели.",
+        statsText: "Урон: 120% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 1.2, s.element, log, ft, pl, 1, state);
           if (Math.random() > 0.7) {
@@ -3226,8 +3083,8 @@ export const createGlitchSectorEnemy = (sectorId: number): Combatant => {
         type: "Skill1",
         cost: 3,
         target: "AllEnemies",
-        description: 'AoE урон, накладывающий случайный дебафф.',
-        statsText: "Дебафф: -15 ЗАЩ, -15 СКОР",
+        description: "AoE урон, накладывающий случайный дебафф.",
+        statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (pl) pl(s.uid, "ultimate_aoe");
           t.forEach(enemy => {
@@ -3285,7 +3142,8 @@ export const createTrialEnemy = (trialId: number): Combatant => {
         type: "Attack",
         cost: 0,
         target: "SingleEnemy",
-        description: 'Наносит урон и восстанавливает энергию босса.',
+        description: "Наносит урон и восстанавливает энергию босса.",
+        statsText: "Урон: 150% АТК",
         execute: (s, t, state, log, ft, pl) => {
           dealDamage(s, t[0], 1.5, s.element, log, ft, pl, 1, state);
         }
@@ -3296,7 +3154,8 @@ export const createTrialEnemy = (trialId: number): Combatant => {
         type: "Skill2",
         cost: 6,
         target: "AllEnemies",
-        description: 'Огромный AoE урон.',
+        description: "Огромный AoE урон.",
+        statsText: "Урон: 250% АТК",
         execute: (s, t, state, log, ft, pl) => {
           if (pl) pl(s.uid, "ultimate_aoe");
           t.forEach(e => {
@@ -3320,7 +3179,7 @@ export const createShadowDrone = (): Combatant => {
   drone.stats.def = 100;
   drone.image = '/src/assets/images/shadow_drone_enemy_1788132867651.jpg';
   drone.color = "bg-slate-800";
-  drone.skills = [{ id: "dr_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Урон.',
+  drone.skills = [{ id: "dr_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: "Урон.",
         statsText: "Урон: 80% АТК", execute: (ds, dt, ds_state, dlog, dft, dpl) => { dealDamage(ds, dt[0], 0.8, "Physical", dlog, dft, dpl, 1, ds_state); } }];
   return drone;
 };
@@ -3337,7 +3196,7 @@ export const createIceMonolith = (): Combatant => {
   monolith.stats.def = 200;
   monolith.image = '/src/assets/images/ice_monolith_enemy_1788132882968.jpg';
   monolith.color = "bg-cyan-900 border-cyan-400";
-  monolith.skills = [{ id: "im_atk", name: "Морозный Импульс", type: "Attack", cost: 0, target: "AllEnemies", description: 'Слабый AoE Крио урон.',
+  monolith.skills = [{ id: "im_atk", name: "Морозный Импульс", type: "Attack", cost: 0, target: "AllEnemies", description: "Слабый AoE Крио урон.",
         statsText: "Урон: 40% АТК", execute: (ds, dt, ds_state, dlog, dft, dpl) => { dt.forEach(e => { if(e.stats.hp > 0) dealDamage(ds, e, 0.4, "Cryo", dlog, dft, dpl, 1, ds_state); }); } }];
   return monolith;
 };
@@ -3380,7 +3239,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Физ урон (1.2x). Призывает Теневого Дрона, если суммарно на поле меньше 4 врагов.',
+          description: "Наносит Физ урон (1.2x). Призывает Теневого Дрона, если суммарно на поле меньше 4 врагов.",
         statsText: "Урон: 120% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             dealDamage(s, t[0], 1.2, "Physical", log, ft, pl, 2, state);
@@ -3402,7 +3261,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Физ урон (1.5x) по всем врагам. Если у босса меньше 70% здоровья, призывает ещё одного дрона.',
+          description: "AoE Физ урон (1.5x) по всем врагам. Если у босса меньше 70% здоровья, призывает ещё одного дрона.",
         statsText: "Урон: 150% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "Physical");
@@ -3427,8 +3286,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Абсолютная Тьма. Босс поглощает всех живых дронов. Урон (3.0x) увеличивается на 1.5x за каждого поглощенного дрона. Если дронов нет, вместо атаки призывает сразу 3-х новых.',
-        statsText: "Урон: 300% АТК",
+          description: "Абсолютная Тьма. Босс поглощает всех живых дронов. Урон (3.0x) увеличивается на 1.5x за каждого поглощенного дрона. Если дронов нет, вместо атаки призывает сразу 3-х новых.",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (state && state.enemyParty) {
               const drones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp > 0);
@@ -3482,7 +3340,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит серию из 4 Электро ударов. Быстро заряжает Вольтаж Вольты.',
+          description: "Наносит серию из 4 Электро ударов. Быстро заряжает Вольтаж Вольты.",
         statsText: "Урон: 150% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             dealDamage(s, t[0], 1.5, "Electro", log, ft, pl, 4, state);
@@ -3494,7 +3352,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'Серия из 3 AoE Электро ударов (быстро заряжает Вольтаж).',
+          description: "Серия из 3 AoE Электро ударов (быстро заряжает Вольтаж).",
         statsText: "Урон: 120% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "Electro");
@@ -3511,7 +3369,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill2" as const,
           cost: 5,
           target: "AllEnemies" as const,
-          description: 'Огромный Электро урон (2.5x, 5 ударов). Идеально поглощается Цепью Проводимости Вольты.',
+          description: "Огромный Электро урон (2.5x, 5 ударов). Идеально поглощается Цепью Проводимости Вольты.",
         statsText: "Урон: 250% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
@@ -3544,7 +3402,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Крио урон (1.5x).',
+          description: "Наносит Крио урон (1.5x).",
         statsText: "Урон: 150% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             dealDamage(s, t[0], 1.5, "Cryo", log, ft, pl, 1, state);
@@ -3556,7 +3414,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Крио урон (1.2x).',
+          description: "AoE Крио урон (1.2x).",
         statsText: "Урон: 120% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             t.forEach(enemy => {
@@ -3570,7 +3428,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Воскрешает уничтоженные Ледяные Монолиты. Затем наносит массивный Крио урон (3.0x).',
+          description: "Воскрешает уничтоженные Ледяные Монолиты. Затем наносит массивный Крио урон (3.0x).",
         statsText: "Урон: 300% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (state && state.enemyParty) {

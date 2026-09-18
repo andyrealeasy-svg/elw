@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Combatant, BattleState, TargetType, Skill } from '../types';
-import { Shovel, Shield, Volume2, VolumeX, Sword, Zap, Sparkles, Target, Info, Activity } from 'lucide-react';
+import { Shovel, Shield, Volume2, VolumeX, Sword, Zap, Sparkles, Target, Info, Activity, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { EffectsOverlay, EffectsOverlayRef } from './EffectsOverlay';
-import { motion } from 'motion/react';
+import { WhiteFieldOverlay } from './WhiteFieldOverlay';
+import { BattleArenaOverlays } from './battle/BattleArenaOverlays';
+import { UnitCard } from './battle/UnitCard';
+import { motion, AnimatePresence } from 'motion/react';
 import { dealDamage } from '../data';
 import { playNormalAttackSound, playElementalSkillSound, playUltimateBurstSound, playVictorySound, getSoundMuteState, setSoundMuteState } from '../lib/sound';
 
@@ -13,12 +16,13 @@ interface BattleScreenProps {
   enemyWaves: Combatant[][]; // Changed from enemyParty
   onDefeat: (stats: Record<string, number>) => void;
   onVictory: (stats: Record<string, number>) => void;
+  onExit?: () => void;
   onSkillUse?: () => void;
   battleBuff?: string;
   stageTitle?: string;
 }
 
-export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, onDefeat, onVictory, onSkillUse, battleBuff, stageTitle }: BattleScreenProps) {
+export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, onDefeat, onVictory, onExit, onSkillUse, battleBuff, stageTitle }: BattleScreenProps) {
   const [players, setPlayers] = useState<Combatant[]>(() => {
     if (!battleBuff) return initialPlayers;
     return initialPlayers.map(p => {
@@ -33,6 +37,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
   const [enemies, setEnemies] = useState<Combatant[]>(enemyWaves[0]);
   const [muted, setMuted] = useState(getSoundMuteState());
   const [isAutoBattle, setIsAutoBattle] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const damageDealtRef = useRef<Record<string, number>>({});
   const battleStartTimeRef = useRef<number>(Date.now());
@@ -43,16 +48,19 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     setSoundMuteState(newState);
   };
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<string[]>(["Бой начался!"]);
+  const logsRef = useRef<string[]>(["Бой начался!"]);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   
-  
   const [attackingUnitId, setAttackingUnitId] = useState<string | null>(null);
-  const [shake, setShake] = useState(false);
+  const arenaRef = useRef<HTMLDivElement>(null);
 
   const triggerShake = React.useCallback(() => {
-    setShake(true);
-    setTimeout(() => setShake(false), 300);
+    const el = arenaRef.current;
+    if (el) {
+      el.classList.remove('anim-screen-shake');
+      void el.offsetWidth;
+      el.classList.add('anim-screen-shake');
+    }
   }, []);
 
   // We use a ref for state to avoid dependency cycles in our game loop interval
@@ -68,6 +76,10 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     lastChecksum: 0,
     isAutoBattle: false
   });
+
+  const registerEffectsRef = React.useCallback((uid: string, el: any) => {
+    if (el) stateRef.current.effectsRefs[uid] = el;
+  }, []);
 
   const addFloatText = React.useCallback((targetUid: string, text: string, color: string) => {
     if (stateRef.current.effectsRefs[targetUid]) {
@@ -88,18 +100,19 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       players, 
       enemies, 
       activeUnitId, 
-      isRunning: !activeUnitId || isAutoBattle, 
+      isRunning: (!activeUnitId || isAutoBattle) && !showExitModal, 
       addFloatText, 
       playEffect,
       damageDealt: damageDealtRef.current,
       lastChecksum: 0,
       isAutoBattle
     };
-  }, [players, enemies, activeUnitId, addFloatText, playEffect, isAutoBattle]);
+  }, [players, enemies, activeUnitId, addFloatText, playEffect, isAutoBattle, showExitModal]);
 
-  const addLog = (msg: string) => {
-    setLogs(prev => [...prev, msg].slice(-10)); // keep last 10 logs
-  };
+  const addLog = React.useCallback((msg: string) => {
+    logsRef.current.push(msg);
+    if (logsRef.current.length > 25) logsRef.current.shift();
+  }, []);
 
   // Game Loop
   useEffect(() => {
@@ -162,12 +175,27 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         if (p.atb >= 100 && !hasActive) {
           hasActive = true;
           setActiveUnitId(p.id);
+          
+          // --- Farina Turn Start Logic ---
+          const farina = currPlayers.find(f => f.id === 'farina');
+          if (farina && farina.buffs.whiteField && farina.buffs.whiteField > 0 && farina.stats.hp > 0) {
+            const aliveEnemies = newEnemies.filter(e => e.stats.hp > 0);
+            if (aliveEnemies.length > 0) {
+              const targetEnemy = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+              const fakeState = { playerParty: currPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: p, logs: [], damageDealt: damageDealtRef.current, lastChecksum: 0 };
+              const isCryo = targetEnemy.aura === 'Cryo' || targetEnemy.buffs.frozen;
+              const mult = isCryo ? 0.8 : 0.4;
+              dealDamage(farina, targetEnemy, mult, "Cryo", addLog, stateRef.current.addFloatText, stateRef.current.playEffect, 1, fakeState);
+              farina.buffs.whiteField--; // Decrement duration. Wait, maybe duration should be decremented only on Farina's own turn start? The skill says "Пока активно «Белое поле»... на 2 хода". Usually buffs decrement on the caster's turn start. So we won't decrement here, we let the normal turn logic decrement it when Farina moves.
+            }
+          }
+
           if (stateRef.current.isAutoBattle) {
             aiPlayerAction = p;
           }
           return p;
         } else if (p.atb < 100) {
-          return { ...p, atb: Math.min(100, p.atb + p.stats.spd * 0.05) };
+          return { ...p, atb: Math.min(100, p.atb + p.stats.spd * 0.0625) };
         }
         return p;
       });
@@ -214,6 +242,17 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
             Object.keys(p.cooldowns).forEach(k => {
                if (k !== skill.id && p.cooldowns[k] > 0) p.cooldowns[k]--;
             });
+
+            if (p.id === 'farina' && p.buffs.whiteField && p.buffs.whiteField > 0) {
+               p.buffs.whiteField--;
+               if (p.buffs.whiteField === 0) {
+                  addLog(`Действие «Белого поля» рассеялось.`);
+               }
+            }
+
+            if (p.buffs.conductionCircuit && p.buffs.conductionCircuit > 0) {
+               p.buffs.conductionCircuit--;
+            }
 
             p.atb = 0;
             setActiveUnitId(null);
@@ -279,6 +318,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                modifiedE.buffs.critOvercool--;
             }
 
+            if (modifiedE.buffs.snowDust && modifiedE.buffs.snowDust > 0) {
+               modifiedE.buffs.snowDust--;
+               if (modifiedE.buffs.snowDust === 0 && stateRef.current.addFloatText) {
+                  stateRef.current.addFloatText(modifiedE.uid, "Пыль рассеялась", "text-cyan-200/80 text-xs font-bold");
+               }
+            }
+
             // Pick random alive player
             const alivePlayers = newPlayers.filter(p => p.stats.hp > 0);
             const target = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
@@ -297,7 +343,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                playNormalAttackSound();
             }
           } else {
-             modifiedE.atb = Math.min(100, modifiedE.atb + modifiedE.stats.spd * 0.05);
+             modifiedE.atb = Math.min(100, modifiedE.atb + modifiedE.stats.spd * 0.0625);
           }
           return modifiedE;
         });
@@ -306,7 +352,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       setPlayers(newPlayers);
       setEnemies(newEnemies);
       
-    }, 100); // 10 ticks per second
+    }, 125); // 8 ticks per second, throttled for smooth 60fps rendering
 
     return () => clearInterval(tick);
   }, [onDefeat, onVictory]);
@@ -315,7 +361,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     setSelectedSkill(skill);
   };
 
-  const handleTargetSelect = (target: Combatant, isPlayerParty: boolean) => {
+  const handleTargetSelect = React.useCallback((target: Combatant, isPlayerParty: boolean) => {
     if (!selectedSkill || !activeUnitId) return;
     const activeUnit = players.find(p => p.id === activeUnitId);
     if (!activeUnit) return;
@@ -346,6 +392,15 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       playElementalSkillSound();
     } else {
       playUltimateBurstSound();
+      if (activeUnit.buffs && activeUnit.buffs.noblesse4pc && !activeUnit.isEnemy) {
+        players.forEach(p => {
+          if (p.stats.hp > 0) {
+            p.buffs.atk = (p.buffs.atk || 0) + Math.floor(p.stats.atk * 0.20);
+            addFloatText(p.uid, "+20% АТК (Знать)", "text-amber-300 font-bold text-xs");
+          }
+        });
+        addLog(`${activeUnit.name} активирует эффект «Церемонии Древней Знати» (+20% АТК отряду)!`);
+      }
     }
 
     if (selectedSkill.type !== "Attack" && onSkillUse) {
@@ -364,6 +419,17 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
        }
     });
 
+    if (activeUnit.id === 'farina' && activeUnit.buffs.whiteField && activeUnit.buffs.whiteField > 0) {
+       activeUnit.buffs.whiteField--;
+       if (activeUnit.buffs.whiteField === 0) {
+          addLog(`Действие «Белого поля» рассеялось.`);
+       }
+    }
+
+    if (activeUnit.buffs.conductionCircuit && activeUnit.buffs.conductionCircuit > 0) {
+       activeUnit.buffs.conductionCircuit--;
+    }
+
     // Reset ATB and clear active state
     activeUnit.atb = 0;
     
@@ -373,186 +439,72 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     
     setSelectedSkill(null);
     setActiveUnitId(null);
-  };
+  }, [selectedSkill, activeUnitId, players, enemies, addLog, addFloatText, playEffect, onSkillUse]);
 
-  const renderUnit = (unit: Combatant, isPlayer: boolean) => {
-    const isActive = unit.id === activeUnitId;
-    const isAttacking = unit.uid === attackingUnitId;
-    const isTargetable = selectedSkill && (
-      (selectedSkill.target === "SingleEnemy" && !isPlayer) ||
-      (selectedSkill.target === "AllEnemies" && !isPlayer) ||
-      (selectedSkill.target === "SingleAlly" && isPlayer) ||
-      (selectedSkill.target === "AllAllies" && isPlayer) ||
-      (selectedSkill.target === "Self" && isActive)
-    );
-    const isDead = unit.stats.hp <= 0;
-    const hpPercent = (unit.stats.hp / unit.stats.maxHp) * 100;
+  const hasRavenInParty = players.some(p => p.id === 'raven' && p.stats.hp > 0);
 
-    return (
-      <motion.div 
-        key={unit.uid}
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ 
-          opacity: 1, 
-          scale: isActive ? 1.1 : 1, 
-          y: isAttacking ? (isPlayer ? -40 : 40) : (isActive ? -8 : 0),
-          x: isAttacking ? (isPlayer ? 20 : -20) : 0,
-          rotate: isAttacking ? (isPlayer ? 5 : -5) : 0,
-          zIndex: isAttacking || isActive ? 50 : 1
-        }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 400, 
-          damping: 25 
-        }}
-        onClick={() => !isDead && handleTargetSelect(unit, isPlayer)}
-        className={cn(
-          "relative flex flex-col p-0 rounded-xl sm:rounded-2xl border-2 cursor-pointer flex-1 min-w-[70px] sm:min-w-[80px] max-w-[95px] sm:max-w-[120px] shadow-lg group bg-[#0a0a0a]",
-          unit.color,
-          isActive ? "ring-2 sm:ring-4 ring-yellow-400 ring-offset-2 sm:ring-offset-4 ring-offset-gray-950 border-white shadow-md" : "border-white/10 opacity-90",
-          isDead ? "opacity-30 grayscale cursor-not-allowed contrast-75 brightness-50" : "hover:scale-105 hover:opacity-100",
-          isTargetable && !isDead ? "animate-pulse cursor-crosshair border-white ring-2 ring-white ring-offset-2 ring-offset-gray-900" : ""
-        )}
-      >
-        {/* Upper Splashart Wrapper */}
-        <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-[#111111]/60 flex-shrink-0">
-          {unit.image ? (
-            <img 
-              src={unit.image} 
-              alt={unit.name} 
-              className={cn(
-                "w-full h-full object-cover scale-105 group-hover:scale-120 transition-transform duration-700 opacity-95 group-hover:opacity-100", 
-                unit.name.includes("БОСС") && "brightness-125 contrast-125"
-              )} 
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl bg-[#1a1a1a]">
-              ⚔️
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/40 via-transparent to-transparent" />
-          {unit.name.includes("БОСС") && <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay animate-pulse" />}
-
-          {/* Buff Icons & Aura inside Splashart Wrapper for clean layout */}
-          <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end z-30">
-             
-               {unit.aura && (
-                  <motion.div 
-                    initial={{ scale: 0 }} animate={{ scale: 1 }} 
-                    className={cn(
-                      "w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-[8px] sm:text-[10px] text-white font-black rounded border border-white/40 uppercase shadow-lg",
-                      unit.aura === "Hydro" ? "bg-blue-600" :
-                      unit.aura === "Pyro" ? "bg-red-600" :
-                      unit.aura === "Dendro" ? "bg-green-600" :
-                      unit.aura === "Electro" ? "bg-purple-600" :
-                      unit.aura === "Cryo" ? "bg-cyan-500" :
-                      unit.aura === "Geo" ? "bg-orange-600" : "bg-gray-500"
-                    )}
-                  >
-                    {unit.aura.substring(0, 1)}
-                  </motion.div>
-               )}
-             
-             <div className="flex gap-0.5 flex-wrap justify-end max-w-[40px]">
-               {unit.buffs.duelMark > 0 && <div className="absolute -top-3 sm:-top-5 -right-3 text-lg sm:text-2xl  animate-bounce font-black text-red-500 z-50">🎯</div>}
-               {unit.buffs.shield > 0 && <Shield className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-300 shadow-sm" />}
-               {unit.buffs.puppets > 0 && <div className="text-[7px] bg-red-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🎭{unit.buffs.puppets}</div>}
-               {unit.buffs.frenzyStacks > 0 && <div className="text-[7px] bg-amber-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">🔥{unit.buffs.frenzyStacks}</div>}
-               {unit.buffs.joyStacks > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-white/20 font-bold">✨{unit.buffs.joyStacks}</div>}
-               {unit.buffs.thorns > 0 && <div className="text-[7px] bg-emerald-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🌿{unit.buffs.thorns}</div>}
-               {unit.buffs.roseEmbers > 0 && <div className="text-[7px] bg-rose-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🌹{unit.buffs.roseEmbers}</div>}
-               {unit.buffs.trapStacks > 0 && <div className="text-[7px] bg-orange-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">💣{unit.buffs.trapStacks}</div>}
-               {unit.buffs.isolationMark > 0 && <div className="text-[7px] bg-purple-600 text-white rounded-sm px-0.5 border border-purple-400 font-bold">🎯{unit.buffs.isolationMark}</div>}
-               {(unit.buffs.voltage ?? 0) > 0 && <div className="text-[7px] bg-violet-600 text-yellow-300 font-bold rounded-sm px-0.5 border border-yellow-400/40">⚡{unit.buffs.voltage}</div>}
-               {(unit.buffs.conductionCircuit ?? 0) > 0 && <div className="text-[7px] bg-cyan-600 text-white font-bold rounded-sm px-0.5 border border-cyan-300/40">🔄{unit.buffs.conductionCircuit}</div>}
-               {(unit.buffs.kairenShards ?? 0) > 0 && <div className="text-[7px] bg-sky-600 text-white font-bold rounded-sm px-0.5 border border-sky-300/40">❄️{unit.buffs.kairenShards}</div>}
-               {(unit.buffs.avelinePetals ?? 0) > 0 && <div className="text-[7px] bg-pink-600 text-white font-bold rounded-sm px-0.5 border border-pink-300/40">🌸{unit.buffs.avelinePetals}</div>}
-             </div>
-          </div>
-        </div>
-
-        {isActive && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-[100]"
-          >
-            <div className={cn("w-2 h-2 rounded-full shadow-sm animate-pulse", unit.name.includes("БОСС") ? "bg-red-500" : "bg-yellow-400")} />
-            <div className={cn("text-[10px] font-black uppercase text-white px-2 py-0.5 rounded-full tracking-widest shadow-md whitespace-nowrap shadow-2xl", unit.name.includes("БОСС") ? "bg-red-600" : "bg-yellow-500")}>
-              {unit.name.includes("БОСС") ? "БОСС" : "Ходит"}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Lower Info Wrapper */}
-        <div className="p-1.5 sm:p-2 flex flex-col gap-1 sm:gap-1.5 bg-[#0a0a0a]/95 rounded-b-[6px] sm:rounded-b-[10px] flex-grow">
-          <div className={cn(
-            "text-white font-black text-[9px] sm:text-xs uppercase tracking-tight text-center truncate shadow-sm",
-            unit.name.includes("БОСС") && "text-red-400 sm:text-sm font-black"
-          )}>
-            {unit.name}
-          </div>
-          
-          {/* HP Bar */}
-          <div className="relative w-full bg-black/60 h-2 sm:h-2.5 rounded-full overflow-hidden border border-white/10 shadow-inner">
-            <motion.div 
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: hpPercent / 100 }}
-              style={{ originX: 0 }}
-              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-              className={cn(
-                "h-full relative rounded-full",
-                hpPercent > 50 ? "bg-gradient-to-r from-green-600 to-green-400" : hpPercent > 20 ? "bg-gradient-to-r from-yellow-600 to-yellow-400" : "bg-gradient-to-r from-red-600 to-red-400"
-              )}
-            >
-              <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
-            </motion.div>
-          </div>
-          <div className="flex justify-between items-center text-[8px] sm:text-[10px] font-black text-white uppercase leading-none mt-0.5">
-             <span className="text-white/50">HP</span>
-             <span className="tabular-nums tracking-tight">
-               {unit.stats.maxHp >= 1000000 
-                 ? `${(unit.stats.hp / 1000000).toFixed(2)}M / ${(unit.stats.maxHp / 1000000).toFixed(2)}M`
-                 : unit.stats.maxHp >= 10000 
-                   ? `${(unit.stats.hp / 1000).toFixed(1)}k / ${(unit.stats.maxHp / 1000).toFixed(1)}k`
-                   : `${Math.floor(unit.stats.hp)} / ${unit.stats.maxHp}`
-               }
-             </span>
-          </div>
-          
-          {/* ATB Bar */}
-          <div className="w-full bg-black/40 h-1 sm:h-1.5 rounded-full overflow-hidden border border-white/5 shadow-inner">
-            <div 
-              className="bg-yellow-400 h-full  rounded-full" 
-              style={{ transform: `scaleX(${unit.atb / 100})`, transformOrigin: 'left' }} 
-            />
-          </div>
-        </div>
-
-        <EffectsOverlay unitId={unit.uid} ref={el => { if(el) stateRef.current.effectsRefs[unit.uid] = el; }} />
-      </motion.div>
-    );
-  };
+  // Memoized primitives for BattleArenaOverlays
+  const circuitAlly = players.find(p => p.stats.hp > 0 && (p.buffs.conductionCircuit ?? 0) > 0);
+  const circuitTurns = circuitAlly?.buffs.conductionCircuit ?? 0;
+  const isPermafrostActive = enemies.some(e => e.stats.hp > 0 && (e.buffs.critOvercool ?? 0) > 0);
+  const aveline = players.find(p => p.id === 'aveline' && p.stats.hp > 0);
+  const gardenTurns = aveline?.buffs.avelineGardenTurns ?? 0;
+  const flowerTurns = aveline?.buffs.avelineGreatFlowerTurns ?? 0;
+  const elementalFlowers = aveline?.buffs.avelineElementalFlowers ?? 0;
+  const isGardenActive = gardenTurns > 0;
+  const kairen = players.find(p => p.id === 'kairen' && p.stats.hp > 0);
+  const winterTurns = kairen?.buffs.kairenWinterTurns ?? 0;
+  const isWinterActive = winterTurns > 0;
+  const kairenShards = kairen?.buffs.kairenShards ?? 0;
+  const kairenMaxShards = (kairen?.constellation ?? 0) >= 5 && winterTurns > 0 ? 7 : 5;
+  const isDuelActive = enemies.some(e => e.stats.hp > 0 && (e.buffs.duelMark ?? 0) > 0);
+  const cleanTargetCount = hasRavenInParty ? enemies.filter(e => e.stats.hp > 0 && !(
+    (e.buffs.thorns ?? 0) > 0 || 
+    (e.buffs.poison ?? 0) > 0 || 
+    (e.buffs.frozen ?? 0) > 0 || 
+    (e.buffs.burn ?? 0) > 0 || 
+    (e.buffs.mute ?? 0) > 0 || 
+    (e.buffs.resDown ?? 0) > 0 || 
+    (e.buffs.bleed ?? 0) > 0 || 
+    (e.buffs.duelMark ?? 0) > 0 || 
+    (e.buffs.spd ?? 0) < 0 || 
+    (e.buffs.def ?? 0) < 0 || 
+    (e.buffs.atk ?? 0) < 0
+  )).length : 0;
 
   const activePlayer = players.find(p => p.id === activeUnitId);
-  const containerVariants = {
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.3 }
-    }
-  };
+  const farinaUnit = players.find(p => p.id === 'farina');
+  const whiteFieldDuration = (farinaUnit && farinaUnit.stats.hp > 0) ? (farinaUnit.buffs.whiteField ?? 0) : 0;
+  const isWhiteFieldActive = whiteFieldDuration > 0;
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      animate={shake ? "shake" : ""}
+    <div 
       className="w-full max-w-6xl h-[100dvh] md:h-[85dvh] flex flex-col bg-[#0a0a0a] md:rounded-3xl overflow-hidden md:border-8 border-white/5 shadow-2xl font-sans text-white/90 ring-1 ring-white/10"
     >
       
       {/* Top Half: Arena */}
-      <div className="flex-1 relative bg-gradient-to-br from-[#111111] via-[#0a0a0a] to-[#111111] p-4 sm:p-8 flex flex-col justify-between overflow-hidden">
+      <div ref={arenaRef} className="flex-1 relative bg-gradient-to-br from-[#111111] via-[#0a0a0a] to-[#111111] p-4 sm:p-8 flex flex-col justify-between overflow-hidden">
         
+        {/* White Field Battle Visual Effect (Белое поле Фарины) */}
+        <WhiteFieldOverlay active={isWhiteFieldActive} duration={whiteFieldDuration} />
+
+        {/* Dynamic Character Arena Overlays (Вольта, Снежана, Авелин, Кайрен, Сайрус, Рейвен) */}
+        <BattleArenaOverlays 
+          circuitTurns={circuitTurns}
+          isPermafrostActive={isPermafrostActive}
+          isGardenActive={isGardenActive}
+          flowerTurns={flowerTurns}
+          gardenTurns={gardenTurns}
+          elementalFlowers={elementalFlowers}
+          isWinterActive={isWinterActive}
+          winterTurns={winterTurns}
+          kairenShards={kairenShards}
+          kairenMaxShards={kairenMaxShards}
+          isDuelActive={isDuelActive}
+          hasRavenActive={hasRavenInParty}
+          cleanTargetCount={cleanTargetCount}
+        />
+
         {/* Background Decorative elements */}
         <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] border-[2px] border-white/20 rotate-45" />
@@ -564,18 +516,30 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           <div className="flex gap-2">
             <button 
               onClick={toggleMute}
-              className="group relative bg-[#111111]/40  hover:bg-white/10 border border-white/5 p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl text-white/50 hover:text-white transition-all duration-300 flex items-center gap-2 text-xs font-bold"
+              className="group relative bg-[#111111]/40  hover:bg-white/10 border border-white/5 p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl text-white/50 hover:text-white transition-all duration-300 flex items-center gap-2 text-xs font-bold backdrop-blur-md"
+              title="Звук"
             >
               {muted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
               <span className="hidden sm:inline uppercase tracking-tighter">Звук</span>
             </button>
             <button 
               onClick={() => setIsAutoBattle(!isAutoBattle)}
-              className={cn("group relative bg-[#111111]/40  hover:bg-white/10 border p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl transition-all duration-300 flex items-center gap-2 text-xs font-bold", isAutoBattle ? "text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10" : "text-white/50 hover:text-white border-white/5")}
+              className={cn("group relative bg-[#111111]/40  hover:bg-white/10 border p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl transition-all duration-300 flex items-center gap-2 text-xs font-bold backdrop-blur-md", isAutoBattle ? "text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10" : "text-white/50 hover:text-white border-white/5")}
+              title="Автобой"
             >
               <Sword className={cn("w-4 h-4", isAutoBattle ? "opacity-100" : "opacity-50")} />
               <span className="hidden sm:inline uppercase tracking-tighter">Авто</span>
             </button>
+            {onExit && (
+              <button 
+                onClick={() => setShowExitModal(true)}
+                className="group relative bg-[#111111]/40 hover:bg-red-500/15 border border-white/5 hover:border-red-500/30 p-2 sm:py-2 sm:px-3 rounded-2xl sm:rounded-3xl text-white/50 hover:text-red-400 transition-all duration-300 flex items-center gap-2 text-xs font-bold backdrop-blur-md"
+                title="Покинуть бой"
+              >
+                <LogOut className="w-4 h-4 text-red-400/80 group-hover:text-red-400" />
+                <span className="hidden sm:inline uppercase tracking-tighter">Выход</span>
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-1 scale-90 sm:scale-100 origin-right">
@@ -596,16 +560,43 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         <div className="flex flex-col flex-1 justify-center gap-8 sm:gap-14 mt-12 sm:mt-10">
           {/* Enemies Row */}
           <div className="flex flex-wrap justify-center md:justify-end gap-2 sm:gap-6 w-full overflow-visible px-2 sm:px-4">
-            
-              {enemies.map(e => renderUnit(e, false))}
-            
+            {enemies.map(e => (
+              <UnitCard
+                key={e.uid}
+                unit={e}
+                isPlayer={false}
+                isActive={e.id === activeUnitId}
+                isAttacking={e.uid === attackingUnitId}
+                isTargetable={Boolean(selectedSkill && (
+                  (selectedSkill.target === "SingleEnemy") ||
+                  (selectedSkill.target === "AllEnemies")
+                ))}
+                hasRavenInParty={hasRavenInParty}
+                onSelect={handleTargetSelect}
+                onRegisterRef={registerEffectsRef}
+              />
+            ))}
           </div>
 
           {/* Players Row */}
           <div className="flex flex-wrap justify-center md:justify-start gap-2 sm:gap-6 z-10 w-full overflow-visible px-2 sm:px-4">
-            
-              {players.map(p => renderUnit(p, true))}
-            
+            {players.map(p => (
+              <UnitCard
+                key={p.uid}
+                unit={p}
+                isPlayer={true}
+                isActive={p.id === activeUnitId}
+                isAttacking={p.uid === attackingUnitId}
+                isTargetable={Boolean(selectedSkill && (
+                  (selectedSkill.target === "SingleAlly") ||
+                  (selectedSkill.target === "AllAllies") ||
+                  (selectedSkill.target === "Self" && p.id === activeUnitId)
+                ))}
+                hasRavenInParty={hasRavenInParty}
+                onSelect={handleTargetSelect}
+                onRegisterRef={registerEffectsRef}
+              />
+            ))}
           </div>
         </div>
 
@@ -750,6 +741,47 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         </div>
       </div>
 
-    </motion.div>
+      {/* Exit Battle Confirmation Modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="bg-[#111111] border border-white/10 rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl flex flex-col items-center text-center space-y-4"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+              <LogOut className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-wider text-white">
+                Покинуть бой?
+              </h3>
+              <p className="text-xs text-white/50 mt-1.5 font-mono leading-relaxed">
+                Текущий прогресс сражения будет сброшен, награды не будут получены.
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-3">
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="flex-1 py-3 px-4 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white/80 font-mono text-xs font-bold uppercase tracking-wider transition-all"
+              >
+                Остаться
+              </button>
+              <button
+                onClick={() => {
+                  setShowExitModal(false);
+                  if (onExit) onExit();
+                }}
+                className="flex-1 py-3 px-4 rounded-full bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-red-950/50 active:scale-95"
+              >
+                Покинуть
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+    </div>
   );
 }

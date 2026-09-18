@@ -16,14 +16,29 @@ export default function AuthScreen({ onLogin }: Props) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionData, setSessionData] = useState<{username: string, id: string} | null>(null);
+  const [localUserAvailable, setLocalUserAvailable] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check saved local user or save data
+    const savedUser = localStorage.getItem('ed_user');
+    const hasLocalSave = !!(localStorage.getItem('ed_profile_v3') || localStorage.getItem('ed_profile_backup') || localStorage.getItem('ed_profile_v1'));
+    if (savedUser) {
+      setUsername(savedUser);
+      setLocalUserAvailable(savedUser);
+    } else if (hasLocalSave) {
+      setLocalUserAvailable('Путешественник');
+    }
+
     // Check session in the background
     const checkSession = async () => {
-       const { data: { session } } = await supabase.auth.getSession();
-       if (session && session.user) {
-          const savedUsername = localStorage.getItem('ed_user') || 'Игрок';
-          setSessionData({ username: savedUsername, id: session.user.id });
+       try {
+         const { data: { session } } = await supabase.auth.getSession();
+         if (session && session.user) {
+            const savedUsername = localStorage.getItem('ed_user') || 'Игрок';
+            setSessionData({ username: savedUsername, id: session.user.id });
+         }
+       } catch (e) {
+         console.warn('Supabase session check error:', e);
        }
     };
     checkSession();
@@ -46,9 +61,17 @@ export default function AuthScreen({ onLogin }: Props) {
   const handleEnterGame = () => {
      if (sessionData) {
         onLogin(sessionData.username, sessionData.id);
+     } else if (localUserAvailable) {
+        onLogin(localUserAvailable, 'local_user');
      } else {
         setStage('LOGIN');
      }
+  };
+
+  const handleGuestLogin = () => {
+    const nick = username.trim() || localUserAvailable || 'Игрок';
+    localStorage.setItem('ed_user', nick);
+    onLogin(nick, 'local_user');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +81,15 @@ export default function AuthScreen({ onLogin }: Props) {
 
     setIsSubmitting(true);
     
-    const email = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@aegis.game`;
+    // Convert any Unicode/Cyrillic username to safe deterministic email string
+    const safeEmailSlug = Array.from(username.toLowerCase())
+      .map(ch => {
+        const code = ch.charCodeAt(0);
+        if ((code >= 48 && code <= 57) || (code >= 97 && code <= 122)) return ch;
+        return `_${code.toString(16)}`;
+      })
+      .join('');
+    const email = `usr_${safeEmailSlug || 'guest'}@aegis.game`;
 
     try {
       let { data, error } = await supabase.auth.signInWithPassword({
@@ -85,7 +116,8 @@ export default function AuthScreen({ onLogin }: Props) {
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setAuthError(err.message || 'Ошибка авторизации. Проверьте данные.');
+      // If cloud auth fails or network is offline, offer local fallback
+      setAuthError((err.message || 'Ошибка авторизации.') + ' Вы можете войти локально кнопкой ниже.');
     } finally {
       setIsSubmitting(false);
     }
@@ -141,21 +173,33 @@ export default function AuthScreen({ onLogin }: Props) {
                 transition={{ delay: 0.2, duration: 1 }}
                 src="https://i.postimg.cc/x1S97SKX/file-0000000049e8820a8fec80dc6caf5b59.png" 
                 alt="Logo" 
-                className="w-72 sm:w-96 drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-16" 
+                className="w-72 sm:w-96 drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-12" 
               />
               
-              <motion.button
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ delay: 0.6, duration: 0.8 }}
-                 onClick={handleEnterGame}
-                 className="group relative px-12 py-4 bg-transparent overflow-hidden rounded-full"
-              >
-                 <div className="absolute inset-0 bg-white/5 border border-indigo-500/30 rounded-full backdrop-blur-sm transition-all group-hover:bg-indigo-500/10 group-hover:border-indigo-400/50" />
-                 <div className="relative flex items-center gap-3 text-indigo-100 font-black tracking-[0.2em] uppercase text-sm">
-                    <Play className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" /> Вход в игру
-                 </div>
-              </motion.button>
+              <div className="flex flex-col items-center gap-3">
+                <motion.button
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 0.6, duration: 0.8 }}
+                   onClick={handleEnterGame}
+                   className="group relative px-12 py-4 bg-transparent overflow-hidden rounded-full cursor-pointer"
+                >
+                   <div className="absolute inset-0 bg-white/5 border border-indigo-500/30 rounded-full backdrop-blur-sm transition-all group-hover:bg-indigo-500/10 group-hover:border-indigo-400/50" />
+                   <div className="relative flex items-center gap-3 text-indigo-100 font-black tracking-[0.2em] uppercase text-sm">
+                      <Play className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" /> Вход в игру
+                   </div>
+                </motion.button>
+
+                <motion.button
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   transition={{ delay: 0.8 }}
+                   onClick={() => setStage('LOGIN')}
+                   className="text-xs text-indigo-300/60 hover:text-indigo-200 transition-colors underline decoration-indigo-500/30 font-mono tracking-wider cursor-pointer"
+                >
+                   Сменить аккаунт / Ввести логин
+                </motion.button>
+              </div>
            </motion.div>
          )}
 
@@ -214,14 +258,24 @@ export default function AuthScreen({ onLogin }: Props) {
                  <button 
                    type="submit"
                    disabled={isSubmitting}
-                   className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/50 disabled:text-white/40 text-white font-black uppercase tracking-widest py-3.5 rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                   className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/50 disabled:text-white/40 text-white font-black uppercase tracking-widest py-3.5 rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] cursor-pointer"
                  >
                    {isSubmitting ? (
                      <><Loader2 className="w-4 h-4 animate-spin" /> Обработка...</>
                    ) : (
-                     <>Войти <ArrowRight className="w-4 h-4" /></>
+                     <>Войти через Облако <ArrowRight className="w-4 h-4" /></>
                    )}
                  </button>
+
+                 <div className="pt-2 border-t border-white/5">
+                   <button 
+                     type="button"
+                     onClick={handleGuestLogin}
+                     className="w-full bg-white/5 hover:bg-white/10 text-indigo-200 font-bold uppercase tracking-wider py-2.5 rounded-2xl text-[11px] transition-all border border-white/10 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                   >
+                     🚀 Войти локально (Локальный профиль)
+                   </button>
+                 </div>
               </form>
            </motion.div>
          )}

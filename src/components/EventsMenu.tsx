@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getCharSplash, characterBlueprints } from '../data';
+import VkusnoCollabEvent, { VkusnoLogo } from './VkusnoCollabEvent';
 
 interface Props {
   profile: PlayerProfile;
@@ -15,7 +16,7 @@ interface Props {
 }
 
 export default function EventsMenu({ profile, updateProfile, setRoute }: Props) {
-  const [subTab, setSubTab] = useState<'LOGIN' | 'AVELINE' | 'GRID' | 'FRONTIER' | 'TESTRUN' | 'MINIGAME' | 'UPDATE'>('AVELINE');
+  const [subTab, setSubTab] = useState<'VKUSNO' | 'LOGIN' | 'AVELINE' | 'GRID' | 'FRONTIER' | 'TESTRUN' | 'MINIGAME' | 'UPDATE'>('VKUSNO');
   const todayStr = new Date().toISOString().split('T')[0];
 
   // ==========================================
@@ -239,6 +240,26 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
       <div className="w-full md:w-64 lg:w-72 border-r border-white/5 bg-[#0a0a0a] p-4 flex flex-col gap-2 overflow-y-auto shrink-0 md:h-[calc(100vh-120px)] hide-scrollbar">
         <h3 className="text-white/30 text-xs font-black uppercase tracking-widest mb-2 px-2">События</h3>
         
+        {/* VKUSNO I TOCHKA COLLABORATION */}
+        <button 
+          onClick={() => setSubTab('VKUSNO')} 
+          className={cn(
+            "flex items-center gap-3 px-3.5 py-3 rounded-2xl font-bold transition shrink-0 relative overflow-hidden border",
+            subTab === 'VKUSNO' 
+              ? "bg-[#003c2f] text-emerald-200 border-[#005a46] shadow-md shadow-black/40" 
+              : "bg-[#091410] text-white/80 hover:bg-[#003c2f]/40 hover:text-white border-[#005a46]/30"
+          )}
+        >
+          <VkusnoLogo className="w-7 h-7 shrink-0" />
+          <div className="text-left leading-tight flex-1">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[9px] font-black uppercase tracking-wider text-white bg-[#f35115] px-1.5 py-0.2 rounded">Коллаб</span>
+              <span className="text-[9px] text-[#f59e0b] font-bold truncate">Сайрус & Рейвен</span>
+            </div>
+            <div className="text-xs sm:text-sm font-black text-white">Вкусно — и точка</div>
+          </div>
+        </button>
+
         <button onClick={() => setSubTab('AVELINE')} className={cn("flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition shrink-0", subTab === 'AVELINE' ? "bg-rose-500/20 text-rose-300 shadow-lg border border-rose-500/30" : "text-white/50 hover:bg-[#1a1a1a]/50")}>
           <Flower2 className="w-4 h-4" /> <div className="text-left leading-tight"><div className="text-[10px] opacity-70">Сюжет</div>Исход Авелин</div>
         </button>
@@ -273,6 +294,15 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
       {/* Main Content */}
       <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-black/40 overflow-y-auto relative h-[calc(100vh-160px)] md:h-[calc(100vh-120px)] hide-scrollbar">
         
+        {/* VKUSNO I TOCHKA COLLABORATION */}
+        {subTab === 'VKUSNO' && (
+          <VkusnoCollabEvent
+            profile={profile}
+            updateProfile={updateProfile}
+            setRoute={setRoute}
+          />
+        )}
+
         {/* AVELINE STORY */}
         {subTab === 'AVELINE' && (
           <div className="space-y-6 max-w-4xl mx-auto relative h-full">

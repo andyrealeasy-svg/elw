@@ -1,1 +1,241 @@
 @import "tailwindcss";
+
+@keyframes aura-subtle-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes particle-float-up {
+  0% { transform: translateY(0); opacity: 0; }
+  30% { opacity: 0.85; }
+  80% { opacity: 0.7; }
+  100% { transform: translateY(-26px); opacity: 0; }
+}
+
+@keyframes arena-mist-drift {
+  0%, 100% { transform: translate(-10px, 0) scale(1); opacity: 0.3; }
+  50% { transform: translate(10px, -4px) scale(1.02); opacity: 0.55; }
+}
+
+.anim-subtle-pulse {
+  animation: aura-subtle-pulse 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.anim-float-particle {
+  animation: particle-float-up 2.8s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+.anim-mist-drift {
+  animation: arena-mist-drift 7s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Water Ripple expanding pulse for Azure Garden */
+@keyframes water-ripple-kf {
+  0% { transform: scale(0.7); opacity: 0.75; }
+  60% { opacity: 0.35; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.anim-water-ripple {
+  animation: water-ripple-kf 3.2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* Celestial bloom rotating floral mandala for Eternal Bloom */
+@keyframes bloom-rotate-kf {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.04); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.anim-bloom-rotate {
+  animation: bloom-rotate-kf 24s linear infinite;
+  will-change: transform;
+}
+
+/* Golden stardust sparkle twinkle */
+@keyframes sparkle-twinkle-kf {
+  0%, 100% { transform: scale(0.8) translateY(0); opacity: 0.35; }
+  50% { transform: scale(1.25) translateY(-16px); opacity: 0.95; }
+}
+.anim-sparkle-twinkle {
+  animation: sparkle-twinkle-kf 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Blizzard Flake & crystalline snow drift */
+@keyframes blizzard-flake-kf {
+  0% { transform: translate3d(-15px, -18px, 0) rotate(0deg); opacity: 0; }
+  25% { opacity: 0.9; }
+  75% { opacity: 0.8; }
+  100% { transform: translate3d(30px, 36px, 0) rotate(180deg); opacity: 0; }
+}
+.anim-blizzard-flake {
+  animation: blizzard-flake-kf 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+/* Glacial ice rune pulse */
+@keyframes glacial-pulse-kf {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.06); opacity: 0.85; }
+}
+.anim-glacial-pulse {
+  animation: glacial-pulse-kf 3.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Ice slash sweep */
+@keyframes ice-slash-kf {
+  0% { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+  45% { transform: scale(1.15) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.3) rotate(20deg); opacity: 0; }
+}
+.anim-ice-slash {
+  animation: ice-slash-kf 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* GPU Hardware-Accelerated Camera Shake (Zero React re-renders) */
+@keyframes screen-shake-kf {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-6px, 3px, 0); }
+  40% { transform: translate3d(5px, -3px, 0); }
+  60% { transform: translate3d(-4px, 2px, 0); }
+  80% { transform: translate3d(3px, -1px, 0); }
+}
+.anim-screen-shake {
+  animation: screen-shake-kf 0.25s ease-in-out;
+  will-change: transform;
+}
+
+/* Floating Damage Numbers (GPU Compositor) */
+@keyframes float-damage-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.65);
+  }
+  15% {
+    opacity: 1;
+    transform: translate3d(0, -12px, 0) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(0, -36px, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -54px, 0) scale(0.9);
+  }
+}
+.anim-float-damage {
+  animation: float-damage-up 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Visual Impact Burst (GPU Compositor) */
+@keyframes impact-burst-kf {
+  0% { transform: translate3d(0, 0, 0) scale(0.3); opacity: 0; }
+  22% { transform: translate3d(0, 0, 0) scale(1.8); opacity: 1; }
+  65% { transform: translate3d(0, 0, 0) scale(1.3); opacity: 0.9; }
+  100% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+}
+.anim-impact-burst {
+  animation: impact-burst-kf 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Shockwave Expanding Ring (GPU Compositor) */
+@keyframes shockwave-ring-kf {
+  0% { transform: translate3d(0, 0, 0) scale(0.2); opacity: 0.95; }
+  100% { transform: translate3d(0, 0, 0) scale(2.8); opacity: 0; }
+}
+.anim-shockwave-ring {
+  animation: shockwave-ring-kf 0.45s ease-out forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Slash / Blade Burst (GPU Compositor) */
+@keyframes slash-burst-kf {
+  0% { transform: translate3d(0, 0, 0) scale(0.3) rotate(-45deg); opacity: 0; }
+  25% { transform: translate3d(0, 0, 0) scale(1.8) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(0.6) rotate(45deg); opacity: 0; }
+}
+.anim-slash-burst {
+  animation: slash-burst-kf 0.4s ease-out forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Heal Rising Sparkle (GPU Compositor) */
+@keyframes heal-float-kf {
+  0% { transform: translate3d(0, 12px, 0) scale(0.6); opacity: 0; }
+  30% { transform: translate3d(0, -8px, 0) scale(1.3); opacity: 1; }
+  100% { transform: translate3d(0, -40px, 0) scale(1); opacity: 0; }
+}
+.anim-heal-float {
+  animation: heal-float-kf 0.65s ease-out forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Cyrus Duelist Rapier Piercing Thrust (GPU Compositor) */
+@keyframes duelist-thrust-kf {
+  0% { transform: scaleX(0.2) scaleY(0.5) translateX(-60px); opacity: 0; }
+  35% { transform: scaleX(1.3) scaleY(1.1) translateX(0px); opacity: 1; }
+  100% { transform: scaleX(1.5) scaleY(0.7) translateX(30px); opacity: 0; }
+}
+.anim-duelist-thrust {
+  animation: duelist-thrust-kf 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Cyrus Guillotine Execution Cleave (GPU Compositor) */
+@keyframes execution-cleave-kf {
+  0% { transform: scaleY(0.2) scaleX(0.8) translateY(-80px); opacity: 0; }
+  30% { transform: scaleY(1.2) scaleX(1.1) translateY(0px); opacity: 1; }
+  70% { transform: scaleY(1.1) scaleX(1.2) translateY(5px); opacity: 1; }
+  100% { transform: scaleY(1.4) scaleX(0.9) translateY(20px); opacity: 0; }
+}
+.anim-execution-cleave {
+  animation: execution-cleave-kf 0.45s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Raven Phantom Shadow Thrust / Dagger (GPU Compositor) */
+@keyframes phantom-thrust-kf {
+  0% { transform: scale(0.3) rotate(-25deg) translate3d(-30px, -20px, 0); opacity: 0; }
+  35% { transform: scale(1.2) rotate(0deg) translate3d(0, 0, 0); opacity: 1; }
+  100% { transform: scale(1.35) rotate(15deg) translate3d(15px, 10px, 0); opacity: 0; }
+}
+.anim-phantom-thrust {
+  animation: phantom-thrust-kf 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Raven Shadow Blade Fan Sweep (GPU Compositor) */
+@keyframes shadow-fan-kf {
+  0% { transform: scale(0.4) rotate(-40deg); opacity: 0; }
+  40% { transform: scale(1.15) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.35) rotate(35deg); opacity: 0; }
+}
+.anim-shadow-fan {
+  animation: shadow-fan-kf 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Raven Shadow Dance Cyclone Cleave (GPU Compositor) */
+@keyframes shadow-cyclone-kf {
+  0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+  35% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+  75% { transform: scale(1.3) rotate(300deg); opacity: 0.9; }
+  100% { transform: scale(1.5) rotate(360deg); opacity: 0; }
+}
+.anim-shadow-cyclone {
+  animation: shadow-cyclone-kf 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
