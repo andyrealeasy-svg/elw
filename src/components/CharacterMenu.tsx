@@ -377,12 +377,12 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                  <Users className="w-4 h-4" /> Характеристики
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">HP</span> <span className="font-bold text-green-400">{charDef.stats.maxHp}</span></div>
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">ATK</span> <span className="font-bold text-red-400">{charDef.stats.atk}</span></div>
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">DEF</span> <span className="font-bold text-blue-400">{charDef.stats.def}</span></div>
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">SPD</span> <span className="font-bold text-yellow-400">{charDef.stats.spd}</span></div>
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ ШАНС</span> <span className="font-bold text-amber-400">{charDef.stats.critRate ?? 5}%</span></div>
-                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ УРОН</span> <span className="font-bold text-orange-400">{charDef.stats.critDamage ?? 50}%</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">HP</span> <span className="font-bold text-green-400">{Math.round(charDef.stats.maxHp)}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">ATK</span> <span className="font-bold text-red-400">{Math.round(charDef.stats.atk)}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">DEF</span> <span className="font-bold text-blue-400">{Math.round(charDef.stats.def)}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">SPD</span> <span className="font-bold text-yellow-400">{Math.round(charDef.stats.spd)}</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ ШАНС</span> <span className="font-bold text-amber-400">{(Math.round((charDef.stats.critRate ?? 5) * 10) / 10)}%</span></div>
+                 <div className="bg-[#0a0a0a] p-2 rounded border border-white/5"><span className="text-white/40 block mb-1">КРИТ УРОН</span> <span className="font-bold text-orange-400">{(Math.round((charDef.stats.critDamage ?? 50) * 10) / 10)}%</span></div>
               </div>
            </div>
 
@@ -548,18 +548,48 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex flex-col gap-4 bg-[#111111] p-4 rounded-3xl border border-white/5">
+                    <div className="flex flex-col gap-3 bg-[#111111] p-4 rounded-3xl border border-white/5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-[#1a1a1a] rounded-2xl transition-colors text-white/50">
                             <ArrowLeft className="w-5 h-5" />
                           </button>
-                          <h4 className="font-black uppercase text-sm tracking-widest text-white">Выбор артефакта: {selectingSlot}</h4>
+                          <div>
+                            <h4 className="font-black uppercase text-sm tracking-widest text-white">
+                              Выбор артефакта: {
+                                selectingSlot === 'flower' ? 'Цветок Жизни (HP)' :
+                                selectingSlot === 'plume' ? 'Перо Смерти (ATK)' :
+                                selectingSlot === 'sands' ? 'Пески Времени' :
+                                selectingSlot === 'goblet' ? 'Кубок Пространства' :
+                                selectingSlot === 'circlet' ? 'Корона Разума' : selectingSlot
+                              }
+                            </h4>
+                          </div>
                         </div>
                         <button onClick={() => setSelectingSlot(null)} className="p-2 hover:bg-[#1a1a1a] rounded-2xl transition-colors text-white/50">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
+
+                      {/* Recommended Stats for Active Character */}
+                      {CHARACTER_PREFERENCES[selectedId] && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/5 text-[11px]">
+                          <span className="font-black uppercase text-[10px] text-amber-400 tracking-wider">Приоритет для {charDef.name}:</span>
+                          {CHARACTER_PREFERENCES[selectedId].main.map((st, i) => (
+                            <span 
+                              key={st} 
+                              className={cn(
+                                "px-2 py-0.5 rounded-full font-mono text-[10px] font-bold flex items-center gap-1",
+                                i === 0 
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-sm" 
+                                  : "bg-white/5 text-white/70 border border-white/10"
+                              )}
+                            >
+                              {i === 0 && "★"} {formatStatName(st)} {i === 0 && "(Лучший)"}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       
                       <div className="relative">
                         <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -586,7 +616,19 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                             const subStats = a.subStats.map(s => formatStatName(s.type) + " " + s.type).join(" ").toLowerCase();
                             return setName.includes(q) || setRaw.includes(q) || mainStat.includes(q) || subStats.includes(q);
                           })
-                          .sort((a, b) => scoreArtifact(b, selectedId) - scoreArtifact(a, selectedId));
+                          .sort((a, b) => {
+                            const prefs = CHARACTER_PREFERENCES[selectedId] || { main: ["atk"], sub: ["atk"], sets: [] };
+                            if (selectingSlot !== 'flower' && selectingSlot !== 'plume') {
+                              const aRank = prefs.main.indexOf(a.mainStat.type);
+                              const bRank = prefs.main.indexOf(b.mainStat.type);
+                              const aScoreMain = aRank === -1 ? 999 : aRank;
+                              const bScoreMain = bRank === -1 ? 999 : bRank;
+                              if (aScoreMain !== bScoreMain) {
+                                return aScoreMain - bScoreMain;
+                              }
+                            }
+                            return scoreArtifact(b, selectedId) - scoreArtifact(a, selectedId);
+                          });
 
                         if (filteredArtifacts.length === 0) {
                           return (
@@ -602,6 +644,11 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                           const usedBy = Object.keys(profile.roster).find(cid => profile.roster[cid].artifacts?.[selectingSlot!] === art.id);
                           const isCurrent = profile.roster[selectedId].artifacts?.[selectingSlot!] === art.id;
                           const score = scoreArtifact(art, selectedId);
+                          const prefs = CHARACTER_PREFERENCES[selectedId] || { main: ["atk"], sub: ["atk"], sets: [] };
+                          const mainRank = prefs.main.indexOf(art.mainStat.type);
+                          const isTopMainStat = mainRank === 0;
+                          const isGoodMainStat = mainRank > 0;
+                          const isPreferredSet = prefs.sets?.includes(art.setName);
                           
                           return (
                             <div 
@@ -609,24 +656,55 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                               onClick={() => !isCurrent && equipManual(art)}
                               className={cn(
                                 "p-4 rounded-3xl border-2 flex flex-col sm:flex-row gap-4 cursor-pointer transition-all",
-                                isCurrent ? "bg-indigo-900/30 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]" : "bg-[#111111] border-white/5 hover:border-slate-600 hover:shadow-lg"
+                                isCurrent 
+                                  ? "bg-indigo-900/30 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.15)]" 
+                                  : isTopMainStat
+                                  ? "bg-[#111111] border-emerald-500/40 hover:border-emerald-400 hover:shadow-lg shadow-emerald-500/5"
+                                  : isGoodMainStat
+                                  ? "bg-[#111111] border-teal-500/30 hover:border-teal-400 hover:shadow-lg"
+                                  : "bg-[#111111] border-white/5 hover:border-slate-600 hover:shadow-lg"
                               )}
                             >
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-xs font-bold text-amber-500">+{art.level}</span>
                                     <h5 className="font-black text-xs uppercase text-white">{ARTIFACT_SETS[art.setName]?.name}</h5>
-                                    {score > 1200 && <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+                                    {isTopMainStat && (
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                        ★ Топ Стат ({formatStatName(art.mainStat.type)})
+                                      </span>
+                                    )}
+                                    {isGoodMainStat && (
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-teal-500/20 text-teal-300 border border-teal-500/40">
+                                        ✓ Реком. ({formatStatName(art.mainStat.type)})
+                                      </span>
+                                    )}
+                                    {isPreferredSet && (
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                                        Реком. сет
+                                      </span>
+                                    )}
+                                    {score > 10000 && <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
                                   </div>
                                   <span className="text-[10px] font-mono text-white/40 uppercase tracking-tighter">Счет: {score}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                  <div className="text-xs font-black text-indigo-400 uppercase">{formatStatName(art.mainStat.type)}: {formatStatValue(art.mainStat.type, art.mainStat.value)}</div>
+                                  <div className={cn(
+                                    "text-xs font-black uppercase",
+                                    isTopMainStat ? "text-emerald-400 font-extrabold" : isGoodMainStat ? "text-teal-400 font-bold" : "text-indigo-400"
+                                  )}>
+                                    {formatStatName(art.mainStat.type)}: {formatStatValue(art.mainStat.type, art.mainStat.value)}
+                                  </div>
                                   <div className="space-y-0.5">
                                     {art.subStats.map((s, i) => (
                                       <div key={i} className="text-[10px] font-mono text-white/40 flex justify-between">
-                                        <span className="uppercase opacity-70">{formatStatName(s.type)}</span>
+                                        <span className={cn(
+                                          "uppercase",
+                                          CHARACTER_PREFERENCES[selectedId]?.sub.includes(s.type) ? "text-emerald-300/80 font-bold" : "opacity-70"
+                                        )}>
+                                          {formatStatName(s.type)}
+                                        </span>
                                         <span className="text-white/70">{formatStatValue(s.type, s.value)}</span>
                                       </div>
                                     ))}

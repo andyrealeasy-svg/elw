@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Sword, Info, Zap, Shield, ChevronLeft, Lock, Star, Trophy, Award } from 'lucide-react';
-import { ARTIFACT_DUNGEONS } from '../data';
+import { ARTIFACT_DUNGEONS, ARTIFACT_SETS } from '../data';
 import { Dungeon, PlayerProfile } from '../types';
 
 interface Props {
@@ -190,7 +190,7 @@ export default function ArtifactDungeon({ profile, updateProfile, setRoute, onBa
                   <div className="flex flex-wrap gap-1.5">
                     {selectedDungeon.rewardSets.map(setId => (
                        <div key={setId} className="px-2.5 py-1 bg-[#111111] rounded-xl border border-amber-500/20 text-[10px] font-bold text-white/90">
-                         {setId.replace(/_/g, ' ').toUpperCase()}
+                         {ARTIFACT_SETS[setId]?.name || setId.replace(/_/g, ' ').toUpperCase()}
                        </div>
                     ))}
                   </div>

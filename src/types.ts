@@ -77,6 +77,19 @@ export interface Combatant {
     duelMark?: number;
     isolationMark?: number;
     defIgnoreBoost?: number;
+    nereusFlower?: { hits: number; turns: number; nereusUid: string; rxnExplosionUsedThisTurn?: boolean };
+    nereusGardenTurns?: number;
+    ivaFloralBondTurns?: number;
+    ivaBloomTurns?: number;
+    kernOverloadTurns?: number;
+    kernQBonusTurns?: number;
+    kernC4BonusTurns?: number;
+    kernCritOverloadActive?: boolean;
+    kernCritOverloadTurns?: number;
+    kernC6Used?: boolean;
+    kernC2DefStacks?: number;
+    kernC2DefTurns?: number;
+    kernNormalAttackCount?: number;
     [key: string]: any;
   };
 }
@@ -198,7 +211,8 @@ export interface PlayerProfile {
   bpClaimedLevelsPremium: number[];
   hasGoldenPass: boolean;
   bpResetTime?: number;
-  bossRushSeason2Claimed?: boolean; // Rewards for Boss Rush claimable once per update
+  bossRushSeason2Claimed?: boolean; // Legacy
+  bossRushSeason3Claimed?: boolean; // Rewards for Boss Rush Season 3 (Update 1.3)
   lunarAbyssClaimed: number[]; // floors 9-12
   lunarAbyssResetTime: number; 
   achievements: Record<string, boolean>; // id -> claimed

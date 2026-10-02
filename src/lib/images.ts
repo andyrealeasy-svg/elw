@@ -67,6 +67,9 @@ export const SPLASH_IMAGES: Record<string, string> = {
   aveline: 'https://i.postimg.cc/3NQ14Dnf/file-000000005408820a8f4971c3464393e8.png',
   farina: 'https://i.postimg.cc/XqR0P310/file-0000000010fc8210b5f4ed926d676ddd.png',
   kairen: 'https://i.postimg.cc/L8jHjd93/file-0000000055ec8243934bfabaafcb5409.png',
+  nereus: 'https://i.postimg.cc/1XLqJv4r/file-000000007c9482118f05712d7221d5e4.png',
+  iva: 'https://i.postimg.cc/VND4DcwG/file-00000000e2a081f4b66d7d24dad29fa7.png',
+  kern: 'https://i.postimg.cc/SQg63pnW/file-0000000024e081f49270fd65155db6cf.png',
   vkusno_collab: 'https://i.postimg.cc/HxPRwDs2/file-00000000bdd081f48ea261edb91ea559.png',
 };
 

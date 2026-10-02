@@ -180,6 +180,58 @@ export const triggerAvelineElementalFlower = (aveline, state, ft, log, c) => {
   }
 };
 
+export const notifyThornAcquired = (
+  source: Combatant,
+  target: Combatant,
+  state: BattleState | undefined,
+  log?: (msg: string) => void,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  playEffect?: (targetUid: string, effectType: string) => void
+) => {
+  if (!state) return;
+  const iva = state.playerParty.find(p => p.id === 'iva' && p.stats.hp > 0);
+  if (!iva) return;
+
+  // Q Bloom:
+  const maxBloomHeals = iva.constellation >= 5 ? 3 : 2;
+  if ((iva.buffs.ivaBloomTurns ?? 0) > 0 && (iva.buffs.ivaBloomHealsThisTurn || 0) < maxBloomHeals) {
+    iva.buffs.ivaBloomHealsThisTurn = (iva.buffs.ivaBloomHealsThisTurn || 0) + 1;
+    const healPct = iva.constellation >= 5 ? 0.06 : 0.05;
+    const healVal = Math.round(source.stats.maxHp * healPct);
+    source.stats.hp = Math.min(source.stats.maxHp, source.stats.hp + healVal);
+    if (floatText) floatText(source.uid, `+${healVal} HP (Цветение)`, "text-emerald-300 font-bold text-xs");
+    if (log) log(`«Цветение» Ивы исцеляет ${source.name} на ${healVal} HP!`);
+    if (playEffect) playEffect(source.uid, "heal");
+  }
+
+  // C4:
+  if (iva.constellation >= 4 && !iva.buffs.ivaC4TriggeredThisTurn && (iva.buffs.ivaFloralBondTurns ?? 0) > 0) {
+    iva.buffs.ivaC4TriggeredThisTurn = true;
+    iva.buffs.ivaFloralBondTurns += 1;
+    if (floatText) floatText(iva.uid, "🌿 СВЯЗЬ +1 ХОД (C4)", "text-emerald-300 font-bold text-xs");
+    if (log) log(`C4 Ивы: Флоральная связь продлена на 1 ход.`);
+  }
+
+  // C6:
+  if (iva.constellation >= 6 && (iva.buffs.ivaFloralBondTurns ?? 0) > 0 && !iva.buffs.ivaC6TriggeredThisE) {
+    iva.buffs.ivaC6ThornCounter = (iva.buffs.ivaC6ThornCounter || 0) + 1;
+    if (iva.buffs.ivaC6ThornCounter >= 3) {
+      iva.buffs.ivaC6TriggeredThisE = true;
+      if (floatText) floatText(iva.uid, "🌸 ЦВЕТОК ЖИЗНИ (C6)", "text-emerald-200 font-black text-sm");
+      if (log) log(`C6 Ивы: «Цветок жизни» раскрывается! Весь отряд восстановил 10% HP и получил +15% ATK.`);
+      state.playerParty.forEach(ally => {
+        if (ally.stats.hp > 0) {
+          const heal = Math.round(ally.stats.maxHp * 0.10);
+          ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal);
+          ally.buffs.atk = (ally.buffs.atk || 0) + Math.round(ally.stats.atk * 0.15);
+          if (floatText) floatText(ally.uid, `+${heal} HP / +15% ATK`, "text-emerald-300 font-bold text-xs");
+          if (playEffect) playEffect(ally.uid, "heal");
+        }
+      });
+    }
+  }
+};
+
 export const dealDamage = (source: Combatant, target: Combatant, multiplier: number, element: Element, log: (msg: string) => void, floatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void, hits: number = 1, state?: BattleState, defIgnore: number = 0, ignoreShields: boolean = false, guaranteedCrit: boolean = false) => {
   const hitDelay = 200;
 
@@ -282,12 +334,26 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       let baseStat = source.stats.atk;
       if (source.id === 'aveline') {
         baseStat = source.stats.maxHp * 0.12;
+      } else if (source.id === 'kern') {
+        baseStat = source.stats.def;
+        if (source.buffs.kernC2DefStacks) {
+          baseStat = Math.floor(baseStat * (1 + 0.10 * source.buffs.kernC2DefStacks));
+        }
       }
       
-      let baseDmg = Math.max(1, Math.floor(((baseStat * multiplier * critMult) / hits)) - (effectiveDef * 0.5));
+      let baseDmg = multiplier === 0 ? 0 : Math.max(1, Math.floor(((baseStat * multiplier * critMult) / hits)) - (effectiveDef * 0.5));
       
       // Apply Damage Boosts
       baseDmg *= actualDmgBoost;
+
+      // Iva Floral Bond: Dendro RES and Cryo RES reduced by 20% (25% on C2)
+      if (!source.isEnemy && (element === "Dendro" || element === "Cryo") && state) {
+        const iva = state.playerParty.find(p => p.id === 'iva' && p.stats.hp > 0);
+        if (iva && (iva.buffs.ivaFloralBondTurns ?? 0) > 0) {
+          const resShred = (iva.constellation >= 2) ? 0.25 : 0.20;
+          baseDmg = Math.floor(baseDmg * (1 + resShred));
+        }
+      }
 
       // Snezhana source debuff: reduces damage dealt by overcooled/crit-overcooled enemies
       if (source.buffs) {
@@ -451,6 +517,16 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
 
       target.stats.hp -= dmg;
       if (target.stats.hp < 0) target.stats.hp = 0;
+      target.stats.hp = Math.round(target.stats.hp);
+
+      // Kern C6 Check: Critical Overload when HP < 30%
+      if (state && target.id === 'kern' && target.constellation >= 6 && !target.buffs.kernC6Used && target.stats.hp > 0 && (target.stats.hp / target.stats.maxHp) < 0.30) {
+        target.buffs.kernC6Used = true;
+        target.buffs.kernCritOverloadActive = true;
+        target.buffs.kernCritOverloadTurns = 3;
+        if (floatText) floatText(target.uid, "🌋 КРИТИЧЕСКОЕ ПЕРЕНАПРЯЖЕНИЕ (C6)", "text-amber-400 font-black text-xs");
+        if (log) log(`C6 Керна: HP упало ниже 30%! Керн переходит в «Критическое перенапряжение» (+30% урон обычных атак, 20% DEF AoE, иммунитет к потере HP)!`);
+      }
 
       // Volta Voltage accumulation on incoming damage
       if (state && target.isEnemy === false && dmg > 0) {
@@ -559,6 +635,135 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
                  }
                }, idx * 100);
             });
+          }
+        }
+      }
+
+      // Nereus Sea Flower (Морской цветок) on hit & reaction explosion
+      if (state && !state.isSubDmg && i === hits - 1 && target.buffs.nereusFlower && target.buffs.nereusFlower.hits > 0) {
+        const nereus = state.playerParty.find(p => p.id === 'nereus' && p.stats.hp > 0);
+        if (nereus) {
+          const flower = target.buffs.nereusFlower;
+          const c = nereus.constellation || 0;
+
+          // 1. Regular flower hit damage: 25% (35% C3) Max HP
+          const flowerRatio = c >= 3 ? 0.35 : 0.25;
+          const flowerMult = Math.round(nereus.stats.maxHp * flowerRatio) / Math.max(1, nereus.stats.atk);
+          if (log) log(`${nereus.name} (Морской цветок) наносит урон по ${target.name}!`);
+          if (floatText) floatText(target.uid, "🪸 МОРСКОЙ ЦВЕТОК", "text-cyan-300 font-bold text-xs");
+          dealDamage(nereus, target, flowerMult, "Hydro", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
+
+          // C2: When flower deals damage, recover 1 Cost (max 2 per turn)
+          if (c >= 2) {
+            nereus.buffs.nereusC2Triggers = (nereus.buffs.nereusC2Triggers || 0);
+            if (nereus.buffs.nereusC2Triggers < 2) {
+              nereus.buffs.nereusC2Triggers++;
+              Object.keys(nereus.cooldowns).forEach(k => {
+                if (nereus.cooldowns[k] > 0) nereus.cooldowns[k]--;
+              });
+              if (floatText) floatText(nereus.uid, "💧 КД -1 (C2)", "text-blue-300 text-xs font-bold");
+            }
+          }
+
+          let rxnExploded = false;
+          // 2. Reaction explosion:
+          // If hit caused elemental reaction, flower additionally explodes: 15% Max HP Hydro DMG and spreads Hydro to remaining enemies.
+          // Max 1 reaction explosion per turn per enemy.
+          if (reactionMsg && !flower.rxnExplosionUsedThisTurn) {
+            rxnExploded = true;
+            flower.rxnExplosionUsedThisTurn = true;
+            const rxnMult = Math.round(nereus.stats.maxHp * 0.15) / Math.max(1, nereus.stats.atk);
+            if (log) log(`Взрыв Морского цветка на ${target.name}! Волна Hydro окутывает противников!`);
+            if (floatText) floatText(target.uid, "💥 РЕАКЦИОННЫЙ ВЗРЫВ", "text-blue-400 font-black text-xs");
+            dealDamage(nereus, target, rxnMult, "Hydro", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
+
+            // Spread Hydro to all other alive enemies
+            state.enemyParty.forEach(e => {
+              if (e.stats.hp > 0 && e.uid !== target.uid) {
+                e.aura = "Hydro";
+              }
+            });
+
+            // C4: When flower explodes after elemental reaction, all other enemies take additional 10% Max HP Hydro DMG.
+            if (c >= 4) {
+              const c4Mult = Math.round(nereus.stats.maxHp * 0.10) / Math.max(1, nereus.stats.atk);
+              state.enemyParty.forEach(e => {
+                if (e.stats.hp > 0 && e.uid !== target.uid) {
+                  dealDamage(nereus, e, c4Mult, "Hydro", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
+                }
+              });
+            }
+
+            // C5: While Garden of Eternal Sea is active, first reaction explosion each turn deals +20% Max HP Hydro DMG to all enemies.
+            if (c >= 5 && (nereus.buffs.nereusGardenTurns ?? 0) > 0 && !nereus.buffs.nereusC5UsedThisTurn) {
+              nereus.buffs.nereusC5UsedThisTurn = true;
+              const c5Mult = Math.round(nereus.stats.maxHp * 0.20) / Math.max(1, nereus.stats.atk);
+              state.enemyParty.forEach(e => {
+                if (e.stats.hp > 0) {
+                  dealDamage(nereus, e, c5Mult, "Hydro", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
+                }
+              });
+              if (floatText) floatText(nereus.uid, "🌊 ВЕЧНЫЙ ПРИЛИВ (+20% HP)", "text-cyan-300 text-xs font-bold");
+            }
+
+            // C6: After flower triggers reaction explosion for the 3rd time within Nereus application, Great Bloom occurs (50% Max HP Hydro DMG to all enemies).
+            if (c >= 6) {
+              nereus.buffs.nereusC6RxnCount = (nereus.buffs.nereusC6RxnCount || 0) + 1;
+              if (nereus.buffs.nereusC6RxnCount >= 3) {
+                nereus.buffs.nereusC6RxnCount = 0;
+                const c6Mult = Math.round(nereus.stats.maxHp * 0.50) / Math.max(1, nereus.stats.atk);
+                state.enemyParty.forEach(e => {
+                  if (e.stats.hp > 0) {
+                    dealDamage(nereus, e, c6Mult, "Hydro", log, floatText, playEffect, 1, { ...state, isSubDmg: true });
+                  }
+                });
+                if (floatText) floatText(nereus.uid, "🪸 ВЕЛИКОЕ ЦВЕТЕНИЕ (50% HP) 🪸", "text-cyan-400 font-black text-sm");
+                if (log) log(`✨ ВЕЛИКОЕ ЦВЕТЕНИЕ НЕРЕУСА охватывает всех врагов! ✨`);
+              }
+            }
+          }
+
+          // Flower hit consumption rule:
+          // C1: reaction explosion does not consume a hit.
+          // Garden of Eternal Sea: flowers do not disappear after reaction explosion and continue until hits are exhausted.
+          const isGardenActive = (nereus.buffs.nereusGardenTurns ?? 0) > 0;
+          const preserveHit = rxnExploded && (c >= 1 || isGardenActive);
+          if (!preserveHit) {
+            flower.hits--;
+            if (flower.hits <= 0) {
+              delete target.buffs.nereusFlower;
+              if (floatText) floatText(target.uid, "Цветок увял", "text-white/50 text-xs");
+            }
+          }
+        }
+      }
+
+      // Iva Floral Bond: Every 2nd ally attack creates 1 Thorn (up to 2 times per turn)
+      if (state && !source.isEnemy && !state.isSubDmg && i === hits - 1 && target && target.stats.hp > 0) {
+        const iva = state.playerParty.find(p => p.id === 'iva' && p.stats.hp > 0);
+        if (iva && (iva.buffs.ivaFloralBondTurns ?? 0) > 0) {
+          iva.buffs.ivaAllyAttackCount = (iva.buffs.ivaAllyAttackCount || 0) + 1;
+          if (iva.buffs.ivaAllyAttackCount % 2 === 0 && (iva.buffs.ivaThornsGeneratedThisTurn || 0) < 2) {
+            iva.buffs.ivaThornsGeneratedThisTurn = (iva.buffs.ivaThornsGeneratedThisTurn || 0) + 1;
+            target.buffs.thorns = Math.min((target.buffs.thorns || 0) + 1, 3);
+            if (floatText) floatText(target.uid, `🌿 +1 ШИП (${target.buffs.thorns}/3)`, "text-emerald-400 font-bold text-xs");
+            if (log) log(`«Связь с флорой» Ивы создаёт 1 Шип на ${target.name} (${target.buffs.thorns}/3)!`);
+
+            // C1: +10% ATK on ally for 1 turn
+            if (iva.constellation >= 1) {
+              source.buffs.atk = (source.buffs.atk || 0) + Math.round(source.stats.atk * 0.10);
+              if (floatText) floatText(source.uid, "+10% ATK (C1)", "text-emerald-300 font-bold text-xs");
+            }
+
+            // C3: Every 2nd attack restoring 5% HP (max 2 times per turn)
+            if (iva.constellation >= 3 && (iva.buffs.ivaC3HealsThisTurn || 0) < 2) {
+              iva.buffs.ivaC3HealsThisTurn = (iva.buffs.ivaC3HealsThisTurn || 0) + 1;
+              const c3Heal = Math.round(source.stats.maxHp * 0.05);
+              source.stats.hp = Math.min(source.stats.maxHp, source.stats.hp + c3Heal);
+              if (floatText) floatText(source.uid, `+${c3Heal} HP (C3)`, "text-green-400 font-bold text-xs");
+            }
+
+            notifyThornAcquired(source, target, state, log, floatText, playEffect);
           }
         }
       }
@@ -695,70 +900,126 @@ export const ARTIFACT_SETS: Record<string, ArtifactSet> = {
     twoPieceBonus: "+15% Крио урон",
     fourPieceBonus: "Атаки по Переохлажденным целям наносят на 25% больше урона и имеют +15% Шанса крита. При возникновении Критического переохлаждения дает +20% ATB.",
     bonusEffect: (c) => {}
+  },
+  "coral_tide": {
+    id: "coral_tide",
+    name: "Коралловый Прилив",
+    twoPieceBonus: "+20% HP",
+    fourPieceBonus: "Увеличивает урон Гидро-атак и навыков, зависящих от HP, на 35%. При создании или взрыве Морского цветка крит. урон персонажа повышается на 40%, а урон Гидро-реакций всего отряда увеличивается на 25% на 2 хода.",
+    bonusEffect: (c) => {
+      c.stats.hp = Math.floor(c.stats.hp * 1.20);
+      c.stats.maxHp = c.stats.hp;
+    }
+  },
+  "thorn_whisper": {
+    id: "thorn_whisper",
+    name: "Шёпот Терновника",
+    twoPieceBonus: "+20% Эффективность лечения и +15 Скорости",
+    fourPieceBonus: "При активации «Связи с флорой» или генерации Шипов увеличивает силу атаки всего отряда на 20% и ускоряет набор ATB на 15%. Снижает сопротивление врагов к стихиям ещё на 10%.",
+    bonusEffect: (c) => {
+      c.buffs.spd = (c.buffs.spd || 0) + 15;
+      c.stats.hp = Math.floor(c.stats.hp * 1.15);
+      c.stats.maxHp = c.stats.hp;
+    }
   }
 };
 
 export const CHARACTER_PREFERENCES: Record<string, { main: string[], sub: string[], sets: string[] }> = {
-  volta: { main: ["hp", "def", "spd"], sub: ["hp", "def", "spd", "atk"], sets: ["voltage_circuit", "ashes_of_forge"] },
+  volta: { main: ["hp", "def", "spd"], sub: ["hp", "def", "spd"], sets: ["voltage_circuit", "ashes_of_forge"] },
   snezhana: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["absolute_zero", "frozen_time"] },
   zephyr: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["isolation_protocol", "echo_of_solitude"] },
-  aurum: { main: ["def", "hp"], sub: ["def", "hp", "spd"], sets: ["voltage_circuit"] },
+  aurum: { main: ["def", "hp", "spd"], sub: ["def", "hp", "spd"], sets: ["crystal_resonance", "voltage_circuit"] },
   rix: { main: ["hp", "spd", "atk"], sub: ["hp", "spd", "atk"], sets: ["voltage_circuit"] },
   ineffa: { main: ["atk", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge", "gladiator"] },
   volosatinya: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  gotka: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  kopro: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  gotka: { main: ["atk", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  kopro: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
   selva: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  moyan: { main: ["hp", "def"], sub: ["hp", "def", "atk"], sets: ["voltage_circuit"] },
-  aelita: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  asher: { main: ["hp", "spd"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
-  selina: { main: ["atk", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  moyan: { main: ["hp", "def", "spd"], sub: ["hp", "def", "spd"], sets: ["voltage_circuit"] },
+  aelita: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  asher: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
+  selina: { main: ["atk", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
   neuron: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["isolation_protocol"] },
-  krona: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
+  krona: { main: ["spd", "atk", "critRate"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
   cyrus: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
   raven: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  echo: { main: ["spd", "atk"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
-  patch: { main: ["hp"], sub: ["hp", "spd"], sets: ["voltage_circuit"] },
-  claymore: { main: ["atk"], sub: ["atk", "def"], sets: ["gladiator"] },
-  viper: { main: ["atk"], sub: ["atk", "spd"], sets: ["gladiator"] },
-  spark: { main: ["spd", "atk"], sub: ["spd", "atk"], sets: ["gladiator"] },
-  aegis: { main: ["def", "hp"], sub: ["def", "hp"], sets: ["voltage_circuit"] },
-  blaze: { main: ["atk", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge"] },
-  tide: { main: ["atk"], sub: ["atk", "spd"], sets: ["gladiator"] },
-  nova: { main: ["hp", "atk"], sub: ["hp", "atk"], sets: ["voltage_circuit"] },
-  glacier: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["absolute_zero"] },
-  pulse: { main: ["spd", "atk"], sub: ["spd", "atk"], sets: ["isolation_protocol"] },
-  gaia: { main: ["hp"], sub: ["hp", "spd"], sets: ["voltage_circuit"] },
-  fenris: { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
-  farina: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["noblesse", "frozen_time", "shattered_winter"] },
+  echo: { main: ["spd", "atk", "critRate"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
+  patch: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
+  claymore: { main: ["atk", "def"], sub: ["atk", "def", "critRate", "critDamage"], sets: ["gladiator"] },
+  viper: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  spark: { main: ["spd", "atk", "critRate"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["gladiator"] },
+  aegis: { main: ["def", "hp", "spd"], sub: ["def", "hp", "spd"], sets: ["crystal_resonance", "voltage_circuit"] },
+  blaze: { main: ["atk", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge"] },
+  tide: { main: ["atk", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  nova: { main: ["hp", "atk", "spd"], sub: ["hp", "atk", "spd"], sets: ["voltage_circuit"] },
+  glacier: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["absolute_zero"] },
+  pulse: { main: ["spd", "atk", "critRate"], sub: ["spd", "atk", "critRate", "critDamage"], sets: ["isolation_protocol"] },
+  gaia: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
+  fenris: { main: ["atk", "spd", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["gladiator"] },
+  farina: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["noblesse", "frozen_time", "shattered_winter"] },
   kairen: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["shattered_winter", "gladiator"] },
-  aveline: { main: ["hp", "spd", "atk"], sub: ["hp", "spd", "atk", "def"], sets: ["ocean_song", "voltage_circuit"] },
+  aveline: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["ocean_song", "voltage_circuit"] },
+  nereus: { main: ["hp", "critDamage", "critRate", "spd"], sub: ["hp", "critDamage", "critRate", "spd"], sets: ["coral_tide", "ocean_song", "voltage_circuit"] },
+  iva: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["thorn_whisper", "voltage_circuit", "ocean_song"] },
+  kern: { main: ["def", "critDamage", "critRate", "spd"], sub: ["def", "critDamage", "critRate", "spd"], sets: ["crystal_resonance", "gladiator", "voltage_circuit"] },
+  maestro: { main: ["atk", "critDamage", "critRate", "spd"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["isolation_protocol", "ashes_of_forge"] },
+  kamikaze: { main: ["atk", "spd", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["ashes_of_forge"] },
 };
 
 export const scoreArtifact = (art: Artifact, charId: string): number => {
-  const prefs = CHARACTER_PREFERENCES[charId] || { main: ["atk"], sub: ["atk"], sets: [] };
+  const prefs = CHARACTER_PREFERENCES[charId] || { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: [] };
   
-  // Base score from rarity
+  // Base score from rarity (1000 - 5000)
   let score = art.rarity * 1000;
   
-  // Level weight (reduced to 20 per level to prioritize stats)
-  score += art.level * 20;
+  // Level weight
+  score += art.level * 40;
 
-  // Main stat weight (much higher priority)
-  if (prefs.main.includes(art.mainStat.type)) {
-    score += 2000;
+  // Main stat weight with strict hierarchy
+  const mainIdx = prefs.main.indexOf(art.mainStat.type);
+  if (mainIdx === 0) {
+    // Top priority stat (e.g. HP for Nereus/Iva, DEF for Kern, ATK for DPS)
+    score += 25000;
+  } else if (mainIdx === 1) {
+    score += 15000;
+  } else if (mainIdx === 2) {
+    score += 10000;
+  } else if (mainIdx >= 3) {
+    score += 6000;
+  } else {
+    // Main stat NOT in character's desired list
+    if (art.slot === 'plume' || art.slot === 'flower') {
+      // Flower is fixed HP, Plume is fixed ATK by system design
+      score += 1000;
+    } else {
+      // Variable slot (sands, goblet, circlet): massive penalty for unwanted main stat!
+      score -= 25000;
+    }
   }
 
-  // Set bonus weight (important for auto-pick)
+  // Set bonus weight
   if (prefs.sets && prefs.sets.includes(art.setName)) {
-    score += 1500;
+    const setIdx = prefs.sets.indexOf(art.setName);
+    score += Math.max(1000, 4000 - setIdx * 1000);
   }
 
-  // Sub stats weight
+  // Sub stats weight (normalized according to stat magnitude and priority)
   art.subStats?.forEach(s => {
-    if (prefs.sub.includes(s.type)) {
-      // Substats matter but less than main/set
-      score += s.value * 5; 
+    const subIdx = prefs.sub.indexOf(s.type);
+    if (subIdx !== -1) {
+      let statWeight = 0;
+      if (s.type === 'critRate') statWeight = s.value * 120;
+      else if (s.type === 'critDamage') statWeight = s.value * 60;
+      else if (s.type === 'spd') statWeight = s.value * 90;
+      else if (s.type === 'hp' || s.type === 'atk' || s.type === 'def') statWeight = s.value * 6;
+      
+      const priorityMult = Math.max(0.6, 2.0 - subIdx * 0.4);
+      score += Math.round(statWeight * priorityMult);
+    } else {
+      // Penalty for ATK substat on characters that scale purely with HP or DEF
+      if (s.type === 'atk' && (prefs.main[0] === 'hp' || prefs.main[0] === 'def')) {
+        score -= 500;
+      }
     }
   });
 
@@ -918,6 +1179,24 @@ export const ARTIFACT_DUNGEONS: Dungeon[] = [
         }
       });
     }
+  },
+  {
+    id: "domain_verdant_tide",
+    name: "Святилище Прилива и Терний",
+    description: 'Древнее затопленное святилище на стыке измерений, где прозрачные приливные воды омывают первозданный терновник. Здесь добываются новые сеты Коралловый Прилив (для Нереуса) и Шёпот Терновника (для Ивы).',
+    level: 90,
+    entryCost: 20,
+    rewardSets: ["coral_tide", "thorn_whisper"],
+    enemyTeam: ["nereus", "iva", "void_prism"],
+    effectDescription: "Гидро и Дендро урон отряда увеличен на 50%. При вызове реакций с участием Гидро или Дендро союзники восстанавливают 10% HP и продвигают свое действие на 15% ATB.",
+    effect: (state) => {
+      state.playerParty.forEach(p => { 
+        if (p.element === 'Hydro' || p.element === 'Dendro') {
+          p.buffs.atk = (p.buffs.atk || 0) + 140;
+          p.buffs.critDamage = (p.buffs.critDamage || 0) + 35;
+        }
+      });
+    }
   }
 ];
 
@@ -935,9 +1214,10 @@ export const formatStatName = (type: string): string => {
 
 export const formatStatValue = (type: string, value: number): string => {
   if (type === 'critRate' || type === 'critDamage') {
-    return `+${value}%`;
+    const num = Math.round((value || 0) * 10) / 10;
+    return `+${num}%`;
   }
-  return `+${value}`;
+  return `+${Math.round(value || 0)}`;
 };
 
 export const generateArtifact = (setName: string, rarity: number = 5): Artifact => {
@@ -1038,6 +1318,14 @@ export const applySetBonuses = (combatant: Combatant, artifacts: Artifact[]) => 
         } else if (setName === 'crystal_resonance') {
            combatant.buffs.defBoost = (combatant.buffs.defBoost || 0) + 20;
            combatant.stats.def = Math.floor(combatant.stats.def * 1.20);
+        } else if (setName === 'coral_tide') {
+           combatant.buffs.hpBoost = (combatant.buffs.hpBoost || 0) + 20;
+           combatant.stats.hp = Math.floor(combatant.stats.hp * 1.20);
+           combatant.stats.maxHp = combatant.stats.hp;
+        } else if (setName === 'thorn_whisper') {
+           combatant.buffs.spd = (combatant.buffs.spd || 0) + 15;
+           combatant.buffs.hpBoost = (combatant.buffs.hpBoost || 0) + 15;
+           combatant.buffs.healBoost = (combatant.buffs.healBoost || 0) + 20;
         }
       }
       if (count >= 4) {
@@ -1065,9 +1353,17 @@ export const applySetBonuses = (combatant: Combatant, artifacts: Artifact[]) => 
            combatant.buffs.reflectionDmgBonus = (combatant.buffs.reflectionDmgBonus || 0) + 0.20;
         } else if (setName === 'crystal_resonance') {
            combatant.buffs.crystalResonance4pc = 1;
-        }
         } else if (setName === 'noblesse') {
            combatant.buffs.noblesse4pc = 1;
+        } else if (setName === 'coral_tide') {
+           combatant.buffs.dmgBoost = (combatant.buffs.dmgBoost || 0) + 35;
+           combatant.buffs.critDamage = (combatant.buffs.critDamage || 0) + 40;
+           combatant.buffs.coralTide4pc = 1;
+        } else if (setName === 'thorn_whisper') {
+           combatant.buffs.atk = (combatant.buffs.atk || 0) + Math.floor(combatant.stats.atk * 0.20);
+           combatant.buffs.defIgnoreBoost = (combatant.buffs.defIgnoreBoost || 0) + 0.10;
+           combatant.buffs.thornWhisper4pc = 1;
+        }
       }
     }
   });
@@ -1092,22 +1388,29 @@ const scaleStats = (baseHp: number, baseAtk: number, baseDef: number, baseSpd: n
     const stats = [art.mainStat, ...subStats];
     stats.forEach(s => {
       if (!s || !s.type) return;
-      if (s.type === 'hp') hp += s.value || 0;
-      if (s.type === 'atk') atk += s.value || 0;
-      if (s.type === 'def') def += s.value || 0;
-      if (s.type === 'spd') spd += s.value || 0;
-      if (s.type === 'critRate') critRate += s.value || 0;
-      if (s.type === 'critDamage') critDamage += s.value || 0;
+      const sVal = s.value || 0;
+      if (s.type === 'hp') hp += Math.round(sVal);
+      if (s.type === 'atk') atk += Math.round(sVal);
+      if (s.type === 'def') def += Math.round(sVal);
+      if (s.type === 'spd') spd += Math.round(sVal);
+      if (s.type === 'critRate') critRate += sVal;
+      if (s.type === 'critDamage') critDamage += sVal;
     });
   });
 
-  const finalSpd = Math.min(180, spd); // Hard cap speed to prevent infinite turns
+  const finalHp = Math.round(hp);
+  const finalAtk = Math.round(atk);
+  const finalDef = Math.round(def);
+  const finalSpd = Math.round(Math.min(180, spd)); // Hard cap speed to prevent infinite turns
   const finalCritRate = Math.round(critRate * 10) / 10;
   const finalCritDamage = Math.round(critDamage * 10) / 10;
-  return { hp, maxHp: hp, atk, def, spd: finalSpd, critRate: finalCritRate, critDamage: finalCritDamage };
+  return { hp: finalHp, maxHp: finalHp, atk: finalAtk, def: finalDef, spd: finalSpd, critRate: finalCritRate, critDamage: finalCritDamage };
 };
 
 export const charRarity: Record<string, Rarity> = {
+  kern: 'A',
+  iva: 'S',
+  nereus: 'S',
   aveline: 'S',
   kairen: 'S',
   zephyr: "S",
@@ -1148,6 +1451,9 @@ export const charRarity: Record<string, Rarity> = {
 
 export const getCharEmoji = (id: string): string => {
   switch (id) {
+    case 'kern': return '⛏️';
+    case 'iva': return '🌿';
+    case 'nereus': return '🪸';
     case 'aveline': return '🌸';
     case 'kairen': return '❄️';
     case 'snezhana': return '❄️';
@@ -1466,6 +1772,294 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     ]
   }),
 
+  nereus: (uid, l, c, arts = []) => ({
+    id: 'nereus', uid, isEnemy: false, name: 'Нереус', element: 'Hydro', color: 'bg-teal-700 text-white', level: l, constellation: c,
+    image: getCharSplash('nereus') || undefined,
+    stats: scaleStats(1550, 150, 80, 48, l, c, arts), atb: 0, cooldowns: {}, buffs: {
+      nereusGardenTurns: 0,
+      nereusC2Triggers: 0,
+      nereusC5UsedThisTurn: false,
+      nereusC6RxnCount: 0
+    },
+    skills: [
+      {
+        id: 'ne_atk', name: 'Прикосновение прилива', type: 'Attack', cost: 0, target: 'SingleEnemy',
+        description: 'Нереус наносит выбранному врагу 100% ATK Hydro DMG.',
+        statsText: "Урон: 100% ATK (Hydro)",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, 'heal');
+          dealDamage(s, t[0], 1.0, 'Hydro', log, ft, pl, 1, state);
+        }
+      },
+      {
+        id: 'ne_e', name: 'Вуаль прилива', type: 'Skill1', cost: 3, target: 'SingleEnemy',
+        description: 'Создаёт Морской цветок на выбранном враге на 2 хода (до 2 ударов). При каждом ударе по цели цветок наносит 25% Max HP (35% на C3) Hydro DMG. При элементальной реакции цветок взрывается (+15% Max HP Hydro DMG) и распространяет Hydro на всех врагов.',
+        statsText: "Морской цветок: 2 хода (2 удара)\nУрон цветка: 25% Max HP (35% C3)\nВзрыв: 15% Max HP Hydro + Hydro всем",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, 'heal');
+          t[0].aura = 'Hydro';
+          t[0].buffs.nereusFlower = {
+            hits: 2,
+            turns: 2,
+            nereusUid: s.uid,
+            rxnExplosionUsedThisTurn: false
+          };
+          if (ft) ft(t[0].uid, '🪸 МОРСКОЙ ЦВЕТОК', 'text-cyan-300 font-bold');
+          if (log) log(`${s.name} накладывает Морской цветок на ${t[0].name}!`);
+        }
+      },
+      {
+        id: 'ne_q', name: 'Сад вечного моря', type: 'Skill2', cost: 5, target: 'AllEnemies',
+        description: 'Создаёт Сад вечного моря на 2 хода. Наносит 30% Max HP Hydro DMG всем врагам, накладывает Hydro и даёт +1 удар существующим Морским цветам. В начале хода каждого врага наносит 17% Max HP Hydro DMG и накладывает Hydro. При окончании сада: Последнее цветение (10% Max HP Hydro DMG + Hydro всем).',
+        statsText: "AoE урон: 30% Max HP Hydro\nСад: 2 хода (17% Max HP в ход врага)\nЦветы: +1 удар\nФинал сада: 10% Max HP Hydro всем",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, 'heal');
+          s.buffs.nereusGardenTurns = 3; // +1 for turn-end tick
+          if (ft) ft(s.uid, '🌊 САД ВЕЧНОГО МОРЯ', 'text-cyan-400 font-black text-sm');
+          if (log) log(`${s.name} раскрывает Сад вечного моря!`);
+
+          const burstMult = Math.round(s.stats.maxHp * 0.30) / Math.max(1, s.stats.atk);
+          t.forEach(e => {
+            if (e.stats.hp > 0) {
+              e.aura = 'Hydro';
+              dealDamage(s, e, burstMult, 'Hydro', log, ft, pl, 1, state);
+              if (e.buffs.nereusFlower) {
+                e.buffs.nereusFlower.hits += 1;
+                if (ft) ft(e.uid, '🪸 +1 УДАР ЦВЕТКА', 'text-cyan-200 text-xs font-bold');
+              }
+            }
+          });
+        }
+      }
+    ]
+  }),
+
+  iva: (uid, l, c, arts = []) => ({
+    id: "iva", uid, isEnemy: false, name: "Ива", element: "Dendro", color: "bg-emerald-700 text-white", level: l, constellation: c,
+    image: getCharSplash('iva') || undefined,
+    stats: scaleStats(1520, 180, 85, 46, l, c, arts), atb: 0, cooldowns: {}, buffs: {
+      ivaFloralBondTurns: 0,
+      ivaBloomTurns: 0,
+      ivaAllyAttackCount: 0,
+      ivaThornsGeneratedThisTurn: 0,
+      ivaBloomHealsThisTurn: 0,
+      ivaC4TriggeredThisTurn: false,
+      ivaC6TriggeredThisE: false,
+      ivaC6ThornCounter: 0,
+      ivaC3HealsThisTurn: 0,
+    },
+    skills: [
+      {
+        id: "iva_atk", name: "Первые ростки", type: "Attack", cost: 0, target: "SingleEnemy",
+        description: "Ива выполняет серию из 5 атак, не наносящих урона.",
+        statsText: "Удары: 5 ударов\nУрон: 0% АТК\nСтоимость: 0",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "heal");
+          dealDamage(s, t[0], 0, "Dendro", log, ft, pl, 5, state);
+          if (log) log(`${s.name} использует «Первые ростки» (5 атак, 0 урона).`);
+        }
+      },
+      {
+        id: "iva_e", name: "Связь с флорой", type: "Skill1", cost: 3, target: "AllAllies",
+        description: "Ива создаёт Флоральную связь на 2 хода. Пока действует связь: Dendro и Cryo RES всех врагов снижены на 20% (25% на C2); каждая 2-я атака союзника дополнительно создаёт 1 Шип (до 2 раз за ход).",
+        statsText: "Длительность: 2 хода\nСнижение RES: -20% (Dendro/Cryo, -25% C2)\nШипы: каждые 2 атаки союзника (до 2/ход)\nСтоимость: 3",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "heal");
+          s.buffs.ivaFloralBondTurns = 3; // 2 full turns
+          s.buffs.ivaThornsGeneratedThisTurn = 0;
+          s.buffs.ivaC6TriggeredThisE = false;
+          s.buffs.ivaC6ThornCounter = 0;
+          if (ft) ft(s.uid, "🌿 СВЯЗЬ С ФЛОРОЙ", "text-emerald-300 font-extrabold");
+          if (log) log(`${s.name} активирует «Связь с флорой» на 2 хода! Снижение Dendro/Cryo RES врагов на ${c >= 2 ? "25%" : "20%"}.`);
+        }
+      },
+      {
+        id: "iva_q", name: "Цветение первозданной природы", type: "Skill2", cost: 6, target: "AllEnemies",
+        description: "Ива призывает силу природы, нанося всем врагам 200% ATK Dendro DMG и восстанавливая всему отряду 20% HP. Создаёт эффект «Цветение» на 2 хода: каждый раз, когда союзник получает Шип, он восстанавливает 5% HP (6% на C5, до 2 раз за ход, 3 на C5).",
+        statsText: "Урон: 200% ATK Dendro всем\nЛечение: 20% HP отряду\nЦветение: 2 хода (5% HP за Шип, до 2/ход)\nСтоимость: 6",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "heal");
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) {
+              dealDamage(s, enemy, 2.0, "Dendro", log, ft, pl, 2, state);
+            }
+          });
+          state?.playerParty.forEach(ally => {
+            if (ally.stats.hp > 0) {
+              const heal = Math.round(ally.stats.maxHp * 0.20);
+              ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal);
+              if (ft) ft(ally.uid, `+${heal} HP`, "text-green-400 font-bold");
+              if (pl) pl(ally.uid, "heal");
+            }
+          });
+          s.buffs.ivaBloomTurns = 3; // 2 full turns
+          s.buffs.ivaBloomHealsThisTurn = 0;
+          if (ft) ft(s.uid, "🌸 ЦВЕТЕНИЕ ПРИРОДЫ", "text-emerald-200 font-black text-sm");
+          if (log) log(`${s.name} вызывает «Цветение первозданной природы»! 200% AoE Dendro DMG и 20% исцеление отряда.`);
+        }
+      }
+    ]
+  }),
+
+  kern: (uid, l, c, arts = []) => ({
+    id: "kern", uid, isEnemy: false, name: "Керн", element: "Geo", color: "bg-amber-800 text-white", level: l, constellation: c,
+    image: getCharSplash('kern') || undefined,
+    stats: scaleStats(1380, 160, 110, 44, l, c, arts), atb: 0, cooldowns: {}, buffs: {
+      kernOverloadTurns: 0,
+      kernQBonusTurns: 0,
+      kernC4BonusTurns: 0,
+      kernCritOverloadActive: false,
+      kernCritOverloadTurns: 0,
+      kernC6Used: false,
+      kernC2DefStacks: 0,
+      kernC2DefTurns: 0,
+      kernNormalAttackCount: 0,
+    },
+    skills: [
+      {
+        id: "kern_atk", name: "Каменный натиск", type: "Attack", cost: 0, target: "SingleEnemy",
+        description: "Керн выполняет серию из 5 атак, наносящих Geo DMG: 70% / 80% / 90% / 100% / 120% DEF. Обычные атаки являются основным источником урона Керна.",
+        statsText: "Удары: 5 ударов (70%/80%/90%/100%/120% ЗАЩ)\nСуммарно: 460% ЗАЩ Geo DMG\nСтоимость: 0",
+        execute: (s, t, state, log, ft, pl) => {
+          const isOverload = (s.buffs.kernOverloadTurns ?? 0) > 0;
+          const isQBonus = (s.buffs.kernQBonusTurns ?? 0) > 0;
+          const isC1 = c >= 1 && (s.stats.hp / s.stats.maxHp) < 0.70;
+          const isC3 = c >= 3;
+          const isC4 = c >= 4 && (s.buffs.kernC4BonusTurns ?? 0) > 0;
+          const isC6 = !!s.buffs.kernCritOverloadActive;
+
+          let bonusPct = 0;
+          if (isOverload) bonusPct += 0.10;
+          if (isQBonus) bonusPct += 0.15;
+          if (isC1) bonusPct += 0.15;
+          if (isC3) bonusPct += 0.20;
+          if (isC4) bonusPct += 0.15;
+          if (isC6) bonusPct += 0.30;
+
+          const totalMult = 4.6 * (1 + bonusPct);
+          s.buffs.kernNormalAttackCount = (s.buffs.kernNormalAttackCount || 0) + 1;
+
+          if (pl) pl(t[0].uid, "Geo");
+          dealDamage(s, t[0], totalMult, "Geo", log, ft, pl, 5, state);
+          if (log) log(`${s.name} проводит «Каменный натиск» (5 ударов, суммарно ${Math.round(totalMult * 100)}% DEF Geo DMG${bonusPct > 0 ? `, бонус +${Math.round(bonusPct * 100)}%` : ""})!`);
+
+          // C5: While Overload is active, every 5th Normal Attack deals 50% DEF Geo DMG to all enemies
+          if (c >= 5 && isOverload && (s.buffs.kernNormalAttackCount % 5 === 0)) {
+            if (ft) ft(s.uid, "💥 НЕУКРОТИМАЯ СИЛА (C5)", "text-amber-300 font-extrabold text-xs");
+            if (log) log(`C5 Керна: 5-я обычная атака в Перенапряжении наносит 50% DEF Geo DMG всем врагам!`);
+            state?.enemyParty.forEach(e => {
+              if (e.stats.hp > 0) {
+                dealDamage(s, e, 0.50, "Geo", log, ft, pl, 1, { ...state, isSubDmg: true });
+              }
+            });
+          }
+
+          // C6: Normal attacks additionally deal 20% DEF Geo DMG to all enemies
+          if (isC6) {
+            state?.enemyParty.forEach(e => {
+              if (e.stats.hp > 0) {
+                dealDamage(s, e, 0.20, "Geo", log, ft, pl, 1, { ...state, isSubDmg: true });
+              }
+            });
+          }
+        }
+      },
+      {
+        id: "kern_e", name: "Разлом ядра", type: "Skill1", cost: 3, target: "AllEnemies",
+        description: "Керн высвобождает Гео-энергию, нанося всем врагам 80% DEF Geo DMG. После атаки Керн теряет 15% текущего HP и получает эффект «Перенапряжение» на 2 хода (+10% урон обычных атак). При повторном применении длительность обновляется.",
+        statsText: "Урон: 80% ЗАЩ Geo всем\nСамоурон: 15% текущего HP\nПеренапряжение: +10% урон обычных атак (2 хода)\nСтоимость: 3",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "Geo");
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) {
+              dealDamage(s, enemy, 0.8, "Geo", log, ft, pl, 1, state);
+            }
+          });
+
+          // HP loss if not in C6 Critical Overload
+          if (!s.buffs.kernCritOverloadActive) {
+            const hpLoss = Math.floor(s.stats.hp * 0.15);
+            s.stats.hp = Math.max(1, s.stats.hp - hpLoss);
+            if (ft) ft(s.uid, `-${hpLoss} HP (Самоурон)`, "text-amber-400 font-bold text-xs");
+            if (log) log(`${s.name} теряет ${hpLoss} HP от «Разлома ядра».`);
+
+            if (c >= 2) {
+              s.buffs.kernC2DefStacks = Math.min(2, (s.buffs.kernC2DefStacks || 0) + 1);
+              s.buffs.kernC2DefTurns = 3;
+              if (ft) ft(s.uid, `+${s.buffs.kernC2DefStacks * 10}% DEF (C2)`, "text-amber-300 font-bold text-xs");
+            }
+          } else {
+            if (ft) ft(s.uid, "🛡️ ИММУНИТЕТ К САМОУРОНУ (C6)", "text-amber-200 font-bold text-xs");
+          }
+
+          // Check C6 trigger
+          if (c >= 6 && !s.buffs.kernC6Used && (s.stats.hp / s.stats.maxHp) < 0.30) {
+            s.buffs.kernC6Used = true;
+            s.buffs.kernCritOverloadActive = true;
+            s.buffs.kernCritOverloadTurns = 3;
+            if (ft) ft(s.uid, "🌋 КРИТИЧЕСКОЕ ПЕРЕНАПРЯЖЕНИЕ (C6)", "text-amber-400 font-black text-sm");
+            if (log) log(`C6 Керна: HP упало ниже 30%! Керн переходит в «Критическое перенапряжение» (+30% урон обычных атак, 20% DEF AoE, иммунитет к потере HP)!`);
+          }
+
+          s.buffs.kernOverloadTurns = 3; // 2 full turns
+          if (ft) ft(s.uid, "⚡ ПЕРЕНАПРЯЖЕНИЕ (+10%)", "text-amber-300 font-extrabold");
+          if (log) log(`${s.name} активирует «Перенапряжение» на 2 хода (+10% к урону обычных атак).`);
+        }
+      },
+      {
+        id: "kern_q", name: "Катастрофа недр", type: "Skill2", cost: 5, target: "AllEnemies",
+        description: "Керн высвобождает мощную Гео-энергию, нанося всем врагам 140% DEF Geo DMG. После атаки теряет 20% текущего HP и усиливает «Перенапряжение»: урон обычных атак увеличивается ещё на 15% на 2 хода (+25% суммарно).",
+        statsText: "Урон: 140% ЗАЩ Geo всем\nСамоурон: 20% текущего HP\nБонус к атакам: +15% (итого +25% с E)\nC4: +10% исцеление и +15% урон атак\nСтоимость: 5",
+        execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "Geo");
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) {
+              dealDamage(s, enemy, 1.4, "Geo", log, ft, pl, 2, state);
+            }
+          });
+
+          // HP loss if not in C6 Critical Overload
+          if (!s.buffs.kernCritOverloadActive) {
+            const hpLoss = Math.floor(s.stats.hp * 0.20);
+            s.stats.hp = Math.max(1, s.stats.hp - hpLoss);
+            if (ft) ft(s.uid, `-${hpLoss} HP (Самоурон)`, "text-amber-400 font-bold text-xs");
+            if (log) log(`${s.name} теряет ${hpLoss} HP от «Катастрофы недр».`);
+
+            if (c >= 2) {
+              s.buffs.kernC2DefStacks = Math.min(2, (s.buffs.kernC2DefStacks || 0) + 1);
+              s.buffs.kernC2DefTurns = 3;
+              if (ft) ft(s.uid, `+${s.buffs.kernC2DefStacks * 10}% DEF (C2)`, "text-amber-300 font-bold text-xs");
+            }
+          } else {
+            if (ft) ft(s.uid, "🛡️ ИММУНИТЕТ К САМОУРОНУ (C6)", "text-amber-200 font-bold text-xs");
+          }
+
+          // C4: Restores 10% HP, +15% normal attack damage for 2 turns
+          if (c >= 4) {
+            const c4Heal = Math.round(s.stats.maxHp * 0.10);
+            s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + c4Heal);
+            s.buffs.kernC4BonusTurns = 3;
+            if (ft) ft(s.uid, `+${c4Heal} HP / +15% АТАКИ (C4)`, "text-green-300 font-bold text-xs");
+            if (log) log(`C4 Керна: восстановлено ${c4Heal} HP и получено +15% к урону обычных атак.`);
+          }
+
+          // Check C6 trigger
+          if (c >= 6 && !s.buffs.kernC6Used && (s.stats.hp / s.stats.maxHp) < 0.30) {
+            s.buffs.kernC6Used = true;
+            s.buffs.kernCritOverloadActive = true;
+            s.buffs.kernCritOverloadTurns = 3;
+            if (ft) ft(s.uid, "🌋 КРИТИЧЕСКОЕ ПЕРЕНАПРЯЖЕНИЕ (C6)", "text-amber-400 font-black text-sm");
+            if (log) log(`C6 Керна: HP упало ниже 30%! Керн переходит в «Критическое перенапряжение» (+30% урон обычных атак, 20% DEF AoE, иммунитет к потере HP)!`);
+          }
+
+          s.buffs.kernQBonusTurns = 3; // +15% for 2 turns
+          if (ft) ft(s.uid, "💥 УСИЛЕНИЕ (+15% УРОНА)", "text-amber-300 font-extrabold");
+          if (log) log(`${s.name} усиливает Перенапряжение: +15% к урону обычных атак на 2 хода.`);
+        }
+      }
+    ]
+  }),
+
   ineffa: (uid, l, c, arts = []) => ({
     id: "ineffa", uid, isEnemy: false, name: "Инеффа", element: "Pyro", color: "bg-red-800", level: l, constellation: c,
     image: getCharSplash('ineffa') || undefined,
@@ -1485,6 +2079,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const fragments = s.buffs.mirrorFragment || 0;
           if (isPyro) mult += fragments * 0.15; // Passive boost
           
+          if (pl) pl(target.uid, isPyro ? "ineffa_mirror_slash" : "Physical");
           dealDamage(s, target, mult, element, log, ft, pl, isPyro ? 3 : 2, state, c >= 6 ? 0.3 : 0);
           
           if (isPyro && target.aura === "Electro") {
@@ -1513,8 +2108,6 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
              }
              
              dealDamage(s, target, bonusMult, "Pyro", log, ft, pl, 1, state, c >= 6 ? 0.3 : 0);
-             
-             // reset critDamageBoost after hit so it only affects this attack? Wait, the set says "Каждый уровень увеличивает... Крит. урон". So it should last as long as the buff lasts (10s), but we don't track time well. Leaving it as a permanent combat buff is fine for this game's mechanics.
           }
         }
       },
@@ -1526,6 +2119,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           s.buffs.reflectedForm = 4;
           s.buffs.spd = (s.buffs.spd || 0) + 15; // Passive 1 representation
           if (ft) ft(s.uid, "ОТРАЖЕННАЯ ФОРМА", "text-red-400 font-bold");
+          if (pl) {
+            pl(s.uid, "ineffa_dawn_mirror");
+            pl(t[0].uid, "ineffa_mirror_slash");
+          }
           let mult = 1.5;
           let fragmentBonus = (s.buffs.mirrorFragment || 0) * 0.25;
           mult += fragmentBonus;
@@ -1540,6 +2137,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           let fragments = s.buffs.mirrorFragment || 0;
           let mult = 3.5 + fragments * 0.9;
           if (c >= 3) mult += 0.5;
+          if (pl) {
+            pl(s.uid, "ineffa_dawn_mirror");
+            pl(t[0].uid, "ineffa_hybrid_energy");
+          }
           dealDamage(s, t[0], mult, "Pyro", log, ft, pl, fragments + 2, state, c >= 6 ? 0.3 : 0);
           
           if (c >= 6 && fragments >= 6) {
@@ -1760,8 +2361,8 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Одиночный укол. Наносит выбранному противнику небольшой урон.',
         statsText: "Урон: 100% АТК",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "maestro_stab");
           dealDamage(s, t[0], 1.0, "Electro", log, ft, pl, 1, state);
-          if (pl) pl(s.uid, "attack");
         }
       },
       {
@@ -1775,8 +2376,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         execute: (s, t, state, log, ft, pl) => {
           t[0].buffs.isolationMark = 2;
           if (ft) ft(t[0].uid, "🎯 Метка Изоляции", "text-purple-400 font-bold");
+          if (pl) {
+            pl(s.uid, "buff");
+            pl(t[0].uid, "maestro_isolation");
+          }
           dealDamage(s, t[0], 1.2, "Electro", log, ft, pl, 1, state);
-          if (pl) pl(s.uid, "buff");
         }
       },
       {
@@ -1788,6 +2392,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Продвигает АТВ союзников на 20%. Если есть враж. дебаффы - союзник с макс. ATK получает мгновенный ход.',
         statsText: "Продвижение хода: 20% / 100%",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) {
+            pl(s.uid, "maestro_final_chord");
+            t.forEach(ally => pl(ally.uid, "maestro_echo"));
+          }
           t.forEach(ally => {
             if (ally.stats.hp > 0 && ally.uid !== s.uid) {
               ally.atb = Math.min(100, ally.atb + 20);
@@ -1811,7 +2419,6 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
               }
             }
           }
-          if (pl) pl(s.uid, "ultimate_cast");
         }
       }
     ]
@@ -1822,11 +2429,38 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1200, 180, 80, 40, l, c, arts), atb: 0, cooldowns: {}, buffs: { lastHitBlocked: false },
     skills: [
       { id: "v_atk", name: "Обычная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удар мечами (Гидро урон).',
-        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Hydro", log, ft, pl, 2, state); } },
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { 
+          if (pl) pl(t[0].uid, "volosatinya_slice");
+          dealDamage(s, t[0], 1.0, "Hydro", log, ft, pl, 2, state); 
+        } },
       { id: "v_e", name: "Волосатый разрез", type: "Skill1", cost: 3, target: "SingleEnemy", description: 'Гидро урон, замедляет врага.',
-        statsText: "Урон: 150% АТК (210% по Пиро)\nДебафф: -10 СКОР", execute: (s, t, state, log, ft, pl) => { let mult = 1.5; if (c >= 6 && t[0].aura === "Pyro") mult *= 1.4; dealDamage(s, t[0], mult, "Hydro", log, ft, pl, 3, state); t[0].buffs.spd = (t[0].buffs.spd || 0) - 10; if(ft) ft(t[0].uid, '↓Скорость', 'text-blue-300'); } },
+        statsText: "Урон: 150% АТК (210% по Пиро)\nДебафф: -10 СКОР", execute: (s, t, state, log, ft, pl) => { 
+          let mult = 1.5; 
+          if (c >= 6 && t[0].aura === "Pyro") mult *= 1.4; 
+          if (pl) pl(t[0].uid, "volosatinya_hair_slash");
+          dealDamage(s, t[0], mult, "Hydro", log, ft, pl, 3, state); 
+          t[0].buffs.spd = (t[0].buffs.spd || 0) - 10; 
+          if(ft) ft(t[0].uid, '↓Скорость', 'text-blue-300'); 
+        } },
       { id: "v_q", name: "Поляна лобковых волос", type: "Skill2", cost: 5, target: "AllEnemies", description: 'AoE Гидро урон, усиливает атаку отряда.',
-        statsText: "Урон: 200% АТК (280% по Пиро)\nБафф: +30 АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { let mult = 2.0; if (c >= 6 && enemy.aura === "Pyro") mult *= 1.4; dealDamage(s, enemy, mult, "Hydro", log, ft, pl, 4, state); } }); state.playerParty.forEach(p => { p.buffs.atk = (p.buffs.atk || 0) + 30; if(ft) ft(p.uid, '+АТК', 'text-red-400'); if(pl) pl(p.uid, 'buff'); }); } }
+        statsText: "Урон: 200% АТК (280% по Пиро)\nБафф: +30 АТК", execute: (s, t, state, log, ft, pl) => { 
+          if (pl) {
+            pl(s.uid, "volosatinya_hair_meadow");
+            t.forEach(enemy => pl(enemy.uid, "volosatinya_slice"));
+          }
+          t.forEach(enemy => { 
+            if(enemy.stats.hp > 0) { 
+              let mult = 2.0; 
+              if (c >= 6 && enemy.aura === "Pyro") mult *= 1.4; 
+              dealDamage(s, enemy, mult, "Hydro", log, ft, pl, 4, state); 
+            } 
+          }); 
+          state.playerParty.forEach(p => { 
+            p.buffs.atk = (p.buffs.atk || 0) + 30; 
+            if(ft) ft(p.uid, '+АТК', 'text-red-400'); 
+            if(pl) pl(p.uid, 'buff'); 
+          }); 
+        } }
     ]
   }),
   gotka: (uid, l, c, arts = []) => ({
@@ -1835,11 +2469,30 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(900, 250, 60, 35, l, c, arts), atb: 0, cooldowns: {}, buffs: { puppets: 0 },
     skills: [
       { id: "g_atk", name: "Выстрел", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Урон выше с марионетками.',
-        statsText: "Урон: 100% АТК (+50% за марионетку)", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; dealDamage(s, t[0], 1.0 + (p * 0.5), "Pyro", log, ft, pl, 1, state, c >= 6 ? 0.3 : 0); } },
+        statsText: "Урон: 100% АТК (+50% за марионетку)", execute: (s, t, state, log, ft, pl) => { 
+          const p = s.buffs.puppets || 0; 
+          if (pl) pl(t[0].uid, "gotka_shot");
+          dealDamage(s, t[0], 1.0 + (p * 0.5), "Pyro", log, ft, pl, 1, state, c >= 6 ? 0.3 : 0); 
+        } },
       { id: "g_e", name: "Театр искаженных теней", type: "Skill1", cost: 2, target: "Self", description: 'Призывает марионеток.',
-        statsText: "Призыв: +2 марионетки (+3 на C1, макс. 4)\nШанс безмолвия (C1): 50%", execute: (s, t, state, log, ft, pl) => { s.buffs.puppets = Math.min((s.buffs.puppets || 0) + (c >= 1 ? 3 : 2), 4); if (c >= 1 && Math.random() < 0.5) state.enemyParty.forEach(e => { if (e.stats.hp > 0) e.buffs.mute = 1; }); if(ft) ft(s.uid, `+${s.buffs.puppets} Кукол`, 'text-purple-300'); if(pl) pl(s.uid, 'buff'); } },
+        statsText: "Призыв: +2 марионетки (+3 на C1, макс. 4)\nШанс безмолвия (C1): 50%", execute: (s, t, state, log, ft, pl) => { 
+          s.buffs.puppets = Math.min((s.buffs.puppets || 0) + (c >= 1 ? 3 : 2), 4); 
+          if (c >= 1 && Math.random() < 0.5) state.enemyParty.forEach(e => { if (e.stats.hp > 0) e.buffs.mute = 1; }); 
+          if(ft) ft(s.uid, `+${s.buffs.puppets} Кукол`, 'text-purple-300'); 
+          if(pl) pl(s.uid, 'gotka_theater'); 
+        } },
       { id: "g_q", name: "Разрыв нитей", type: "Skill2", cost: 5, target: "AllEnemies", description: 'Взрывает марионеток для огромного AoE урона.',
-        statsText: "Урон: 150% АТК (+150% за марионетку)", execute: (s, t, state, log, ft, pl) => { const p = s.buffs.puppets || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.5 + (p * 1.5), "Pyro", log, ft, pl, p > 0 ? p + 1 : 1, state, c >= 6 ? 0.3 : 0); }); s.buffs.puppets = 0; } }
+        statsText: "Урон: 150% АТК (+150% за марионетку)", execute: (s, t, state, log, ft, pl) => { 
+          const p = s.buffs.puppets || 0; 
+          if (pl) {
+            pl(s.uid, "gotka_thread_snap");
+            t.forEach(enemy => pl(enemy.uid, "gotka_shot"));
+          }
+          t.forEach(enemy => { 
+            if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.5 + (p * 1.5), "Pyro", log, ft, pl, p > 0 ? p + 1 : 1, state, c >= 6 ? 0.3 : 0); 
+          }); 
+          s.buffs.puppets = 0; 
+        } }
     ]
   }),
   kopro: (uid, l, c, arts = []) => ({
@@ -1848,7 +2501,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1100, 210, 75, 38, l, c, arts), atb: 0, cooldowns: {}, buffs: { frenzyStacks: 0 },
     skills: [
       { id: "k_atk", name: "Атака копьем", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удары Дендро копьем.',
-        statsText: "Урон: 120% АТК\nЛечение: 20% HP", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = s.stats.atk * 0.2; s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
+        statsText: "Урон: 120% АТК\nЛечение: 20% HP", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = Math.round(s.stats.atk * 0.2); s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
       { id: "k_e", name: "Приступ истерики", type: "Skill1", cost: c >= 1 ? 1 : 3, target: "Self", description: 'Входит в Безумие, повышая скорость и силу.',
         statsText: "Бафф: +40 АТК, +15 СКОР", execute: (s, t, state, log, ft, pl) => { s.buffs.frenzyStacks = Math.min((s.buffs.frenzyStacks || 0) + 2, 5); s.buffs.spd = (s.buffs.spd || 0) + 15; s.buffs.atk = (s.buffs.atk || 0) + 40; if(ft) ft(s.uid, 'БЕЗУМИЕ!', 'text-green-500'); if(pl) pl(s.uid, 'buff'); } },
       { id: "k_q", name: "Время дендродов!", type: "Skill2", cost: c >= 1 ? 4 : 6, target: "AllEnemies", description: 'Дендро-взрыв, тратит Безумие.',
@@ -1865,7 +2518,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       { id: "s_e", name: "Любитель пострелять", type: "Skill1", cost: 2, target: "AllEnemies", description: 'AoE Электро урон, дает Срытый рейтинг.',
         statsText: "Урон: 120% АТК\nБафф: +5 СКОР", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 4, state); }); s.buffs.joyStacks = Math.min((s.buffs.joyStacks || 0) + 1, c >= 2 ? 15 : 10); if (c >= 1) s.buffs.spd = (s.buffs.spd || 0) + 5; if(ft) ft(s.uid, '+Рейтинг', 'text-yellow-300'); if(pl) pl(s.uid, 'buff'); } },
       { id: "s_q", name: "Режим Бога!", type: "Skill2", cost: 6, target: "AllEnemies", description: 'Тратит Радость на мега-атаки.',
-        statsText: "Урон: 200% АТК (Базово)", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + (s.stats.maxHp * 0.02)); } } }); s.buffs.joyStacks = 0; } }
+        statsText: "Урон: 200% АТК (Базово)", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, Math.round(s.stats.hp + (s.stats.maxHp * 0.02))); } } }); s.buffs.joyStacks = 0; } }
     ]
   }),
   moyan: (uid, l, c, arts = []) => ({
@@ -1878,7 +2531,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       { id: "m_e", name: "Запись Контракта", type: "Skill1", cost: 4, target: "AllAllies", description: 'Щит на всех союзников.',
         statsText: "Щит: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { const shieldMult = c >= 4 ? 1.3 : 1.0; ally.buffs.shield = (ally.buffs.shield || 0) + 400 * (1 + l * 0.05) * shieldMult; if(ft) ft(ally.uid, '+Щит', 'text-yellow-500'); if(pl) pl(ally.uid, 'shield'); }); } },
       { id: "m_q", name: "Оживление рукописи", type: "Skill2", cost: 6, target: "AllAllies", description: 'Лечит отряд и наносит AoE Гео урон врагам.',
-        statsText: "Урон: 250% АТК\nЛечение: 500 (базово)\nПродвижение хода: 40%", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { if(ally.stats.hp > 0) { const heal = 500 * (1 + l * 0.05); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
+        statsText: "Урон: 250% АТК\nЛечение: 500 (базово)\nПродвижение хода: 40%", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { if(ally.stats.hp > 0) { const heal = Math.round(500 * (1 + l * 0.05)); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
     ]
   }),
   aelita: (uid, l, c, arts = []) => ({
@@ -1887,11 +2540,45 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1350, 240, 60, 42, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
       { id: "a_atk", name: "Шипы Справедливости", type: "Attack", cost: 0, target: "SingleEnemy", description: '4 удара. Накладывает 1 стак [Шипы].',
-        statsText: "Урон: 100% АТК\nСтаки: 1 стак\nДебафф: -5 СКОР", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 4, state); t[0].buffs.thorns = Math.min((t[0].buffs.thorns || 0) + 1, 3); if (c >= 1) t[0].buffs.spd = (t[0].buffs.spd || 0) - 5; if(ft) ft(t[0].uid, '+Шипы', 'text-emerald-400'); } },
+        statsText: "Урон: 100% АТК\nСтаки: 1 стак\nДебафф: -5 СКОР", execute: (s, t, state, log, ft, pl) => { 
+          if (pl) pl(t[0].uid, "aelita_thorns");
+          dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 4, state); 
+          t[0].buffs.thorns = Math.min((t[0].buffs.thorns || 0) + 1, 3); 
+          if (c >= 1) t[0].buffs.spd = (t[0].buffs.spd || 0) - 5; 
+          if(ft) ft(t[0].uid, '+Шипы', 'text-emerald-400'); 
+          notifyThornAcquired(s, t[0], state, log, ft, pl); 
+        } },
       { id: "a_e", name: "Связь с флорой", type: "Skill1", cost: 3, target: "SingleEnemy", description: 'Снимает все Шипы с врага. Огромный урон за каждый стак.',
-        statsText: "Урон: 120% АТК (+150% АТК за каждый стак Шипов)\nЛечение (C4): 150 HP за стак", execute: (s, t, state, log, ft, pl) => { const thorns = t[0].buffs.thorns || 0; dealDamage(s, t[0], 1.2 + (thorns * 1.5), "Dendro", log, ft, pl, 1, state); t[0].buffs.thorns = 0; if (c >= 4) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + 150 * thorns); if(ft) ft(s.uid, 'Облегчение', 'text-green-300'); } } },
+        statsText: "Урон: 120% АТК (+150% АТК за каждый стак Шипов)\nЛечение (C4): 150 HP за стак", execute: (s, t, state, log, ft, pl) => { 
+          const thorns = t[0].buffs.thorns || 0; 
+          if (pl) pl(t[0].uid, "aelita_flora_burst");
+          dealDamage(s, t[0], 1.2 + (thorns * 1.5), "Dendro", log, ft, pl, 1, state); 
+          t[0].buffs.thorns = 0; 
+          if (c >= 4) { 
+            s.stats.hp = Math.min(s.stats.maxHp, Math.round(s.stats.hp + 150 * thorns)); 
+            if(ft) ft(s.uid, 'Облегчение', 'text-green-300'); 
+          } 
+        } },
       { id: "a_q", name: "Теорема о Дикой Природе", type: "Skill2", cost: 6, target: "AllEnemies", description: 'AоE урон. Баффает АТК Аэлиты, дает всем врагам Шипы.',
-        statsText: "Урон: 200% АТК\nЩит: 200% ЗАЩ (на C6)\nБафф: +100 АТК", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0, "Dendro", log, ft, pl, 2, state); enemy.buffs.thorns = Math.min((enemy.buffs.thorns || 0) + 1, 3); } }); s.buffs.atk = (s.buffs.atk || 0) + 100 + (l * 5); if (c >= 6) { s.buffs.shield = (s.buffs.shield || 0) + s.stats.def * 2; if(ft) ft(s.uid, 'C6: SHIELD', 'text-emerald-300'); } if(ft) ft(s.uid, 'Оранжерея Знаний!', 'text-emerald-300'); if(pl) pl(s.uid, 'buff'); } }
+        statsText: "Урон: 200% АТК\nЩит: 200% ЗАЩ (на C6)\nБафф: +100 АТК", execute: (s, t, state, log, ft, pl) => { 
+          if (pl) {
+            pl(s.uid, "aelita_wild_theorem");
+            t.forEach(enemy => pl(enemy.uid, "aelita_thorns"));
+          }
+          t.forEach(enemy => { 
+            if(enemy.stats.hp > 0) { 
+              dealDamage(s, enemy, 2.0, "Dendro", log, ft, pl, 2, state); 
+              enemy.buffs.thorns = Math.min((enemy.buffs.thorns || 0) + 1, 3); 
+              notifyThornAcquired(s, enemy, state, log, ft, pl); 
+            } 
+          }); 
+          s.buffs.atk = (s.buffs.atk || 0) + 100 + (l * 5); 
+          if (c >= 6) { 
+            s.buffs.shield = (s.buffs.shield || 0) + s.stats.def * 2; 
+            if(ft) ft(s.uid, 'C6: SHIELD', 'text-emerald-300'); 
+          } 
+          if(ft) ft(s.uid, 'Оранжерея Знаний!', 'text-emerald-300'); 
+        } }
     ]
   }),
   asher: (uid, l, c, arts = []) => ({
@@ -1913,7 +2600,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         t.forEach(ally => {
           ally.buffs.hpFreeze = 45;
           if (ally.stats.hp / ally.stats.maxHp > 0.45) {
-            ally.stats.hp = ally.stats.maxHp * 0.45;
+            ally.stats.hp = Math.round(ally.stats.maxHp * 0.45);
           }
           if(ft) ft(ally.uid, "🛡️ СТАБИЛИЗАЦИЯ ОЗ", "text-orange-300 font-bold text-[10px]");
         });
@@ -2606,9 +3293,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       { id: "ti_atk", name: "Струя воды", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Гидро урон.',
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Hydro", log, ft, pl, 3, state); } },
       { id: "ti_e", name: "Восстановление", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Сильное лечение и бафф.',
-        statsText: "Лечение: 300% АТК\nПродвижение хода: 10%", execute: (s, t, state, log, ft, pl) => { const heal = s.stats.atk * 3; t[0].stats.hp = Math.min(t[0].stats.maxHp, t[0].stats.hp + heal); t[0].buffs.atk = (t[0].buffs.atk || 0) + 30; if (c >= 1) t[0].atb = Math.min(100, t[0].atb + 10); if(ft) ft(t[0].uid, `+${Math.floor(heal)}`, 'text-green-400'); } },
+        statsText: "Лечение: 300% АТК\nПродвижение хода: 10%", execute: (s, t, state, log, ft, pl) => { const heal = Math.round(s.stats.atk * 3); t[0].stats.hp = Math.min(t[0].stats.maxHp, t[0].stats.hp + heal); t[0].buffs.atk = (t[0].buffs.atk || 0) + 30; if (c >= 1) t[0].atb = Math.min(100, t[0].atb + 10); if(ft) ft(t[0].uid, `+${Math.floor(heal)}`, 'text-green-400'); } },
       { id: "ti_q", name: "Океанская молитва", type: "Skill2", cost: 6, target: "AllAllies", description: 'Лечит весь отряд и дает регенерацию.',
-        statsText: "Лечение: 200% АТК\nПродвижение хода: 10%\nБафф: +30 Сопротивление", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = s.stats.atk * 2; a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); a.buffs.regen = (a.buffs.regen || 0) + 3; if (c >= 1) a.atb = Math.min(100, a.atb + 10); if(ft) ft(a.uid, 'РЕГЕН', 'text-cyan-300'); }); if (c >= 6) { s.buffs.res = (s.buffs.res || 0) + 30; if(ft) ft(s.uid, 'C6: OCEAN', 'text-blue-300'); } } }
+        statsText: "Лечение: 200% АТК\nПродвижение хода: 10%\nБафф: +30 Сопротивление", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = Math.round(s.stats.atk * 2); a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); a.buffs.regen = (a.buffs.regen || 0) + 3; if (c >= 1) a.atb = Math.min(100, a.atb + 10); if(ft) ft(a.uid, 'РЕГЕН', 'text-cyan-300'); }); if (c >= 6) { s.buffs.res = (s.buffs.res || 0) + 30; if(ft) ft(s.uid, 'C6: OCEAN', 'text-blue-300'); } } }
     ]
   }),
   nova: (uid, l, c, arts = []) => ({
@@ -2617,9 +3304,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1000, 300, 40, 48, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
       { id: "no_atk", name: "Сокрушение", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Массивный физ урон.',
-        statsText: "Урон: 130% АТК\nЛечение: 8% HP (на C1)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.3, "Physical", log, ft, pl, 1, state); if (c >= 1) { s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + s.stats.maxHp * 0.08); if(ft) ft(s.uid, 'C1: REGEN', 'text-green-400'); } } },
+        statsText: "Урон: 130% АТК\nЛечение: 8% HP (на C1)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.3, "Physical", log, ft, pl, 1, state); if (c >= 1) { s.stats.hp = Math.min(s.stats.maxHp, Math.round(s.stats.hp + s.stats.maxHp * 0.08)); if(ft) ft(s.uid, 'C1: REGEN', 'text-green-400'); } } },
       { id: "no_e", name: "Боевой азарт", type: "Skill1", cost: 2, target: "Self", description: 'Тратит HP для баффа атаки.',
-        statsText: "Расход: 20% HP\nБафф: +100 АТК, +30 СКОР", execute: (s, t, state, log, ft, pl) => { const cost = s.stats.hp * 0.2; s.stats.hp -= cost; s.buffs.atk = (s.buffs.atk || 0) + 100; if (c >= 2) s.buffs.spd = (s.buffs.spd || 0) + 30; if(ft) ft(s.uid, 'ЯРОСТЬ', 'text-red-600'); } },
+        statsText: "Расход: 20% HP\nБафф: +100 АТК, +30 СКОР", execute: (s, t, state, log, ft, pl) => { const cost = Math.round(s.stats.hp * 0.2); s.stats.hp = Math.max(1, s.stats.hp - cost); s.buffs.atk = (s.buffs.atk || 0) + 100; if (c >= 2) s.buffs.spd = (s.buffs.spd || 0) + 30; if(ft) ft(s.uid, 'ЯРОСТЬ', 'text-red-600'); } },
       { id: "no_q", name: "Удар сверхновой", type: "Skill2", cost: 5, target: "SingleEnemy", description: 'Ультимативный физический удар.',
         statsText: "Урон: 450% АТК (доп. +50% игнор. ЗАЩ на C6)", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 4.5, "Physical", log, ft, pl, 1, state, c >= 6 ? 0.5 : 0); } }
     ]
@@ -2658,9 +3345,9 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
       { id: "ga_atk", name: "Лоза", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Дендро урон.',
         statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 2, state); } },
       { id: "ga_e", name: "Рост", type: "Skill1", cost: 3, target: "AllAllies", description: 'Лечит отряд в зависимости от макс HP.',
-        statsText: "Лечение: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = s.stats.maxHp * 0.15; a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); }); } },
+        statsText: "Лечение: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { const heal = Math.round(s.stats.maxHp * 0.15); a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + heal); }); } },
       { id: "ga_q", name: "Дух леса", type: "Skill2", cost: 5, target: "AllAllies", description: 'Огромное лечение.',
-        statsText: "Лечение: 30% HP (+5% HP на C1)", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + s.stats.maxHp * 0.3); if (c >= 1) { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + a.stats.maxHp * 0.05); if(ft) ft(a.uid, '+5% HP', 'text-green-400'); } }); } }
+        statsText: "Лечение: 30% HP (+5% HP на C1)", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + Math.round(s.stats.maxHp * 0.3)); if (c >= 1) { a.stats.hp = Math.min(a.stats.maxHp, a.stats.hp + Math.round(a.stats.maxHp * 0.05)); if(ft) ft(a.uid, '+5% HP', 'text-green-400'); } }); } }
     ]
   }),
   fenris: (uid, l, c, arts = []) => ({
@@ -3347,12 +4034,17 @@ export const generateBossRushWave = (stage: number): Combatant[] => {
   const wave = [boss];
   
   if (stage === 0) {
+    // Stage 0: Cyrus + Raven + Maestro
     wave.push(createShadowDrone());
     wave.push(createShadowDrone());
+  } else if (stage === 1) {
+    // Stage 1: Aelita + Iva (Flora / Slimes to build Thorns stacks)
+    wave.push(createBasicEnemy(80, 'glitch_slime'));
+    wave.push(createBasicEnemy(80, 'glitch_slime'));
   } else if (stage === 2) {
-    wave.push(createIceMonolith());
-    wave.push(createIceMonolith());
-    wave.push(createIceMonolith());
+    // Stage 2: Kairen + Nereus + Aveline (Pyro minions to easily freeze & explode)
+    wave.push(createBasicEnemy(85, 'blaze'));
+    wave.push(createBasicEnemy(85, 'blaze'));
   }
   
   return wave;
@@ -3361,27 +4053,27 @@ export const generateBossRushWave = (stage: number): Combatant[] => {
 export const createBossRushEnemy = (stage: number): Combatant => {
   const configs = [
     {
-      id: "boss_magister_rush",
-      name: "«МАГИСТР ТЕНЕЙ»",
+      id: "boss_matrix_inquisitor",
+      name: "«МАТРИЧНЫЙ ИНКВИЗИТОР»",
       element: "Physical" as Element,
-      color: "bg-slate-900 border-gray-500",
-      level: 80,
-      hp: 400000,
-      atk: 1000,
-      def: 1200, // Very high DEF so Cyrus's ignore DEF is great
-      spd: 90,
+      color: "bg-purple-950 border-purple-500",
+      level: 82,
+      hp: 520000,
+      atk: 1100,
+      def: 1600, // Tremendous DEF: Cyrus's 100% DEF ignore completely bypasses this!
+      spd: 95,
       critRate: 20,
       critDamage: 50,
       image: getCharSplash('boss_colossus') || undefined,
       skills: [
         {
-          id: "br_shadow_strike",
-          name: "Теневой Выпад",
+          id: "br_inq_strike",
+          name: "Теневой Залп",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Физ урон (1.2x). Призывает Теневого Дрона, если суммарно на поле меньше 4 врагов.',
-        statsText: "Урон: 120% АТК",
+          description: 'Наносит Физ урон (1.2x). Воскрешает уничтоженного Теневого Дрона.',
+          statsText: "Урон: 120% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             dealDamage(s, t[0], 1.2, "Physical", log, ft, pl, 2, state);
             if (state && state.enemyParty) {
@@ -3391,133 +4083,56 @@ export const createBossRushEnemy = (stage: number): Combatant => {
                 targetDrone.stats.hp = targetDrone.stats.maxHp;
                 targetDrone.buffs = {};
                 targetDrone.atb = 0;
-                if (ft) ft(s.uid, "ВОЗРОЖДЕНИЕ ДРОНА", "text-gray-400 font-bold text-xs");
+                if (ft) ft(s.uid, "РЕЗОНАТОР ВОЗРОЖДЁН", "text-purple-400 font-bold text-xs");
               }
             }
           }
         },
         {
-          id: "br_shadow_wave",
-          name: "Волна Мрака",
+          id: "br_inq_wave",
+          name: "Импульс Матрицы",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Физ урон (1.5x) по всем врагам. Если у босса меньше 70% здоровья, призывает ещё одного дрона.',
-        statsText: "Урон: 150% АТК",
+          description: 'AoE Физ урон (1.4x). Если на боссе висит метка Изоляции (Маэстро) или метка Дуэли (Сайрус), босс получает на 80% больше урона и теряет 30 ATB.',
+          statsText: "Урон: 140% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "Physical");
-            t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.5, "Physical", log, ft, pl, 2, state);
-            });
-            if (state && state.enemyParty && s.stats.hp < s.stats.maxHp * 0.7) {
-               const deadDrones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp <= 0);
-               if (deadDrones.length > 0) {
-                  const targetDrone = deadDrones[0];
-                  targetDrone.stats.hp = targetDrone.stats.maxHp;
-                  targetDrone.buffs = {};
-                  targetDrone.atb = 0;
-                  if (ft) ft(s.uid, "РЕЗЕРВНЫЙ ДРОН", "text-gray-400 font-bold text-xs");
-               }
+            const hasIsolation = Boolean(s.buffs.isolationMark || s.buffs.duelMark);
+            if (hasIsolation) {
+              s.atb = Math.max(0, s.atb - 30);
+              if (ft) ft(s.uid, "СБОЙ ИЗОЛЯЦИИ! (-30 ATB)", "text-purple-300 font-black");
+              if (log) log("Метка Изоляции сбивает импульс Матричного Инквизитора!");
             }
+            t.forEach(enemy => {
+              if (enemy.stats.hp > 0) {
+                const mult = hasIsolation ? 0.7 : 1.4;
+                dealDamage(s, enemy, mult, "Physical", log, ft, pl, 2, state);
+              }
+            });
           }
         },
         {
-          id: "br_annihilation",
-          name: "Абсолютная Тьма",
+          id: "br_inq_protocol",
+          name: "Карающий Протокол",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Абсолютная Тьма. Босс поглощает всех живых дронов. Урон (3.0x) увеличивается на 1.5x за каждого поглощенного дрона. Если дронов нет, вместо атаки призывает сразу 3-х новых.',
-        statsText: "Урон: 300% АТК",
+          description: 'Ультимативный залп (2.6x). Если активна Сверхпроводимость или снижение физ. защиты (Рейвен), урон босса падает на 60%, а босс теряет 12% здоровья!',
+          statsText: "Урон: 260% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (state && state.enemyParty) {
-              const drones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp > 0);
-              if (drones.length === 0) {
-                const deadDrones = state.enemyParty.filter(e => e.id === 'shadow_drone' && e.stats.hp <= 0);
-                deadDrones.forEach(d => {
-                   d.stats.hp = d.stats.maxHp;
-                   d.buffs = {};
-                   d.atb = 0;
-                });
-                if (ft) ft(s.uid, "ТЕНЕВОЙ РИТУАЛ", "text-gray-400 font-black");
-                if (log) log("Магистр Теней возрождает дронов!");
-                return;
-              } else {
-                let mult = 3.0 + (drones.length * 1.5);
-                drones.forEach(d => { 
-                  d.stats.hp = 0; 
-                  d.buffs = {}; // clear buffs
-                  if (ft) setTimeout(() => ft(d.uid, "ПОГЛОЩЕН", "text-red-500 font-bold"), 100); 
-                });
-                if (log) log(`Магистр Теней поглощает ${drones.length} дронов!`);
-                
-                if (pl) pl(s.uid, "ultimate_aoe");
-                t.forEach(enemy => {
-                  if (enemy.stats.hp > 0) dealDamage(s, enemy, mult, "Physical", log, ft, pl, 1, state);
-                });
-                if (ft) ft(s.uid, "ВЗРЫВ ТЬМЫ", "text-red-600 font-black");
-              }
+            const hasPhysShred = (s.buffs.def || 0) < 0 || (s.buffs.resDown || 0) > 0 || s.aura === 'Electro';
+            if (hasPhysShred) {
+              const recoil = Math.floor(s.stats.maxHp * 0.12);
+              s.stats.hp = Math.max(1, s.stats.hp - recoil);
+              if (ft) ft(s.uid, `СВЕРХПРОВОДИМОСТЬ: -${recoil}`, "text-cyan-400 font-black");
+              if (log) log(`Сверхпроводимость перегружает матрицу босса на ${recoil} урона!`);
             }
-          }
-        }
-      ]
-    },
-    {
-      id: "boss_colossus_rush",
-      name: "«СВЕРХПРОВОДЯЩИЙ КОЛОСС»",
-      element: "Electro" as Element,
-      color: "bg-purple-950 border-purple-500",
-      level: 85,
-      hp: 600000,
-      atk: 1000,
-      def: 350,
-      spd: 120, // Very fast to trigger Volta's voltage often
-      critRate: 20,
-      critDamage: 50,
-      image: getCharSplash('boss_colossus') || undefined,
-      skills: [
-        {
-          id: "br_electro_strike",
-          name: "Мульти-Разряд",
-          type: "Attack" as const,
-          cost: 0,
-          target: "SingleEnemy" as const,
-          description: 'Наносит серию из 4 Электро ударов. Быстро заряжает Вольтаж Вольты.',
-        statsText: "Урон: 150% АТК",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.5, "Electro", log, ft, pl, 4, state);
-          }
-        },
-        {
-          id: "br_chain_lightning",
-          name: "Цепная Молния",
-          type: "Skill1" as const,
-          cost: 3,
-          target: "AllEnemies" as const,
-          description: 'Серия из 3 AoE Электро ударов (быстро заряжает Вольтаж).',
-        statsText: "Урон: 120% АТК",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "Electro");
-            t.forEach(enemy => {
-              if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 3, state);
-              }
-            });
-          }
-        },
-        {
-          id: "br_voltage_overload",
-          name: "Перегрузка Матрицы",
-          type: "Skill2" as const,
-          cost: 5,
-          target: "AllEnemies" as const,
-          description: 'Огромный Электро урон (2.5x, 5 ударов). Идеально поглощается Цепью Проводимости Вольты.',
-        statsText: "Урон: 250% АТК",
-          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
               if (enemy.stats.hp > 0) {
-                dealDamage(s, enemy, 2.5, "Electro", log, ft, pl, 5, state);
+                const mult = hasPhysShred ? 1.0 : 2.6;
+                dealDamage(s, enemy, mult, "Physical", log, ft, pl, 2, state);
               }
             });
           }
@@ -3525,66 +4140,169 @@ export const createBossRushEnemy = (stage: number): Combatant => {
       ]
     },
     {
-      id: "boss_absolute_zero",
-      name: "«АБСОЛЮТНЫЙ НОЛЬ»",
-      element: "Cryo" as Element,
-      color: "bg-cyan-950 border-cyan-300",
-      level: 90,
-      hp: 900000,
-      atk: 1500,
-      def: 500,
+      id: "boss_primal_bramble",
+      name: "«ПЕРВОБЫТНЫЙ ТЕРНОВНИК»",
+      element: "Dendro" as Element,
+      color: "bg-emerald-950 border-emerald-500",
+      level: 88,
+      hp: 780000,
+      atk: 1250,
+      def: 420,
       spd: 100,
       critRate: 20,
       critDamage: 50,
-      image: getCharSplash('boss_frost_giant') || undefined,
+      image: getCharSplash('gaia') || undefined,
       skills: [
         {
-          id: "br_ice_shatter",
-          name: "Раскол Льда",
+          id: "br_bramble_strike",
+          name: "Хлыст Лозы",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Крио урон (1.5x).',
-        statsText: "Урон: 150% АТК",
+          description: 'Наносит Дендро урон (1.3x). Если на боссе есть стаки «Шипов» (Аэлита/Ива), урон босса снижается на 15% за каждый стак, а босс получает ответный урон.',
+          statsText: "Урон: 130% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            dealDamage(s, t[0], 1.5, "Cryo", log, ft, pl, 1, state);
+            const thornStacks = s.buffs.thorns || 0;
+            const mult = Math.max(0.4, 1.3 - thornStacks * 0.15);
+            dealDamage(s, t[0], mult, "Dendro", log, ft, pl, 2, state);
+            if (thornStacks > 0) {
+              const recoil = Math.floor(s.stats.maxHp * 0.04 * thornStacks);
+              s.stats.hp = Math.max(1, s.stats.hp - recoil);
+              if (ft) ft(s.uid, `ОТДАЧА ШИПОВ: -${recoil}`, "text-emerald-400 font-bold");
+              if (log) log(`Шипы вонзаются в Первобытный Терновник на ${recoil} урона!`);
+            }
           }
         },
         {
-          id: "br_blizzard",
-          name: "Снежная Буря",
+          id: "br_bramble_tempest",
+          name: "Терновый Буран",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Крио урон (1.2x).',
-        statsText: "Урон: 120% АТК",
+          description: 'AoE Дендро урон (1.4x). Если у союзников активна «Связь с флорой» (Ива), урон нейтрализуется и восстанавливает 15% здоровья отряду!',
+          statsText: "Урон: 140% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            if (pl) pl(s.uid, "Dendro");
+            const hasFloralBond = t.some(hero => (hero.buffs.ivaFloralBondTurns || 0) > 0);
+            if (hasFloralBond) {
+              t.forEach(hero => {
+                if (hero.stats.hp > 0) {
+                  const heal = Math.floor(hero.stats.maxHp * 0.15);
+                  hero.stats.hp = Math.min(hero.stats.maxHp, hero.stats.hp + heal);
+                  if (ft) ft(hero.uid, `+${heal} (СВЯЗЬ С ФЛОРОЙ)`, "text-emerald-300 font-bold");
+                }
+              });
+              if (log) log("Связь с Флорой Ивы поглощает буран и исцеляет команду!");
+            } else {
+              t.forEach(enemy => {
+                if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.4, "Dendro", log, ft, pl, 2, state);
+              });
+            }
+          }
+        },
+        {
+          id: "br_bramble_shell",
+          name: "Древесный Панцирь",
+          type: "Skill2" as const,
+          cost: 5,
+          target: "AllEnemies" as const,
+          description: 'Босс укрепляет кору. Детонация стаков «Шипов» (навык Аэлиты) полностью срывает панцирь и наносит боссу колоссальный урон в размере 150 000!',
+          statsText: "Урон: 240% АТК",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            const thornStacks = s.buffs.thorns || 0;
+            if (thornStacks >= 2) {
+              const shatterDmg = 150000;
+              s.stats.hp = Math.max(1, s.stats.hp - shatterDmg);
+              s.buffs.thorns = 0;
+              s.atb = 0;
+              if (ft) ft(s.uid, `РАСКОЛ ПАНЦИРЯ: -${shatterDmg}`, "text-emerald-400 font-black");
+              if (log) log(`Шипы Аэлиты раскалывают Древесный Панцирь босса на ${shatterDmg} урона!`);
+              return;
+            }
+            if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Cryo", log, ft, pl, 2, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 2.4, "Dendro", log, ft, pl, 3, state);
+            });
+          }
+        }
+      ]
+    },
+    {
+      id: "boss_magma_leviathan",
+      name: "«МАГМАТИЧЕСКИЙ ЛЕВИАФАН»",
+      element: "Pyro" as Element,
+      color: "bg-red-950 border-orange-500",
+      level: 95,
+      hp: 1150000,
+      atk: 1600,
+      def: 650,
+      spd: 105,
+      critRate: 20,
+      critDamage: 50,
+      image: getCharSplash('blaze') || undefined,
+      skills: [
+        {
+          id: "br_leviathan_spit",
+          name: "Магматический Выброс",
+          type: "Attack" as const,
+          cost: 0,
+          target: "SingleEnemy" as const,
+          description: 'Наносит Пиро урон (1.5x). Если цель обладает высоким HP (Нереус), урон рассеивается на 50%.',
+          statsText: "Урон: 150% АТК",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            const isHighHp = t[0].stats.maxHp > 35000;
+            const mult = isHighHp ? 0.75 : 1.5;
+            dealDamage(s, t[0], mult, "Pyro", log, ft, pl, 2, state);
+            if (isHighHp && ft) ft(t[0].uid, "ПРИЛИВНЫЙ БАРЬЕР HP", "text-blue-300 font-bold");
+          }
+        },
+        {
+          id: "br_leviathan_geyser",
+          name: "Кипящий Гейзер",
+          type: "Skill1" as const,
+          cost: 3,
+          target: "AllEnemies" as const,
+          description: 'AoE Пиро урон (1.4x). Если активен «Сад Вечного Моря» Нереуса или Лотосы Авелин, гейзер мгновенно охлаждается и наносит боссу обратный Гидро урон!',
+          statsText: "Урон: 140% АТК",
+          execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
+            if (pl) pl(s.uid, "Pyro");
+            const hasOceanAura = t.some(hero => (hero.buffs.nereusGardenTurns || 0) > 0 || (hero.buffs.hpBoost || 0) > 0);
+            if (hasOceanAura) {
+              const tideRecoil = 90000;
+              s.stats.hp = Math.max(1, s.stats.hp - tideRecoil);
+              if (ft) ft(s.uid, `ОХЛАЖДЕНИЕ ПРИЛИВОМ: -${tideRecoil}`, "text-cyan-400 font-black");
+              if (log) log("Сад Вечного Моря Нереуса и Лотосы Авелин охлаждают лаву Левиафана!");
+            }
+            t.forEach(enemy => {
+              if (enemy.stats.hp > 0) {
+                const mult = hasOceanAura ? 0.7 : 1.4;
+                dealDamage(s, enemy, mult, "Pyro", log, ft, pl, 2, state);
+              }
             });
           }
         },
         {
-          id: "br_deep_freeze",
-          name: "Глубокая Заморозка",
+          id: "br_leviathan_rift",
+          name: "Инфернальный Разлом",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Воскрешает уничтоженные Ледяные Монолиты. Затем наносит массивный Крио урон (3.0x).',
-        statsText: "Урон: 300% АТК",
+          description: 'Заряжает катастрофический взрыв (3.2x). Если босс Заморожен (Заморозка Кайрена + Нереус/Авелин), взрыв прерывается, босс получает «Термальный Шок» и теряет 200 000 HP!',
+          statsText: "Урон: 320% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (state && state.enemyParty) {
-               const deadMonoliths = state.enemyParty.filter(e => e.id === 'ice_monolith' && e.stats.hp <= 0);
-               deadMonoliths.forEach(m => {
-                  m.stats.hp = m.stats.maxHp;
-                  m.buffs = {};
-                  m.atb = 0;
-               });
-               if (deadMonoliths.length > 0 && ft) ft(s.uid, "ВОССТАНОВЛЕНИЕ", "text-cyan-300 font-bold");
+            const isFrozen = (s.buffs.frozenTurns || 0) > 0 || s.aura === 'Cryo';
+            if (isFrozen) {
+              const freezeShatter = 200000;
+              s.stats.hp = Math.max(1, s.stats.hp - freezeShatter);
+              s.buffs.frozenTurns = 0;
+              s.atb = 0;
+              if (ft) ft(s.uid, `ТЕРМАЛЬНЫЙ ШОК: -${freezeShatter}`, "text-cyan-300 font-black");
+              if (log) log(`Заморозка Кайрена и Нереуса вызывает Термальный Шок Левиафана на ${freezeShatter} урона!`);
+              return;
             }
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 3.0, "Cryo", log, ft, pl, 3, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 3.2, "Pyro", log, ft, pl, 3, state);
             });
           }
         }

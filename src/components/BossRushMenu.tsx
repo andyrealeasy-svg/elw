@@ -12,9 +12,36 @@ interface BossRushMenuProps {
 }
 
 const BOSSES = [
-  { id: 'shadow_magister', name: 'Магистр Теней', level: 80, hpText: '400k HP', element: 'Physical', desc: 'Обладает огромной защитой и призывает дронов. Уязвим к пробитию защиты и изоляции (под Сайруса и Рейвен).', icon: Sword, color: 'text-gray-400' },
-  { id: 'colossus', name: 'Сверхпроводящий Колосс', level: 85, hpText: '600k HP', element: 'Electro', desc: 'Наносит непрерывный шквал АоЕ ударов. Требует поглощения входящего урона (под Вольту).', icon: Zap, color: 'text-purple-400' },
-  { id: 'absolute_zero', name: 'Абсолютный Ноль', level: 90, hpText: '900k HP', element: 'Cryo', desc: 'Имеет феноменальный запас здоровья. Требует максимального ДПС и реакций заморозки (под Кайрена и Авелин).', icon: Mountain, color: 'text-cyan-400' }
+  { 
+    id: 'matrix_inquisitor', 
+    name: 'Матричный Инквизитор', 
+    level: 82, 
+    hpText: '500k HP', 
+    element: 'Physical', 
+    desc: 'Обладает колоссальной броней (1600 ЗАЩ) и фазовым щитом матрицы. Уязвим к чистому пробитию защиты, Сверхпроводимости и меткам Изоляции (под отряд Сайрус + Рейвен + Маэстро).', 
+    icon: Sword, 
+    color: 'text-purple-400' 
+  },
+  { 
+    id: 'primal_bramble', 
+    name: 'Первобытный Терновник', 
+    level: 88, 
+    hpText: '750k HP', 
+    element: 'Dendro', 
+    desc: 'Укрыт барьером древесной коры (поглощает 80% обычного урона). Разрушается детонацией стаков [Шипы] и эффектами Дендро-флоры (под отряд Аэлита + Ива).', 
+    icon: Flame, 
+    color: 'text-emerald-400' 
+  },
+  { 
+    id: 'magma_leviathan', 
+    name: 'Магматический Левиафан', 
+    level: 95, 
+    hpText: '1.1M HP', 
+    element: 'Pyro', 
+    desc: 'Защищен кипящей магматической лавой. Требует непрерывной Заморозки и реакций Океана для сбития защиты в ноль и колоссального урона от ХП (под отряд Кайрен + Нереус + Авелин).', 
+    icon: Mountain, 
+    color: 'text-cyan-400' 
+  }
 ];
 
 export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onStartRush }) => {
@@ -61,11 +88,11 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-wider flex items-center gap-2 text-white">
-                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 2
+                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 3
               </h1>
             </div>
             <p className="text-xs text-white/50 font-medium">
-              Соберите 3 уникальных отряда для 3 боссов
+              Соберите 3 специализированных отряда для 3 новых боссов (Обновление 1.3)
             </p>
           </div>
         </div>
@@ -82,20 +109,20 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
       <div className="bg-[#111111]/80 backdrop-blur-sm border-b border-white/5 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between z-10 shrink-0 gap-3">
          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <span className="text-xs sm:text-sm font-bold text-white/80 uppercase tracking-wider">Награды за сезон:</span>
-            {profile.bossRushSeason2Claimed ? (
+            {profile.bossRushSeason3Claimed ? (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                    ✓ Получено
                  </span>
-                 <span className="text-[10px] sm:text-xs text-white/40">Награды за сезон уже собраны. Базовый опыт и золото.</span>
+                 <span className="text-[10px] sm:text-xs text-white/40">Награды за Сезон 3 уже собраны. Базовый опыт и золото.</span>
                </div>
             ) : (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20 flex items-center gap-1.5">
                    💎 1200 Гемов
                  </span>
-                 <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 flex items-center gap-1.5">
-                   🛡️ 10x 5★ (Песнь Океана / Зима)
+                 <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20 flex items-center gap-1.5">
+                   🛡️ 10x 5★ (Коралловый Прилив / Шёпот Терний)
                  </span>
                </div>
             )}

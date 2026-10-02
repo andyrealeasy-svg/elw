@@ -319,6 +319,287 @@ export const EffectsOverlay = memo(forwardRef<EffectsOverlayRef, { unitId: strin
             </svg>
           </div>
         );
+
+      /* ======================================================== */
+      /* 1. AELITA (Дендро: Шипы, Флора, Теорема Дикой Природы)   */
+      /* ======================================================== */
+      case "aelita_thorns":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-36 h-36 overflow-visible" viewBox="0 0 130 130" fill="none">
+              {/* Spiral Sharp Thorn Vines */}
+              <path d="M 20 110 Q 65 20 110 65 Q 65 110 35 45" stroke="#10b981" strokeWidth="3" strokeLinecap="round" className="anim-thorn-burst drop-shadow-[0_0_10px_rgba(16,185,129,0.9)]" />
+              <path d="M 30 115 Q 70 35 105 75" stroke="#34d399" strokeWidth="1.5" strokeLinecap="round" className="anim-thorn-burst" style={{ animationDelay: '0.04s' }} />
+              
+              {/* Radial Thorn Needles */}
+              <polygon points="65,20 70,40 60,40" fill="#6ee7b7" className="anim-impact-burst" />
+              <polygon points="110,65 90,60 90,70" fill="#6ee7b7" className="anim-impact-burst" />
+              <polygon points="40,85 55,75 50,85" fill="#6ee7b7" className="anim-impact-burst" />
+              
+              {/* Center Emerald Crystal Sprout */}
+              <polygon points="65,48 78,65 65,82 52,65" fill="#064e3b" stroke="#34d399" strokeWidth="2" className="anim-impact-burst drop-shadow-[0_0_12px_rgba(52,211,153,1)]" />
+              <circle cx="65" cy="65" r="4" fill="#ffffff" />
+            </svg>
+          </div>
+        );
+
+      case "aelita_flora_burst":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-36 h-36 rounded-full border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.9)]" />
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border border-green-300 shadow-[0_0_12px_rgba(74,222,128,0.8)]" style={{ animationDelay: '0.06s' }} />
+            <svg className="w-40 h-40 overflow-visible anim-impact-burst" viewBox="0 0 140 140" fill="none">
+              {/* Expanding 8-Point Flora Mandala */}
+              <polygon points="70,10 82,50 122,35 95,70 122,105 82,90 70,130 58,90 18,105 45,70 18,35 58,50" stroke="#10b981" strokeWidth="2" fill="rgba(16,185,129,0.18)" className="drop-shadow-[0_0_16px_rgba(16,185,129,1)]" />
+              <circle cx="70" cy="70" r="16" fill="#022c22" stroke="#6ee7b7" strokeWidth="1.5" />
+              <text x="70" y="76" textAnchor="middle" fontSize="16" fill="#34d399">🌿</text>
+            </svg>
+          </div>
+        );
+
+      case "aelita_wild_theorem":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-48 h-48 rounded-full border-4 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,1)] z-50" />
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-2 border-lime-300 shadow-[0_0_16px_rgba(190,242,100,0.8)]" style={{ animationDelay: '0.08s' }} />
+            <svg className="w-52 h-52 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Rotating Sacred Botanical Geometry */}
+              <circle cx="80" cy="80" r="60" stroke="#10b981" strokeWidth="1.5" strokeDasharray="6 4" className="anim-bloom-rotate opacity-80" />
+              <polygon points="80,15 135,115 25,115" stroke="#34d399" strokeWidth="2" fill="rgba(16,185,129,0.12)" className="anim-impact-burst drop-shadow-[0_0_16px_rgba(52,211,153,1)]" />
+              <polygon points="80,145 25,45 135,45" stroke="#a7f3d0" strokeWidth="1.5" fill="rgba(110,231,183,0.08)" className="anim-impact-burst" style={{ animationDelay: '0.05s' }} />
+              
+              {/* Central Glowing Core Theorem */}
+              <circle cx="80" cy="80" r="22" fill="#064e3b" stroke="#ffffff" strokeWidth="2" className="anim-impact-burst drop-shadow-[0_0_20px_rgba(255,255,255,1)]" />
+              <text x="80" y="87" textAnchor="middle" fontSize="20" fill="#ffffff">🌱</text>
+            </svg>
+          </div>
+        );
+
+      /* ======================================================== */
+      /* 2. MAESTRO (Электро: Изоляция, Укол, Финальный Аккорд)  */
+      /* ======================================================== */
+      case "maestro_stab":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-36 h-36 overflow-visible" viewBox="0 0 120 120" fill="none">
+              {/* Lightning Rapier Piercing Ray */}
+              <line x1="5" y1="60" x2="115" y2="60" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-duelist-thrust drop-shadow-[0_0_12px_rgba(168,85,247,1)]" />
+              <line x1="15" y1="60" x2="110" y2="60" stroke="#a855f7" strokeWidth="7" strokeLinecap="round" opacity="0.6" className="anim-duelist-thrust" />
+              
+              {/* Electric Tuning Fork Prongs */}
+              <line x1="85" y1="40" x2="115" y2="60" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" className="anim-duelist-thrust" />
+              <line x1="85" y1="80" x2="115" y2="60" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" className="anim-duelist-thrust" />
+              
+              {/* Electro Spark Diamond */}
+              <polygon points="70,52 82,60 70,68 58,60" fill="#ffffff" stroke="#9333ea" strokeWidth="1" className="anim-impact-burst drop-shadow-[0_0_10px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+
+      case "maestro_isolation":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-soundwave-ring absolute w-32 h-32 rounded-full border-2 border-purple-400 shadow-[0_0_18px_rgba(168,85,247,0.9)]" />
+            <div className="anim-soundwave-ring absolute w-20 h-20 rounded-full border border-violet-300 shadow-[0_0_10px_rgba(196,181,253,0.8)]" style={{ animationDelay: '0.07s' }} />
+            <svg className="w-36 h-36 overflow-visible anim-impact-burst" viewBox="0 0 120 120" fill="none">
+              {/* Concentric Isolation Crosshairs & Clef Nodes */}
+              <circle cx="60" cy="60" r="38" stroke="#a855f7" strokeWidth="1.5" strokeDasharray="5 3" />
+              <circle cx="60" cy="60" r="22" stroke="#c084fc" strokeWidth="2" fill="rgba(126,34,206,0.2)" />
+              
+              <line x1="60" y1="10" x2="60" y2="110" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="3 3" />
+              <line x1="10" y1="60" x2="110" y2="60" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="3 3" />
+              
+              {/* Center Acoustic Core */}
+              <polygon points="60,46 72,60 60,74 48,60" fill="#ffffff" stroke="#7e22ce" strokeWidth="1.5" className="drop-shadow-[0_0_12px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+
+      case "maestro_final_chord":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-44 h-44 rounded-full border-4 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,1)] z-50" />
+            <svg className="w-48 h-48 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Musical Harmonic Stave Wave */}
+              <path d="M 10 50 Q 80 10 150 50" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" className="anim-soundwave-ring" />
+              <path d="M 10 80 Q 80 40 150 80" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-soundwave-ring" style={{ animationDelay: '0.04s' }} />
+              <path d="M 10 110 Q 80 70 150 110" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" className="anim-soundwave-ring" style={{ animationDelay: '0.08s' }} />
+              
+              {/* Grand Symphonic Treble Clef & Lightning Core */}
+              <polygon points="80,20 100,80 80,140 60,80" fill="rgba(147,51,234,0.25)" stroke="#ffffff" strokeWidth="2.5" className="anim-impact-burst drop-shadow-[0_0_20px_rgba(192,132,252,1)]" />
+              <circle cx="80" cy="80" r="18" fill="#3b0764" stroke="#facc15" strokeWidth="2" className="anim-impact-burst" />
+              <text x="80" y="87" textAnchor="middle" fontSize="18" fill="#facc15">⚡</text>
+            </svg>
+          </div>
+        );
+
+      case "maestro_echo":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-soundwave-ring absolute w-28 h-28 rounded-full border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.7)]" />
+            <div className="anim-impact-burst text-4xl select-none drop-shadow-[0_0_10px_rgba(192,132,252,1)]">
+              🎵
+            </div>
+          </div>
+        );
+
+      /* ======================================================== */
+      /* 3. INEFFA (Пиро: Отражение, Зеркало Рассвета, Взрыв)     */
+      /* ======================================================== */
+      case "ineffa_mirror_slash":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-36 h-36 overflow-visible" viewBox="0 0 130 130" fill="none">
+              {/* Prismatic Crimson Reflection Blade */}
+              <polygon points="20,20 110,110 95,115 15,35" fill="rgba(239,68,68,0.3)" stroke="#f43f5e" strokeWidth="2" className="anim-mirror-shard drop-shadow-[0_0_14px_rgba(244,63,94,1)]" />
+              <line x1="15" y1="20" x2="115" y2="110" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-mirror-shard" />
+              
+              {/* Shattered Mirror Shards */}
+              <polygon points="40,25 55,15 48,35" fill="#fecdd3" stroke="#f43f5e" strokeWidth="1" className="anim-impact-burst" />
+              <polygon points="85,95 105,90 95,108" fill="#fecdd3" stroke="#f43f5e" strokeWidth="1" className="anim-impact-burst" style={{ animationDelay: '0.04s' }} />
+              <polygon points="75,45 90,40 85,55" fill="#ffffff" stroke="#f43f5e" strokeWidth="1" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+
+      case "ineffa_dawn_mirror":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-36 h-36 rounded-full border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.9)]" />
+            <svg className="w-40 h-40 overflow-visible anim-impact-burst" viewBox="0 0 140 140" fill="none">
+              {/* Octagonal Solar Mirror Barrier */}
+              <polygon points="70,12 110,28 128,70 110,112 70,128 30,112 12,70 30,28" stroke="#fb7185" strokeWidth="2.5" fill="rgba(225,29,72,0.18)" className="drop-shadow-[0_0_18px_rgba(244,63,94,1)]" />
+              {/* Inner Diamond Reflector */}
+              <polygon points="70,35 95,70 70,105 45,70" fill="#ffffff" stroke="#f43f5e" strokeWidth="1.5" className="drop-shadow-[0_0_12px_rgba(255,255,255,1)]" />
+              <circle cx="70" cy="70" r="10" fill="#e11d48" />
+              <text x="70" y="75" textAnchor="middle" fontSize="14" fill="#ffffff">🔥</text>
+            </svg>
+          </div>
+        );
+
+      case "ineffa_hybrid_energy":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-52 h-52 rounded-full border-4 border-rose-500 shadow-[0_0_35px_rgba(244,63,94,1)] z-50" />
+            <div className="anim-shockwave-ring absolute w-36 h-36 rounded-full border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.9)]" style={{ animationDelay: '0.07s' }} />
+            <svg className="w-52 h-52 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Supernova Pyro Flare with Refraction Beams */}
+              <polygon points="80,5 98,62 155,80 98,98 80,155 62,98 5,80 62,62" fill="rgba(244,63,94,0.3)" stroke="#ffffff" strokeWidth="3" className="anim-impact-burst drop-shadow-[0_0_25px_rgba(244,63,94,1)]" />
+              {/* Secondary Diagonal Diamond Star */}
+              <polygon points="80,30 115,45 130,80 115,115 80,130 45,115 30,80 45,45" stroke="#f59e0b" strokeWidth="2" fill="rgba(251,191,36,0.2)" className="anim-impact-burst" style={{ animationDelay: '0.05s' }} />
+              {/* Blinding Center Core */}
+              <circle cx="80" cy="80" r="20" fill="#ffffff" className="drop-shadow-[0_0_20px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+
+      /* ======================================================== */
+      /* 4. GOTKA (Пиро: Марионетки, Нити Тьмы, Разрыв Нитей)     */
+      /* ======================================================== */
+      case "gotka_shot":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 110 110" fill="none">
+              {/* Shadow Marionette Needle Shot */}
+              <line x1="10" y1="10" x2="100" y2="100" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" className="anim-thread-snap drop-shadow-[0_0_10px_rgba(220,38,38,1)]" />
+              <line x1="25" y1="10" x2="100" y2="85" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" className="anim-thread-snap" />
+              <polygon points="100,100 88,94 94,88" fill="#ef4444" />
+            </svg>
+          </div>
+        );
+
+      case "gotka_theater":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-36 h-36 rounded-full border-2 border-red-600 shadow-[0_0_18px_rgba(220,38,38,0.9)]" />
+            <svg className="w-44 h-44 overflow-visible anim-impact-burst" viewBox="0 0 140 140" fill="none">
+              {/* Marionette Crossbar */}
+              <line x1="20" y1="30" x2="120" y2="30" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" className="drop-shadow-[0_0_10px_rgba(255,255,255,1)]" />
+              <line x1="70" y1="10" x2="70" y2="50" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" />
+              
+              {/* Hanging Strings */}
+              <line x1="30" y1="30" x2="40" y2="100" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="70" y1="30" x2="70" y2="95" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="110" y1="30" x2="100" y2="100" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 2" />
+              
+              {/* Ominous Floating Puppet Mask */}
+              <circle cx="70" cy="95" r="16" fill="#450a0a" stroke="#dc2626" strokeWidth="2" className="drop-shadow-[0_0_14px_rgba(220,38,38,1)]" />
+              <text x="70" y="102" textAnchor="middle" fontSize="16" fill="#ffffff">🎭</text>
+            </svg>
+          </div>
+        );
+
+      case "gotka_thread_snap":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-48 h-48 rounded-full border-4 border-red-600 shadow-[0_0_30px_rgba(220,38,38,1)] z-50" />
+            <svg className="w-48 h-48 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Snapping X-Threads Cleave */}
+              <line x1="10" y1="10" x2="150" y2="150" stroke="#ffffff" strokeWidth="3.5" strokeLinecap="round" className="anim-thread-snap drop-shadow-[0_0_14px_rgba(239,68,68,1)]" />
+              <line x1="150" y1="10" x2="10" y2="150" stroke="#ef4444" strokeWidth="3.5" strokeLinecap="round" className="anim-thread-snap" style={{ animationDelay: '0.04s' }} />
+              
+              {/* Horizontal Thread Shatter */}
+              <line x1="5" y1="80" x2="155" y2="80" stroke="#ffffff" strokeWidth="2" strokeDasharray="6 4" className="anim-impact-burst" />
+              
+              {/* Center Shattered Puppet Spark */}
+              <polygon points="80,55 95,80 80,105 65,80" fill="#7f1d1d" stroke="#ef4444" strokeWidth="2" className="anim-impact-burst drop-shadow-[0_0_16px_rgba(239,68,68,1)]" />
+              <circle cx="80" cy="80" r="6" fill="#ffffff" />
+            </svg>
+          </div>
+        );
+
+      /* ======================================================== */
+      /* 5. VOLOSATINYA (Гидро: Волосатый Разрез, Поляна Волос)   */
+      /* ======================================================== */
+      case "volosatinya_slice":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              {/* Azure Curved Hair Wave Slash */}
+              <path d="M 15 25 Q 75 15 105 95" stroke="#38bdf8" strokeWidth="3.5" strokeLinecap="round" className="anim-hair-wave drop-shadow-[0_0_12px_rgba(56,189,248,1)]" />
+              <path d="M 25 35 Q 80 30 95 100" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" className="anim-hair-wave" />
+            </svg>
+          </div>
+        );
+
+      case "volosatinya_hair_slash":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="w-44 h-44 overflow-visible" viewBox="0 0 150 150" fill="none">
+              {/* Signature «Волосатый Разрез» — Cascading Hydro-Hair Blades */}
+              <path d="M 15 15 Q 110 30 135 135" stroke="#0ea5e9" strokeWidth="5" strokeLinecap="round" className="anim-hair-wave drop-shadow-[0_0_18px_rgba(14,165,233,1)]" />
+              <path d="M 20 20 Q 105 40 125 130" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-hair-wave" />
+              <path d="M 135 15 Q 40 50 15 135" stroke="#38bdf8" strokeWidth="4" strokeLinecap="round" className="anim-hair-wave" style={{ animationDelay: '0.05s' }} />
+              
+              {/* Water Splash Foam Droplets */}
+              <circle cx="85" cy="70" r="5" fill="#e0f2fe" className="anim-impact-burst" />
+              <circle cx="105" cy="50" r="4" fill="#38bdf8" className="anim-impact-burst" />
+              <circle cx="45" cy="95" r="4" fill="#38bdf8" className="anim-impact-burst" />
+              
+              {/* Center Hydro Diamond Core */}
+              <polygon points="75,55 90,75 75,95 60,75" fill="#0369a1" stroke="#ffffff" strokeWidth="1.5" className="anim-impact-burst drop-shadow-[0_0_14px_rgba(255,255,255,1)]" />
+            </svg>
+          </div>
+        );
+
+      case "volosatinya_hair_meadow":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-48 h-48 rounded-full border-4 border-sky-400 shadow-[0_0_30px_rgba(56,189,248,1)] z-50" />
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-2 border-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.8)]" style={{ animationDelay: '0.07s' }} />
+            <svg className="w-52 h-52 overflow-visible" viewBox="0 0 160 160" fill="none">
+              {/* Grand Ocean Hair Wave Mandala */}
+              <circle cx="80" cy="80" r="62" stroke="#38bdf8" strokeWidth="2" strokeDasharray="8 4" className="anim-bloom-rotate opacity-75" />
+              <path d="M 20 80 Q 80 15 140 80 Q 80 145 20 80" stroke="#0284c7" strokeWidth="4" fill="rgba(14,165,233,0.18)" className="anim-impact-burst drop-shadow-[0_0_20px_rgba(14,165,233,1)]" />
+              <path d="M 80 20 Q 145 80 80 140 Q 15 80 80 20" stroke="#38bdf8" strokeWidth="3" fill="rgba(56,189,248,0.12)" className="anim-impact-burst" style={{ animationDelay: '0.04s' }} />
+              
+              {/* Glistening Hair Shine Core */}
+              <circle cx="80" cy="80" r="20" fill="#075985" stroke="#ffffff" strokeWidth="2.5" className="anim-impact-burst drop-shadow-[0_0_18px_rgba(255,255,255,1)]" />
+              <text x="80" y="87" textAnchor="middle" fontSize="18" fill="#ffffff">🌊</text>
+            </svg>
+          </div>
+        );
+
       default:
         return null;
     }

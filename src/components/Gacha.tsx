@@ -5,7 +5,7 @@ import { baseCharacterPool, characterBlueprints, charRarity, getCharEmoji, getCh
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
-const LIMITED_S = ["volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita", "aveline", "kairen"];
+const LIMITED_S = ["iva", "nereus", "volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita", "aveline", "kairen"];
 const S_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "S");
 const STANDARD_S_POOL = S_POOL.filter(id => !LIMITED_S.includes(id));
 const A_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "A");
@@ -29,55 +29,65 @@ type PullResult = {
 };
 
 export default function Gacha({ profile, updateProfile, onBack }: Props) {
-  const [activeBanner, setActiveBanner] = useState<string>('AVELINE');
+  const [activeBanner, setActiveBanner] = useState<string>('NEREUS');
   
-  const permanentBanners: ('AVELINE' | 'KAIREN' | 'CYRUS' | 'RAVEN')[] = ['AVELINE', 'KAIREN', 'CYRUS', 'RAVEN'];
+  const permanentBanners: ('NEREUS' | 'IVA' | 'AELITA' | 'MAESTRO')[] = ['NEREUS', 'IVA', 'AELITA', 'MAESTRO'];
   const allAvailableBanners = permanentBanners;
 
-  const bannerDisplayDetails = {
-    AVELINE: {
-      title: "ПЕСНЬ ПРИЛИВА",
-      subtitle: "Танец Лепестков",
-      sId: "aveline",
-      sName: "Авелин",
+  const bannerDisplayDetails: Record<string, {
+    title: string;
+    subtitle: string;
+    sId: string;
+    sName: string;
+    sElement: string;
+    sThemeColor: string;
+    sBgAccent: string;
+    desc: string;
+    aRateUps: string[];
+  }> = {
+    NEREUS: {
+      title: "ВУАЛЬ ПРИЛИВА",
+      subtitle: "Сад Вечного Моря",
+      sId: "nereus",
+      sName: "Нереус",
       sElement: "Hydro",
-      sThemeColor: "text-blue-400 border-blue-500/40 bg-blue-950/40",
-      sBgAccent: "from-blue-600/20 to-transparent",
-      desc: "Шанс на получение Авелин [S] увеличен! Гидро Саппорт: создает лепестки прилива, усиливающие элементальные реакции отряда!",
-      aRateUps: ["aegis", "kopro", "gotka"] as string[]
+      sThemeColor: "text-teal-400 border-teal-500/40 bg-teal-950/40",
+      sBgAccent: "from-teal-600/20 to-transparent",
+      desc: "Шанс на получение Нереуса [S] увеличен! Hydro Саб-DPS/Аппликатор: взрывает Морские цветы от элементальных реакций и создаёт Сад вечного моря!",
+      aRateUps: ["kern", "glacier", "echo"]
     },
-    KAIREN: {
-      title: "ТРОН ЗИМЫ",
-      subtitle: "Ледяное Эхо",
-      sId: "kairen",
-      sName: "Кайрен",
-      sElement: "Cryo",
-      sThemeColor: "text-cyan-400 border-cyan-500/40 bg-cyan-950/40",
-      sBgAccent: "from-cyan-600/20 to-transparent",
-      desc: "Шанс на получение Кайрена [S] увеличен! Крио DPS: поглощает осколки инея для нанесения разрушительного массового урона!",
-      aRateUps: ["aegis", "kopro", "gotka"] as string[]
+    IVA: {
+      title: "ПЕРВЫЕ РОСТКИ",
+      subtitle: "Связь с Флорой",
+      sId: "iva",
+      sName: "Ива",
+      sElement: "Dendro",
+      sThemeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
+      sBgAccent: "from-emerald-600/20 to-transparent",
+      desc: "Шанс на получение Ивы [S] увеличен! Dendro Support / Sustain: снижает Dendro и Cryo RES врагов, генерирует Шипы от атак союзников и исцеляет отряд при получении Шипов!",
+      aRateUps: ["kern", "glacier", "echo"]
     },
-    CYRUS: {
-      title: "ТОЧНЫЙ ВЫСТРЕЛ",
-      subtitle: "Смертельное Яблочко",
-      sId: "cyrus",
-      sName: "Сайрус",
-      sElement: "Physical",
-      sThemeColor: "text-yellow-400 border-yellow-500/40 bg-yellow-950/40",
-      sBgAccent: "from-yellow-600/20 to-transparent",
-      desc: "Шанс на получение Сайруса [S] увеличен! Физ DPS: специализируется на критическом уроне и мощных одиночных выстрелах!",
-      aRateUps: ["aegis", "kopro", "gotka"] as string[]
+    AELITA: {
+      title: "ШИПЫ СПРАВЕДЛИВОСТИ",
+      subtitle: "Теорема Дикой Природы",
+      sId: "aelita",
+      sName: "Аэлита",
+      sElement: "Dendro",
+      sThemeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
+      sBgAccent: "from-emerald-600/20 to-transparent",
+      desc: "Шанс на получение Аэлиты [S] увеличен! Dendro DPS: накладывает и взрывает стаки [Шипы] на противниках для нанесения колоссального урона!",
+      aRateUps: ["kern", "glacier", "echo"]
     },
-    RAVEN: {
-      title: "ФАНТОМНЫЙ КЛИНОК",
-      subtitle: "Тень Безмолвия",
-      sId: "raven",
-      sName: "Рейвен",
+    MAESTRO: {
+      title: "СИМФОНИЯ ОДИНОЧЕСТВА",
+      subtitle: "Эхо Разлома",
+      sId: "maestro",
+      sName: "Маэстро",
       sElement: "Electro",
-      sThemeColor: "text-indigo-400 border-indigo-500/40 bg-indigo-950/40",
-      sBgAccent: "from-indigo-600/20 to-transparent",
-      desc: "Шанс на получение Рейвен [S] увеличен! Электро Убийца: наносит огромный урон целям без дебаффов и разгоняет отряд!",
-      aRateUps: ["aegis", "kopro", "gotka"] as string[]
+      sThemeColor: "text-purple-400 border-purple-500/40 bg-purple-950/40",
+      sBgAccent: "from-purple-600/20 to-transparent",
+      desc: "Шанс на получение Маэстро [S] увеличен! Electro Саб-DPS: атакует вместе с союзниками через «Эхо Одиночества» и изолирует врагов!",
+      aRateUps: ["kern", "glacier", "echo"]
     },
     STANDARD: {
       title: "ЭХО ПРЕДКОВ",
@@ -239,52 +249,62 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
   };
 
   const getBannerTabEmoji = (bKey: string): string => {
-    if (bKey === 'AVELINE') return '🌸';
-    if (bKey === 'KAIREN') return '❄️';
+    if (bKey === 'NEREUS') return '🪸';
+    if (bKey === 'IVA') return '🌿';
+    if (bKey === 'AELITA') return '🍃';
+    if (bKey === 'MAESTRO') return '🎻';
     switch (bKey) {
+      case 'AVELINE': return '🌸';
+      case 'KAIREN': return '❄️';
       case 'VOLTA': return '⚡';
       case 'SELINA': return '🌹';
       case 'KRONA': return '❄️';
       case 'ASHER': return '⚒️';
       case 'CYRUS': return '🎯';
       case 'RAVEN': return '🔪';
-      case 'MAESTRO': return '🎻';
       case 'INEFFA': return '🪞';
       case 'ZEPHYR': return '⚡';
       case 'AURUM': return '🛡️';
+      default: return '✨';
     }
   };
 
   const getBannerTabColor = (bKey: string, isActive: boolean): string => {
     if (!isActive) return 'text-white/50 hover:text-white border-transparent';
-    if (bKey === 'AVELINE') return 'bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
-    if (bKey === 'KAIREN') return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
-    if (!isActive) return 'text-white/50 hover:text-white border-transparent';
+    if (bKey === 'NEREUS') return 'bg-teal-600 text-white border-teal-500 shadow-[0_0_12px_rgba(20,184,166,0.4)]';
+    if (bKey === 'IVA') return 'bg-emerald-600 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
+    if (bKey === 'AELITA') return 'bg-emerald-700 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
+    if (bKey === 'MAESTRO') return 'bg-purple-600 text-white border-purple-500 shadow-[0_0_12px_rgba(147,51,234,0.4)]';
     switch (bKey) {
+      case 'AVELINE': return 'bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
+      case 'KAIREN': return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
       case 'VOLTA': return 'bg-violet-600 text-white border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]';
       case 'SELINA': return 'bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]';
       case 'KRONA': return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
       case 'ASHER': return 'bg-emerald-600 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
       case 'CYRUS': return 'bg-red-600 text-white border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.4)]';
       case 'RAVEN': return 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.4)]';
-      case 'MAESTRO': return 'bg-purple-600 text-white border-purple-500 shadow-[0_0_12px_rgba(147,51,234,0.4)]';
       case 'INEFFA': return 'bg-red-700 text-white border-red-600 shadow-[0_0_12px_rgba(220,38,38,0.4)]';
       case 'ZEPHYR': return 'bg-purple-800 text-white border-purple-600 shadow-[0_0_12px_rgba(168,85,247,0.4)]';
       case 'AURUM': return 'bg-amber-600 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]';
+      default: return 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.4)]';
     }
   };
 
   const getBannerTabName = (bKey: string): string => {
-    if (bKey === 'AVELINE') return 'Авелин';
-    if (bKey === 'KAIREN') return 'Кайрен';
+    if (bKey === 'NEREUS') return 'Нереус';
+    if (bKey === 'IVA') return 'Ива';
+    if (bKey === 'AELITA') return 'Аэлита';
+    if (bKey === 'MAESTRO') return 'Маэстро';
     switch (bKey) {
+      case 'AVELINE': return 'Авелин';
+      case 'KAIREN': return 'Кайрен';
       case 'VOLTA': return 'Вольта';
       case 'SELINA': return 'Селина';
       case 'KRONA': return 'Крона';
       case 'ASHER': return 'Ашер';
       case 'CYRUS': return 'Сайрус';
       case 'RAVEN': return 'Рейвен';
-      case 'MAESTRO': return 'Маэстро';
       case 'INEFFA': return 'Инеффа';
       case 'ZEPHYR': return 'Зефир';
       case 'AURUM': return 'Аурум';

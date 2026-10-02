@@ -239,3 +239,59 @@
   animation: shadow-cyclone-kf 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform, opacity;
 }
+
+/* Aelita Thorn Burst Animation (Dendro Thorns) */
+@keyframes thorn-burst-kf {
+  0% { transform: scale(0.3) rotate(-35deg); opacity: 0; }
+  35% { transform: scale(1.25) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1.4) rotate(45deg); opacity: 0; }
+}
+.anim-thorn-burst {
+  animation: thorn-burst-kf 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Maestro Acoustic / Soundwave Ring Animation */
+@keyframes soundwave-ring-kf {
+  0% { transform: scale(0.2); opacity: 0.95; }
+  50% { opacity: 0.8; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.anim-soundwave-ring {
+  animation: soundwave-ring-kf 0.5s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+/* Ineffa Prismatic Mirror Shard Slash (Pyro Reflection) */
+@keyframes mirror-shard-kf {
+  0% { transform: scale(0.3) translate3d(-30px, -30px, 0) rotate(-20deg); opacity: 0; }
+  35% { transform: scale(1.2) translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.4) translate3d(20px, 20px, 0) rotate(15deg); opacity: 0; }
+}
+.anim-mirror-shard {
+  animation: mirror-shard-kf 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Gotka Marionette Thread Snap Animation (Dark Pyro Strings) */
+@keyframes thread-snap-kf {
+  0% { transform: scaleY(0.2) scaleX(1.4); opacity: 0; }
+  30% { transform: scaleY(1.3) scaleX(1.1); opacity: 1; }
+  100% { transform: scaleY(1.6) scaleX(0.7); opacity: 0; }
+}
+.anim-thread-snap {
+  animation: thread-snap-kf 0.45s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Volosatinya Hair Wave & Hydro Slash Animation */
+@keyframes hair-wave-kf {
+  0% { transform: scale(0.3) rotate(-60deg) translateX(-40px); opacity: 0; }
+  40% { transform: scale(1.25) rotate(15deg) translateX(0px); opacity: 1; }
+  100% { transform: scale(1.45) rotate(70deg) translateX(30px); opacity: 0; }
+}
+.anim-hair-wave {
+  animation: hair-wave-kf 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+

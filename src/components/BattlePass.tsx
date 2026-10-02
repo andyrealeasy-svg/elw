@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PlayerProfile } from '../types';
-import { ArrowLeft, Gift, Star, Gem, Lock, Crown, CheckCircle2, Coins, Sparkles } from 'lucide-react';
+import { ArrowLeft, Gift, Star, Gem, Lock, Crown, CheckCircle2, Coins, Sparkles, Key } from 'lucide-react';
 import { cn } from '../lib/utils';
+import BattlePassCheatMenu from './BattlePassCheatMenu';
 
 interface Props {
   profile: PlayerProfile;
@@ -18,6 +19,10 @@ interface BPReward {
 export default function BattlePass({ profile, updateProfile, onBack }: Props) {
   const [viewMode, setViewMode] = useState<'FREE' | 'PREMIUM'>('FREE');
   const [summaryReward, setSummaryReward] = useState<BPReward | null>(null);
+  const cheatRef = useRef<HTMLDivElement | null>(null);
+  const scrollToCheat = () => {
+    cheatRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
   const MAX_LEVELS = 100;
   const EXP_PER_LEVEL = 7500;
   const GOLDEN_PASS_COST = 1000;
@@ -121,9 +126,18 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
               <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest leading-none">Обновление: Раз в 3 дня</p>
            </div>
         </div>
-        
-        {profile.hasGoldenPass ? (
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={scrollToCheat}
+            title="Спуститься к чит-кодам внизу"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-mono transition active:scale-95 cursor-pointer"
+          >
+            <Key className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Чит-меню</span>
+          </button>
+
+          {profile.hasGoldenPass ? (
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
             <Crown className="w-4 h-4 text-amber-500" />
             <span className="text-xs font-black text-amber-400 uppercase tracking-tight">Золотой статус</span>
           </div>
@@ -140,6 +154,7 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
             </div>
           </button>
         )}
+        </div>
       </div>
 
       <div className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar">
@@ -289,6 +304,9 @@ export default function BattlePass({ profile, updateProfile, onBack }: Props) {
                );
             })}
          </div>
+
+         {/* Secret Developer Terminal / Cheat-Code Menu */}
+         <div ref={cheatRef}><BattlePassCheatMenu profile={profile} updateProfile={updateProfile} /></div>
       </div>
 
       {/* Rewards Summary Overlay */}

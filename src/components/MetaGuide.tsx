@@ -133,12 +133,15 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
 
   const tierList: Record<string, TierEntry[]> = {
     'T0': [
+      { id: 'nereus' },
+      { id: 'iva' },
       { id: 'aveline' },
       { id: 'kairen' },
       { id: 'volta' },
       { id: 'ineffa' },
       { id: 'zephyr' },
       { id: 'aurum' },
+      { id: 'kern', c: 2 },
       { id: 'maestro' },
       { id: 'raven' },
       { id: 'moyan' },
@@ -150,6 +153,7 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       { id: 'neuron', c: 2 }
     ],
     'T0.5': [
+      { id: 'kern' },
       { id: 'cyrus' },
       { id: 'selina' },
       { id: 'asher' },
@@ -212,6 +216,24 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   };
 
   const recommendedTeams: TeamComposition[] = [
+    {
+      name: "Ледяной Прилив",
+      description: "Ультимативный Freeze-отряд с двойным Крио и Гидро резонансом. Кайрен и Фарина сковывают врагов «Белым полем» и Снежной пылью, Авелин усиливает элементальный урон и заливает Лепестки, а Нереус раскрывает «Сад вечного моря», нанося непрерывный урон Морскими цветами от каждой атаки союзников.",
+      members: ['kairen', 'aveline', 'nereus', 'farina'],
+      tags: ["FREEZE", "HYDRO", "CRYO", "T0", "SYNERGY"]
+    },
+    {
+      name: "Шёпот Морозной Флоры",
+      description: "Синергия Дендро, Крио и Гидро. Ива активирует «Связь с флорой», срезая Дендро и Крио сопротивления врагов на 20-25% и генерируя Шипы, Аэлита разгоняет урон терниями, Фарина даёт постоянные Крио-срабатывания «Снежной пылью», а Авелин обеспечивает идеальный отхил и бафф команды.",
+      members: ['aelita', 'iva', 'farina', 'aveline'],
+      tags: ["BLOOM", "FREEZE", "DENDRO", "T0", "THORNS"]
+    },
+    {
+      name: "Тектонический Прилив",
+      description: "Мощнейший двойной Гео и Гидро резонанс. Мо Янь и Аурум дают колоссальную защиту и щиты, нивелируя самоурон Керна, Авелин и Нереус разгоняют максимальное HP отряда, а Керн под Перенапряжением обрушивает серии атак на 460% ЗАЩ, пока Нереус заливает поле непрерывным уроном от ХП.",
+      members: ['kern', 'nereus', 'aveline', 'moyan'],
+      tags: ["GEO", "HYDRO", "DEFENSE", "HP-SCALING", "T0"]
+    },
     {
       name: "Абсолютный Холод",
       description: "Сильнейшая Freeze-команда. Кайрен наносит разрушительный АоЕ-урон и генерирует осколки за каждого замороженного врага, пока Авелин баффает команду и мгновенно активирует лепестки прилива.",
@@ -345,11 +367,11 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
     // This is a bit redundant but helps with custom styling inside the component
     const char = charId.toLowerCase();
     if (['selva', 'neuron', 'spark', 'pulse', 'raven', 'volta', 'zephyr', 'maestro', 'rix'].includes(char)) return 'text-purple-400 border-purple-500/20 bg-purple-500/5';
-    if (['moyan', 'claymore', 'aegis', 'aurum'].includes(char)) return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
+    if (['moyan', 'claymore', 'aegis', 'aurum', 'kern'].includes(char)) return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
     if (['gotka', 'selina', 'blaze', 'ineffa'].includes(char)) return 'text-red-400 border-red-500/20 bg-red-500/5';
     if (['krona', 'glacier', 'snezhana', 'farina', 'kairen'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
-    if (['aveline', 'tide', 'volosatinya'].includes(char)) return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
-    if (['aelita', 'kopro', 'fenris'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
+    if (['aveline', 'tide', 'volosatinya', 'nereus'].includes(char)) return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
+    if (['aelita', 'kopro', 'fenris', 'iva'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
     return 'text-white border-white/10 bg-white/5';
   };
 

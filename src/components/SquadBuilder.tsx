@@ -310,8 +310,8 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                         {b.def.name}
                       </h3>
                       <div className="flex justify-between text-[10px] font-mono text-white/50 mt-1">
-                        <span>HP: <strong className="text-green-400">{b.def.stats.maxHp}</strong></span>
-                        <span>ATK: <strong className="text-red-400">{b.def.stats.atk}</strong></span>
+                        <span>HP: <strong className="text-green-400">{Math.round(b.def.stats.maxHp)}</strong></span>
+                        <span>ATK: <strong className="text-red-400">{Math.round(b.def.stats.atk)}</strong></span>
                       </div>
                     </div>
                   </div>

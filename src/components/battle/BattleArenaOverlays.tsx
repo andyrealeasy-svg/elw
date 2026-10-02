@@ -15,6 +15,29 @@ interface ArenaOverlaysProps {
   isDuelActive: boolean;
   hasRavenActive?: boolean;
   cleanTargetCount?: number;
+  // Nereus
+  nereusGardenTurns?: number;
+  nereusFlowersCount?: number;
+  // Iva
+  ivaFloralBondTurns?: number;
+  ivaBloomTurns?: number;
+  // Kern
+  kernOverloadTurns?: number;
+  kernQBonusTurns?: number;
+  kernCritOverloadActive?: boolean;
+  kernCritOverloadTurns?: number;
+  // Aelita
+  aelitaTheoremActive?: boolean;
+  aelitaThornsEnemyCount?: number;
+  // Maestro
+  maestroIsolationActive?: boolean;
+  // Ineffa
+  ineffaReflectedActive?: boolean;
+  ineffaFragmentsCount?: number;
+  // Gotka
+  gotkaPuppetsCount?: number;
+  // Volosatinya
+  volosatinyaMeadowActive?: boolean;
 }
 
 export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
@@ -30,10 +53,28 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
   isDuelActive,
   hasRavenActive = false,
   cleanTargetCount = 0,
+  nereusGardenTurns = 0,
+  nereusFlowersCount = 0,
+  ivaFloralBondTurns = 0,
+  ivaBloomTurns = 0,
+  kernOverloadTurns = 0,
+  kernQBonusTurns = 0,
+  kernCritOverloadActive = false,
+  kernCritOverloadTurns = 0,
+  aelitaTheoremActive = false,
+  aelitaThornsEnemyCount = 0,
+  maestroIsolationActive = false,
+  ineffaReflectedActive = false,
+  ineffaFragmentsCount = 0,
+  gotkaPuppetsCount = 0,
+  volosatinyaMeadowActive = false,
 }) => {
   const isCircuitActive = circuitTurns > 0;
   const isAzureGardenActive = gardenTurns > 0;
   const isEternalBloomActive = flowerTurns > 0;
+  const isNereusGardenActive = nereusGardenTurns > 0;
+  const isIvaFloraActive = ivaFloralBondTurns > 0 || ivaBloomTurns > 0;
+  const isKernOverloadActive = kernOverloadTurns > 0 || kernCritOverloadActive;
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-15">
@@ -280,8 +321,399 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
         )}
       </AnimatePresence>
 
-      {/* Top Status Banners Container (Aveline + Kairen + Cyrus side-by-side gracefully) */}
+      {/* 7. Nereus Abyssal Sea Garden Arena Overlay (Deep Ocean Sanctuary) */}
+      <AnimatePresence>
+        {isNereusGardenActive && (
+          <motion.div
+            key="nereus-garden-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            {/* Deep Sea Light Blue Floor Mist */}
+            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-sky-950/45 via-blue-950/25 via-sky-500/10 to-transparent" />
+
+            {/* Ocean Current Shimmer Line */}
+            <div className="absolute bottom-8 left-10 right-10 h-[1.5px] bg-gradient-to-r from-transparent via-sky-300/80 to-transparent shadow-[0_0_14px_rgba(56,189,248,0.7)] anim-subtle-pulse" />
+
+            {/* Undersea Coral Mandala & Ripple SVG */}
+            <svg
+              className="absolute bottom-0 left-0 w-full h-32 opacity-45 overflow-visible"
+              viewBox="0 0 800 130"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              {/* Concentric Light Blue Wave Curves */}
+              <path d="M 100,120 Q 250,60 400,110 T 700,70" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.5" fill="none" />
+              <path d="M 50,90 Q 200,40 400,85 T 750,50" stroke="#60a5fa" strokeWidth="0.8" strokeOpacity="0.4" strokeDasharray="4 4" fill="none" />
+              {/* Sea flower coral motifs */}
+              <circle cx="400" cy="70" r="28" stroke="#7dd3fc" strokeWidth="1" strokeOpacity="0.5" />
+              <circle cx="400" cy="70" r="14" fill="#0284c7" fillOpacity="0.25" />
+            </svg>
+
+            {/* Floating Deep-Sea Motifs */}
+            <div style={{ left: '15%', bottom: '28px' }} className="absolute text-sm text-sky-200 drop-shadow-[0_0_8px_rgba(56,189,248,0.9)] anim-mist-drift select-none">
+              🪸
+            </div>
+            <div style={{ right: '16%', bottom: '26px', animationDelay: '2.5s' }} className="absolute text-sm text-sky-300 drop-shadow-[0_0_8px_rgba(125,211,252,0.9)] anim-mist-drift select-none">
+              🪸
+            </div>
+            <div style={{ left: '48%', bottom: '22px' }} className="absolute text-xs text-blue-200 drop-shadow-[0_0_6px_rgba(186,230,253,0.8)] anim-float-particle select-none">
+              🫧
+            </div>
+
+            {/* Light Blue Abyssal Vignette Border */}
+            <div className="absolute inset-0 rounded-2xl border border-sky-400/30 shadow-[inset_0_0_30px_rgba(56,189,248,0.2)]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 8. Iva Flora Bond & Verdant Botanical Arena Overlay */}
+      <AnimatePresence>
+        {isIvaFloraActive && (
+          <motion.div
+            key="iva-flora-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            {/* Lush Emerald Botanical Floor Glow */}
+            <div className="absolute bottom-0 left-0 right-0 h-38 bg-gradient-to-t from-emerald-950/40 via-green-950/15 via-emerald-600/8 to-transparent" />
+
+            {/* Botanical Vine Horizon Line */}
+            <div className="absolute bottom-8 left-12 right-12 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.5)] anim-subtle-pulse" />
+
+            {/* Botanical Root & Sprout SVG Lines */}
+            <svg
+              className="absolute bottom-0 left-0 w-full h-28 opacity-35 overflow-visible"
+              viewBox="0 0 800 110"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path d="M 120,105 Q 260,45 400,90 T 680,60" stroke="#10b981" strokeWidth="1" strokeOpacity="0.4" fill="none" />
+              <path d="M 200,95 Q 350,30 500,80 T 780,45" stroke="#34d399" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="5 3" fill="none" />
+              <circle cx="400" cy="65" r="22" stroke="#6ee7b7" strokeWidth="0.8" strokeOpacity="0.3" />
+            </svg>
+
+            {/* Floating Leaves & Botanical Spores */}
+            <div style={{ left: '18%', bottom: '26px' }} className="absolute text-sm text-emerald-300 drop-shadow-[0_0_6px_rgba(16,185,129,0.8)] anim-float-particle select-none">
+              🌿
+            </div>
+            <div style={{ right: '20%', bottom: '24px', animationDelay: '1.8s' }} className="absolute text-sm text-green-300 drop-shadow-[0_0_6px_rgba(34,197,94,0.8)] anim-float-particle select-none">
+              🌸
+            </div>
+            <div style={{ left: '46%', bottom: '18px', animationDelay: '1.1s' }} className="absolute text-xs text-emerald-200 drop-shadow-[0_0_4px_rgba(110,231,183,0.6)] anim-sparkle-twinkle select-none">
+              🍃
+            </div>
+
+            {/* Emerald Vignette */}
+            <div className="absolute inset-0 rounded-2xl border border-emerald-500/25 shadow-[inset_0_0_24px_rgba(16,185,129,0.15)]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. Kern Tectonic Core Overload Arena Overlay */}
+      <AnimatePresence>
+        {isKernOverloadActive && (
+          <motion.div
+            key="kern-tectonic-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            {/* Molten Magma Amber Floor Gradient */}
+            <div className={`absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t ${
+              kernCritOverloadActive 
+                ? 'from-rose-950/50 via-amber-950/30 via-orange-600/15 to-transparent' 
+                : 'from-amber-950/40 via-orange-950/20 via-amber-600/10 to-transparent'
+            }`} />
+
+            {/* Glowing Magma Fracture Horizon */}
+            <div className={`absolute bottom-8 left-10 right-10 h-[2px] bg-gradient-to-r from-transparent ${
+              kernCritOverloadActive ? 'via-rose-500' : 'via-amber-400/70'
+            } to-transparent shadow-[0_0_12px_rgba(245,158,11,0.6)] anim-subtle-pulse`} />
+
+            {/* Tectonic Fissure Ground Fractures (SVG) */}
+            <svg
+              className="absolute bottom-0 left-0 w-full h-32 opacity-45 overflow-visible"
+              viewBox="0 0 800 130"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              {/* Central Core Rupture Lines */}
+              <line x1="400" y1="130" x2="400" y2="45" stroke={kernCritOverloadActive ? "#f43f5e" : "#f59e0b"} strokeWidth="1.2" strokeOpacity="0.6" />
+              <line x1="400" y1="85" x2="310" y2="30" stroke="#d97706" strokeWidth="1" strokeOpacity="0.5" />
+              <line x1="400" y1="85" x2="490" y2="30" stroke="#d97706" strokeWidth="1" strokeOpacity="0.5" />
+              <line x1="310" y1="30" x2="230" y2="15" stroke="#f59e0b" strokeWidth="0.8" strokeOpacity="0.4" />
+              <line x1="490" y1="30" x2="570" y2="15" stroke="#f59e0b" strokeWidth="0.8" strokeOpacity="0.4" />
+              <line x1="400" y1="110" x2="200" y2="70" stroke="#f97316" strokeWidth="0.9" strokeOpacity="0.4" />
+              <line x1="400" y1="110" x2="600" y2="70" stroke="#f97316" strokeWidth="0.9" strokeOpacity="0.4" />
+
+              {/* Core Rupture Circle */}
+              <circle cx="400" cy="75" r="35" stroke={kernCritOverloadActive ? "#ef4444" : "#f59e0b"} strokeWidth="1" strokeDasharray="6 3" strokeOpacity="0.4" />
+            </svg>
+
+            {/* Floating Magma Embers */}
+            <div style={{ left: '16%', bottom: '30px' }} className="absolute text-sm text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.9)] anim-float-particle select-none">
+              🌋
+            </div>
+            <div style={{ right: '18%', bottom: '28px', animationDelay: '1.5s' }} className="absolute text-sm text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.9)] anim-float-particle select-none">
+              💥
+            </div>
+            <div style={{ left: '50%', bottom: '22px', animationDelay: '0.8s' }} className="absolute text-xs text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.8)] anim-sparkle-twinkle select-none">
+              ⚡
+            </div>
+
+            {/* Amber Magma Vignette */}
+            <div className={`absolute inset-0 rounded-2xl border ${
+              kernCritOverloadActive 
+                ? 'border-rose-500/35 shadow-[inset_0_0_30px_rgba(239,68,68,0.2)]' 
+                : 'border-amber-500/25 shadow-[inset_0_0_24px_rgba(245,158,11,0.15)]'
+            }`} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. Aelita Botanical Wild Theorem Arena Overlay */}
+      <AnimatePresence>
+        {aelitaTheoremActive && (
+          <motion.div
+            key="aelita-theorem-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0"
+          >
+            {/* Emerald Botanical Foliage Glow */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-emerald-950/30 via-emerald-600/10 to-transparent" />
+            
+            {/* Botanical Rune Ground Ring */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-16 rounded-full border border-emerald-400/40 shadow-[0_0_16px_rgba(16,185,129,0.3)] bg-emerald-500/[0.05] anim-subtle-pulse" />
+            
+            {/* Sprouting Emerald Leaves */}
+            <div style={{ left: '20%', bottom: '25px' }} className="absolute text-sm text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.9)] anim-float-particle select-none">
+              🌿
+            </div>
+            <div style={{ right: '22%', bottom: '30px', animationDelay: '1.2s' }} className="absolute text-sm text-green-300 drop-shadow-[0_0_8px_rgba(74,222,128,0.9)] anim-float-particle select-none">
+              🌱
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 10. Maestro Isolation Acoustic Symphony Arena Overlay */}
+      <AnimatePresence>
+        {maestroIsolationActive && (
+          <motion.div
+            key="maestro-isolation-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0"
+          >
+            {/* Violet Electric Soundwave Floor Glow */}
+            <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-purple-950/25 via-purple-600/8 to-transparent" />
+            
+            {/* Harmonic Stave Line */}
+            <div className="absolute bottom-7 left-10 right-10 h-[1.5px] bg-gradient-to-r from-transparent via-purple-400 to-transparent shadow-[0_0_10px_rgba(168,85,247,0.7)] anim-subtle-pulse" />
+            
+            {/* Floating Music & Targeting Sparkles */}
+            <div style={{ left: '15%', bottom: '28px' }} className="absolute text-xs text-purple-300 drop-shadow-[0_0_6px_rgba(192,132,252,0.9)] anim-float-particle select-none">
+              🎵
+            </div>
+            <div style={{ right: '15%', bottom: '28px', animationDelay: '1s' }} className="absolute text-xs text-violet-300 drop-shadow-[0_0_6px_rgba(196,181,253,0.9)] anim-float-particle select-none">
+              ⚡
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 11. Ineffa Prismatic Solar Mirror Arena Overlay */}
+      <AnimatePresence>
+        {ineffaReflectedActive && (
+          <motion.div
+            key="ineffa-mirror-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0"
+          >
+            {/* Ruby Crimson Flame Reflection Mist */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-rose-950/30 via-rose-600/10 to-transparent" />
+            
+            {/* Crimson Vignette Border */}
+            <div className="absolute inset-0 border border-rose-500/25 rounded-2xl shadow-[inset_0_0_24px_rgba(244,63,94,0.15)]" />
+            
+            {/* Solar Mirror Refraction Rays */}
+            <div style={{ left: '25%', bottom: '24px' }} className="absolute text-xs text-rose-300 drop-shadow-[0_0_6px_rgba(244,63,94,0.9)] anim-float-particle select-none">
+              🪞
+            </div>
+            <div style={{ right: '25%', bottom: '26px', animationDelay: '0.8s' }} className="absolute text-xs text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.9)] anim-sparkle-twinkle select-none">
+              🔥
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 12. Gotka Shadow Marionette Theater Arena Overlay */}
+      <AnimatePresence>
+        {gotkaPuppetsCount > 0 && (
+          <motion.div
+            key="gotka-theater-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0"
+          >
+            {/* Ominous Top Shadow & Hanging Strings */}
+            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-red-950/35 via-red-900/10 to-transparent" />
+            
+            {/* Suspended Marionette Strings from Ceiling */}
+            <svg className="absolute inset-0 w-full h-full opacity-35" preserveAspectRatio="none">
+              <line x1="20%" y1="0" x2="25%" y2="80%" stroke="#ef4444" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="50%" y1="0" x2="50%" y2="75%" stroke="#ef4444" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="80%" y1="0" x2="75%" y2="80%" stroke="#ef4444" strokeWidth="1" strokeDasharray="3 3" />
+            </svg>
+            
+            <div style={{ left: '12%', top: '35px' }} className="absolute text-xs text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] anim-float-particle select-none">
+              🎭
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 13. Volosatinya Ocean Hair Meadow Arena Overlay */}
+      <AnimatePresence>
+        {volosatinyaMeadowActive && (
+          <motion.div
+            key="volosatinya-meadow-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0"
+          >
+            {/* Azure Hydro Hair Tide Floor Mist */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-sky-950/30 via-sky-500/10 to-transparent" />
+            
+            {/* Flowing Water Crest Line */}
+            <div className="absolute bottom-5 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-sky-300 to-transparent shadow-[0_0_12px_rgba(56,189,248,0.7)] anim-subtle-pulse" />
+            
+            <div style={{ left: '22%', bottom: '25px' }} className="absolute text-sm text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.9)] anim-float-particle select-none">
+              🌊
+            </div>
+            <div style={{ right: '20%', bottom: '25px', animationDelay: '1.4s' }} className="absolute text-xs text-cyan-200 drop-shadow-[0_0_6px_rgba(103,232,249,0.9)] anim-float-particle select-none">
+              💇‍♂️
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Top Status Banners Container (Aveline + Kairen + Cyrus + Nereus + Iva + Kern + Aelita + Maestro + Ineffa + Gotka + Volosatinya) */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 flex flex-wrap items-center justify-center gap-2 pointer-events-none max-w-full px-2">
+        {/* Nereus Sea Garden */}
+        <AnimatePresence>
+          {isNereusGardenActive && (
+            <motion.div
+              key="badge-nereus-garden"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#031524]/95 border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.4)] text-[9px] sm:text-[10px] font-black text-sky-200 uppercase whitespace-nowrap"
+            >
+              <span>🪸</span>
+              <span>САД ВЕЧНОГО МОРЯ</span>
+              <span className="px-1 py-0.2 rounded-full bg-sky-950/90 text-sky-300 text-[8px] border border-sky-500/40">
+                {nereusGardenTurns} х
+              </span>
+              {nereusFlowersCount > 0 && (
+                <span className="px-1 py-0.2 rounded-full bg-blue-950/90 text-sky-200 text-[8px] border border-blue-500/40">
+                  Цветы: {nereusFlowersCount}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Iva Floral Bond */}
+        <AnimatePresence>
+          {ivaFloralBondTurns > 0 && (
+            <motion.div
+              key="badge-iva-flora"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#041a10]/95 border border-emerald-400/70 shadow-[0_0_12px_rgba(16,185,129,0.35)] text-[9px] sm:text-[10px] font-black text-emerald-200 uppercase whitespace-nowrap"
+            >
+              <span>🌿</span>
+              <span>СВЯЗЬ С ФЛОРОЙ</span>
+              <span className="px-1 py-0.2 rounded-full bg-emerald-950/90 text-emerald-300 text-[8px] border border-emerald-500/30">
+                {ivaFloralBondTurns} х
+              </span>
+              <span className="text-[8px] text-emerald-400/80 font-mono">-20% RES</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Iva Bloom */}
+        <AnimatePresence>
+          {ivaBloomTurns > 0 && (
+            <motion.div
+              key="badge-iva-bloom"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0a1f0a]/95 border border-green-400/70 shadow-[0_0_10px_rgba(34,197,94,0.3)] text-[9px] sm:text-[10px] font-black text-green-200 uppercase whitespace-nowrap"
+            >
+              <span>🌸</span>
+              <span>ЦВЕТЕНИЕ</span>
+              <span className="px-1 py-0.2 rounded-full bg-green-950/90 text-green-300 text-[8px] border border-green-500/30">
+                {ivaBloomTurns} х
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Kern Overload */}
+        <AnimatePresence>
+          {isKernOverloadActive && (
+            <motion.div
+              key="badge-kern-overload"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ${
+                kernCritOverloadActive 
+                  ? 'bg-[#200808]/95 border border-rose-400/80 shadow-[0_0_14px_rgba(244,63,94,0.5)] text-rose-100 animate-pulse' 
+                  : 'bg-[#1e1003]/95 border border-amber-400/70 shadow-[0_0_12px_rgba(245,158,11,0.35)] text-amber-200'
+              } text-[9px] sm:text-[10px] font-black uppercase whitespace-nowrap`}
+            >
+              <span>{kernCritOverloadActive ? '🌋' : '⚡'}</span>
+              <span>{kernCritOverloadActive ? 'КРИТ. ПЕРЕНАПРЯЖЕНИЕ (C6)' : 'ПЕРЕНАПРЯЖЕНИЕ'}</span>
+              <span className={`px-1 py-0.2 rounded-full text-[8px] border ${
+                kernCritOverloadActive 
+                  ? 'bg-rose-950/90 text-rose-200 border-rose-500/30' 
+                  : 'bg-amber-950/90 text-amber-300 border-amber-500/30'
+              }`}>
+                {kernCritOverloadActive ? `${kernCritOverloadTurns}х` : `${kernOverloadTurns}х`}
+              </span>
+              <span className="text-[8px] text-amber-300 font-mono">
+                {kernCritOverloadActive ? '+30% АТК / AoE' : (kernQBonusTurns > 0 ? '+25% АТК' : '+10% АТК')}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Aveline Azure Garden */}
         <AnimatePresence>
           {isAzureGardenActive && (
@@ -380,6 +812,99 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
               <span>Фантом</span>
               <span className="text-indigo-400/70 font-mono text-[8px]">· Чистых целей: {cleanTargetCount}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Aelita Wild Theorem / Thorns */}
+        <AnimatePresence>
+          {(aelitaTheoremActive || aelitaThornsEnemyCount > 0) && (
+            <motion.div
+              key="badge-aelita-theorem"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#021f12]/95 border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.4)] text-[9px] sm:text-[10px] font-black text-emerald-100 uppercase whitespace-nowrap"
+            >
+              <span>🌿</span>
+              <span>ДИКАЯ ПРИРОДА</span>
+              {aelitaThornsEnemyCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-950/90 text-emerald-300 text-[8px] border border-emerald-500/40">
+                  Шипы целей: {aelitaThornsEnemyCount}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Maestro Isolation Focus */}
+        <AnimatePresence>
+          {maestroIsolationActive && (
+            <motion.div
+              key="badge-maestro-isolation"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1e072b]/95 border border-purple-400/80 shadow-[0_0_12px_rgba(168,85,247,0.45)] text-[9px] sm:text-[10px] font-black text-purple-100 uppercase whitespace-nowrap"
+            >
+              <span className="text-yellow-300">🎵</span>
+              <span>ФОКУС ВНИМАНИЯ</span>
+              <span className="text-[8px] text-purple-300 font-mono">+40% Урон соло</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Ineffa Solar Mirror */}
+        <AnimatePresence>
+          {(ineffaReflectedActive || ineffaFragmentsCount > 0) && (
+            <motion.div
+              key="badge-ineffa-mirror"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#240409]/95 border border-rose-400/80 shadow-[0_0_14px_rgba(244,63,94,0.45)] text-[9px] sm:text-[10px] font-black text-rose-100 uppercase whitespace-nowrap"
+            >
+              <span>🪞</span>
+              <span>ОТРАЖЕНИЕ</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-950/90 text-amber-300 text-[8px] border border-rose-500/40 font-mono">
+                Фрагменты: {ineffaFragmentsCount}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Gotka Puppets */}
+        <AnimatePresence>
+          {gotkaPuppetsCount > 0 && (
+            <motion.div
+              key="badge-gotka-puppets"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#200505]/95 border border-red-500/80 shadow-[0_0_12px_rgba(239,68,68,0.4)] text-[9px] sm:text-[10px] font-black text-red-100 uppercase whitespace-nowrap"
+            >
+              <span>🎭</span>
+              <span>ТЕАТР ТЕНЕЙ</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-red-950/90 text-red-200 text-[8px] border border-red-500/40 font-mono">
+                Кукол: {gotkaPuppetsCount}/4
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Volosatinya Ocean Meadow */}
+        <AnimatePresence>
+          {volosatinyaMeadowActive && (
+            <motion.div
+              key="badge-volosatinya-meadow"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#031828]/95 border border-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.4)] text-[9px] sm:text-[10px] font-black text-sky-100 uppercase whitespace-nowrap"
+            >
+              <span>🌊</span>
+              <span>ПОЛЯНА ВОЛОС</span>
+              <span className="text-[8px] text-sky-300 font-mono">+30 АТК отряду</span>
             </motion.div>
           )}
         </AnimatePresence>

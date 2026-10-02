@@ -12,6 +12,17 @@ import {
   DuelReticleAura,
   CyrusDuelistAura,
   RavenPhantomAura,
+  NereusSeaGardenAura,
+  NereusSeaFlowerAura,
+  IvaFloraBondAura,
+  IvaThornDebuffAura,
+  KernTectonicAura,
+  AelitaThornsEmpowerAura,
+  MaestroConductorAura,
+  MaestroIsolationTargetAura,
+  IneffaMirrorAura,
+  GotkaPuppetAura,
+  VolosatinyaHairAura,
 } from './UnitCardAuras';
 import { EffectsOverlay } from '../EffectsOverlay';
 
@@ -71,7 +82,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
         stacks={unit.buffs.snowDust} 
       />
 
-      {/* Dynamic Character Visual Auras (Вольта, Снежана, Авелин, Кайрен, Сайрус, Рейвен) */}
+      {/* Dynamic Character Visual Auras (Вольта, Снежана, Авелин, Кайрен, Сайрус, Рейвен, Нереус, Ива, Керн) */}
       <VoltageCircuitAura unit={unit} isDead={isDead} />
       <OvercoolFrostAura unit={unit} isDead={isDead} />
       <AzurePetalsAura unit={unit} isDead={isDead} />
@@ -80,6 +91,17 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
       <DuelReticleAura unit={unit} isDead={isDead} />
       <CyrusDuelistAura unit={unit} isDead={isDead} />
       <RavenPhantomAura unit={unit} isDead={isDead} isPlayer={isPlayer} hasRavenInParty={hasRavenInParty} />
+      <NereusSeaGardenAura unit={unit} isDead={isDead} />
+      <NereusSeaFlowerAura unit={unit} isDead={isDead} />
+      <IvaFloraBondAura unit={unit} isDead={isDead} />
+      <IvaThornDebuffAura unit={unit} isDead={isDead} />
+      <KernTectonicAura unit={unit} isDead={isDead} />
+      <AelitaThornsEmpowerAura unit={unit} isDead={isDead} />
+      <MaestroConductorAura unit={unit} isDead={isDead} />
+      <MaestroIsolationTargetAura unit={unit} isDead={isDead} />
+      <IneffaMirrorAura unit={unit} isDead={isDead} />
+      <GotkaPuppetAura unit={unit} isDead={isDead} />
+      <VolosatinyaHairAura unit={unit} isDead={isDead} />
 
       {/* Upper Splashart Wrapper */}
       <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-[#111111]/60 flex-shrink-0">
@@ -139,8 +161,16 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
             {(unit.buffs.avelinePetals ?? 0) > 0 && <div className="text-[7px] bg-pink-600 text-white font-bold rounded-sm px-0.5 border border-pink-300/40">🌸{unit.buffs.avelinePetals}</div>}
             {(unit.buffs.avelineGardenTurns ?? 0) > 0 && <div className="text-[7px] bg-sky-700 text-cyan-200 font-bold rounded-sm px-0.5 border border-sky-400/40" title="Лазурный сад">🪷{unit.buffs.avelineGardenTurns}</div>}
             {(unit.buffs.avelineGreatFlowerTurns ?? 0) > 0 && <div className="text-[7px] bg-fuchsia-800 text-fuchsia-100 font-bold rounded-sm px-0.5 border border-fuchsia-400/50" title="Вечное цветение">🌺{unit.buffs.avelineGreatFlowerTurns}</div>}
+            {unit.buffs.nereusFlower && (unit.buffs.nereusFlower.hits > 0) && <div className="text-[7px] bg-teal-800 text-cyan-200 font-bold rounded-sm px-0.5 border border-cyan-400/50" title="Морской цветок">🪸{unit.buffs.nereusFlower.hits}</div>}
+            {(unit.buffs.nereusGardenTurns ?? 0) > 0 && <div className="text-[7px] bg-teal-900 text-cyan-100 font-bold rounded-sm px-0.5 border border-teal-400/50" title="Сад вечного моря">🌊{unit.buffs.nereusGardenTurns}</div>}
             {(unit.buffs.snowDust ?? 0) > 0 && <div className="text-[7px] bg-cyan-700 text-cyan-100 font-bold rounded-sm px-0.5 border border-cyan-300/40">❄️{unit.buffs.snowDust}</div>}
             {(unit.buffs.whiteField ?? 0) > 0 && <div className="text-[7px] bg-sky-800 text-sky-100 font-bold rounded-sm px-0.5 border border-sky-300/40">🌨️{unit.buffs.whiteField}</div>}
+            {(unit.buffs.ivaFloralBondTurns ?? 0) > 0 && <div className="text-[7px] bg-emerald-900 text-emerald-200 font-bold rounded-sm px-0.5 border border-emerald-400/50" title="Связь с флорой">🌿{unit.buffs.ivaFloralBondTurns}</div>}
+            {(unit.buffs.ivaBloomTurns ?? 0) > 0 && <div className="text-[7px] bg-emerald-800 text-emerald-100 font-bold rounded-sm px-0.5 border border-emerald-300/40" title="Цветение">🌸{unit.buffs.ivaBloomTurns}</div>}
+            {(unit.buffs.kernOverloadTurns ?? 0) > 0 && <div className="text-[7px] bg-amber-900 text-amber-200 font-bold rounded-sm px-0.5 border border-amber-400/50" title="Перенапряжение (+10% АТК)">⚡{unit.buffs.kernOverloadTurns}</div>}
+            {(unit.buffs.kernQBonusTurns ?? 0) > 0 && <div className="text-[7px] bg-orange-950 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-500/50" title="Усиление Q (+15% АТК)">💥{unit.buffs.kernQBonusTurns}</div>}
+            {unit.buffs.kernCritOverloadActive && <div className="text-[7px] bg-rose-950 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-400 animate-pulse" title="Критическое перенапряжение (C6)">🌋C6</div>}
+            {(unit.buffs.kernC2DefStacks ?? 0) > 0 && <div className="text-[7px] bg-stone-800 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-400/40" title="Каменная кровь (C2)">🛡️+{unit.buffs.kernC2DefStacks * 10}%</div>}
           </div>
         </div>
       </div>
@@ -178,11 +208,9 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
         <div className="flex justify-between items-center text-[8px] sm:text-[10px] font-black text-white uppercase leading-none mt-0.5">
            <span className="text-white/50">HP</span>
            <span className="tabular-nums tracking-tight">
-             {unit.stats.maxHp >= 1000000 
-               ? `${(unit.stats.hp / 1000000).toFixed(2)}M / ${(unit.stats.maxHp / 1000000).toFixed(2)}M`
-               : unit.stats.maxHp >= 10000 
-                 ? `${(unit.stats.hp / 1000).toFixed(1)}k / ${(unit.stats.maxHp / 1000).toFixed(1)}k`
-                 : `${Math.floor(unit.stats.hp)} / ${unit.stats.maxHp}`
+             {unit.stats.maxHp >= 10000000 
+               ? `${(unit.stats.hp / 1000000).toFixed(1)}M / ${(unit.stats.maxHp / 1000000).toFixed(1)}M`
+               : `${Math.round(unit.stats.hp)} / ${Math.round(unit.stats.maxHp)}`
              }
            </span>
         </div>

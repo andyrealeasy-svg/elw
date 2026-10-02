@@ -12,8 +12,9 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue } from './data';
-import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage } from './types';
+import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES } from './data';
+import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage, ArtifactSlot } from './types';
+import { createGodArtifact } from './components/BattlePassCheatMenu';
 import ArtifactDungeon from './components/ArtifactDungeon';
 import WorldMap from './components/WorldMap';
 import { getNextThursdayResetTime } from './lib/utils';
@@ -53,6 +54,7 @@ const defaultProfile: PlayerProfile = {
   lunarAbyssClaimed: [],
   lunarAbyssResetTime: getNextThursdayResetTime(),
   bossRushSeason2Claimed: false,
+  bossRushSeason3Claimed: false,
   achievements: {},
   expeditions: [],
   events: {
@@ -83,6 +85,243 @@ const defaultProfile: PlayerProfile = {
   }
 };
 
+export const getUserStorageKey = (uid: string | null): string => {
+  if (!uid || uid === 'local_user') return 'ed_profile_guest';
+  return `ed_profile_${uid}`;
+};
+
+export const normalizeAndMigrateProfile = (raw: any): PlayerProfile => {
+  if (!raw || typeof raw !== 'object') {
+    return JSON.parse(JSON.stringify(defaultProfile));
+  }
+
+  const parsed = { ...raw };
+
+  const sanitizeArtifact = (a: any) => {
+    if (!a || !a.mainStat) return a;
+    const currentLevel = Math.min(a.level || 0, 20);
+
+    let mainVal = a.mainStat.value || 0;
+    if (a.mainStat.type === "critRate") {
+      mainVal = Math.min(mainVal, Math.round((3.1 + currentLevel * 1.4) * 10) / 10);
+    } else if (a.mainStat.type === "critDamage") {
+      mainVal = Math.min(mainVal, Math.round((6.2 + currentLevel * 2.8) * 10) / 10);
+    } else {
+      // Auto-fix any previous bugged artifacts generated with 46.6 or 58.3 at level 20
+      if (currentLevel >= 15) {
+        if (a.mainStat.type === "hp" && mainVal < 500) mainVal = 2400;
+        else if (a.mainStat.type === "atk" && mainVal < 350) mainVal = 1800;
+        else if (a.mainStat.type === "def" && mainVal < 250) mainVal = 1200;
+        else if (a.mainStat.type === "spd" && mainVal < 15) mainVal = 35;
+      }
+      const cap = a.mainStat.type === "hp" ? 4800 : 2500;
+      if (mainVal > cap) mainVal = cap;
+      mainVal = Math.round(mainVal);
+    }
+
+    const subStats = (a.subStats || []).map((s: any) => {
+      if (!s) return s;
+      let sVal = s.value || 0;
+      if (s.type === "critRate") {
+        sVal = Math.round(Math.min(sVal, 20) * 10) / 10;
+      } else if (s.type === "critDamage") {
+        sVal = Math.round(Math.min(sVal, 40) * 10) / 10;
+      } else {
+        if (sVal > 1200) sVal = 1200;
+        sVal = Math.round(sVal);
+      }
+      return { ...s, value: sVal };
+    });
+
+    return {
+      ...a,
+      level: currentLevel,
+      mainStat: { ...a.mainStat, value: mainVal },
+      subStats
+    };
+  };
+
+  // Migration: Cap artifact levels to 20 and normalize stats
+  let artifacts = parsed.artifacts;
+  if (Array.isArray(artifacts)) {
+    artifacts = artifacts.map(sanitizeArtifact);
+  } else {
+    artifacts = [];
+  }
+
+  let roster = parsed.roster ? { ...parsed.roster } : { ...defaultProfile.roster };
+  Object.keys(roster).forEach((charKey) => {
+    const charObj = roster[charKey];
+    if (charObj && charObj.artifacts) {
+      const newArts: any = {};
+      Object.keys(charObj.artifacts).forEach((slotKey) => {
+        if (charObj.artifacts[slotKey]) {
+          newArts[slotKey] = sanitizeArtifact(charObj.artifacts[slotKey]);
+        } else {
+          newArts[slotKey] = null;
+        }
+      });
+      roster[charKey] = { ...charObj, artifacts: newArts };
+    }
+  });
+
+  const teams = parsed.teams || [parsed.team || ['moyan', 'kopro'], ...Array(9).fill([])];
+  while (teams.length < 10) teams.push([]);
+  const activeTeamIndex = (parsed.activeTeamIndex !== undefined && parsed.activeTeamIndex >= 0 && parsed.activeTeamIndex < 10) 
+    ? parsed.activeTeamIndex 
+    : 0;
+
+  // Daily Reset Logic
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const lastReset = parsed.events?.lastLoginDay || 0;
+
+  let resetDailies = parsed.dailies ? { ...parsed.dailies } : { ...defaultProfile.dailies };
+  let resetEvents = parsed.events ? { ...parsed.events } : { ...defaultProfile.events };
+
+  if (lastReset < startOfDay) {
+    resetDailies = {
+      battlesWon: 0,
+      skillsUsed: 0,
+      gachaPulls: 0,
+      resinsSpent: 0,
+      itemsBought: 0,
+      claimed: [false, false, false, false, false]
+    };
+    resetEvents = {
+      ...resetEvents,
+      lastLoginDay: startOfDay
+    };
+  }
+
+  // BP reset
+  let bpExp = parsed.bpExp ?? defaultProfile.bpExp;
+  let bpClaimedLevels = parsed.bpClaimedLevels || [];
+  let bpClaimedLevelsPremium = parsed.bpClaimedLevelsPremium || [];
+  let hasGoldenPass = !!parsed.hasGoldenPass;
+  let bpResetTime = parsed.bpResetTime || (now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  if (now.getTime() >= bpResetTime) {
+    bpExp = 0;
+    bpClaimedLevels = [];
+    bpClaimedLevelsPremium = [];
+    hasGoldenPass = false;
+    bpResetTime = now.getTime() + 3 * 24 * 60 * 60 * 1000;
+  }
+
+  // Lunar abyss reset
+  let lunarAbyssClaimed = parsed.lunarAbyssClaimed || [];
+  let lunarAbyssResetTime = parsed.lunarAbyssResetTime || getNextThursdayResetTime();
+  if (now.getTime() >= lunarAbyssResetTime) {
+    lunarAbyssClaimed = [];
+    lunarAbyssResetTime = getNextThursdayResetTime();
+  }
+
+  return { 
+    ...defaultProfile, 
+    ...parsed, 
+    artifacts,
+    roster,
+    teams,
+    activeTeamIndex,
+    team: teams[activeTeamIndex] || ['moyan', 'kopro'],
+    dailies: resetDailies,
+    events: resetEvents,
+    bpExp,
+    bpClaimedLevels,
+    bpClaimedLevelsPremium,
+    hasGoldenPass,
+    bpResetTime,
+    lunarAbyssClaimed,
+    lunarAbyssResetTime,
+    expeditions: parsed.expeditions || [],
+    achievements: parsed.achievements || {},
+    mapState: parsed.mapState || { claimedChests: [], completedAnomalies: [], unlockedRegions: [] },
+    storyProgress: parsed.storyProgress || { unlockedChapters: ['chap1'], completedStages: [] }
+  };
+};
+
+export const getProfileProgressScore = (p: any): number => {
+  if (!p || typeof p !== 'object') return 0;
+  let score = 0;
+  if (p.roster && typeof p.roster === 'object') {
+    const chars = Object.keys(p.roster);
+    score += chars.length * 100;
+    chars.forEach((c) => {
+      const charObj = p.roster[c];
+      const lvl = charObj?.level || 1;
+      score += lvl * 10;
+      if (charObj?.constellation) score += charObj.constellation * 50;
+    });
+  }
+  if (Array.isArray(p.artifacts)) {
+    score += p.artifacts.length * 20;
+    p.artifacts.forEach((a: any) => {
+      score += (a?.level || 0) * 5;
+    });
+  }
+  if (p.clearedAbyssFloor) score += p.clearedAbyssFloor * 100;
+  if (p.storyProgress?.completedStages?.length) {
+    score += p.storyProgress.completedStages.length * 50;
+  }
+  if (p.gems && p.gems > 1600) score += Math.floor((p.gems - 1600) / 160) * 10;
+  if (p.gold && p.gold > 100000) score += Math.floor((p.gold - 100000) / 10000) * 5;
+  return score;
+};
+
+export const getBestLegacySave = (): { profile: PlayerProfile; source: string; score: number } | null => {
+  const sources = [
+    'ed_profile_v3',
+    'ed_profile_backup',
+    'ed_profile_v2',
+    'ed_profile_v1',
+    'ed_profile',
+    'game_profile',
+    'ed_profile_guest',
+  ];
+  let best: { profile: PlayerProfile; source: string; score: number } | null = null;
+  for (const src of sources) {
+    try {
+      const raw = localStorage.getItem(src);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const norm = normalizeAndMigrateProfile(parsed);
+        const score = getProfileProgressScore(norm);
+        if (!best || score > best.score) {
+          best = { profile: norm, source: src, score };
+        }
+      }
+    } catch (e) {}
+  }
+  return best;
+};
+
+export const loadLocalProfileForUser = (uid: string | null): PlayerProfile => {
+  const key = getUserStorageKey(uid);
+  try {
+    let saved = localStorage.getItem(key) || localStorage.getItem(`${key}_backup`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const norm = normalizeAndMigrateProfile(parsed);
+      const score = getProfileProgressScore(norm);
+      if (score > 220) {
+        return norm;
+      }
+    }
+    // If user's specific key has no save or only blank initial progress (<=220), check if legacy save exists
+    const bestLegacy = getBestLegacySave();
+    if (bestLegacy && bestLegacy.score > 220) {
+      return bestLegacy.profile;
+    }
+    if (saved) {
+      return normalizeAndMigrateProfile(JSON.parse(saved));
+    }
+  } catch (e) {
+    console.warn('Error loading local profile for user:', e);
+  }
+  return JSON.parse(JSON.stringify(defaultProfile));
+};
+
 export default function App() {
   const [route, setRoute] = useState<GameRoute | 
     { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT', runs?: number } |
@@ -96,131 +335,7 @@ export default function App() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const [profile, setProfile] = useState<PlayerProfile>(() => {
-    try {
-      const saved = localStorage.getItem('ed_profile_v3') || 
-                    localStorage.getItem('ed_profile_backup') || 
-                    localStorage.getItem('ed_profile_v2') || 
-                    localStorage.getItem('ed_profile_v1') || 
-                    localStorage.getItem('ed_profile') || 
-                    localStorage.getItem('game_profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        
-        const sanitizeArtifact = (a: any) => {
-          if (!a || !a.mainStat) return a;
-          const currentLevel = Math.min(a.level || 0, 20);
-
-          let mainVal = a.mainStat.value || 0;
-          if (a.mainStat.type === "critRate") {
-            mainVal = Math.min(mainVal, Math.round((3.1 + currentLevel * 1.4) * 10) / 10);
-          } else if (a.mainStat.type === "critDamage") {
-            mainVal = Math.min(mainVal, Math.round((6.2 + currentLevel * 2.8) * 10) / 10);
-          } else {
-            const cap = a.mainStat.type === "hp" ? 3500 : 2500;
-            if (mainVal > cap) mainVal = cap;
-          }
-
-          const subStats = (a.subStats || []).map((s: any) => {
-            if (!s) return s;
-            let sVal = s.value || 0;
-            if (s.type === "critRate") {
-              sVal = Math.min(sVal, 20);
-            } else if (s.type === "critDamage") {
-              sVal = Math.min(sVal, 40);
-            } else if (sVal > 800) {
-              sVal = 800;
-            }
-            return { ...s, value: sVal };
-          });
-
-          return {
-            ...a,
-            level: currentLevel,
-            mainStat: { ...a.mainStat, value: mainVal },
-            subStats
-          };
-        };
-
-        // Migration: Cap artifact levels to 20 and normalize stats
-        if (parsed.artifacts) {
-          parsed.artifacts = parsed.artifacts.map(sanitizeArtifact);
-        }
-
-        if (parsed.roster) {
-          Object.keys(parsed.roster).forEach((charKey) => {
-            const charObj = parsed.roster[charKey];
-            if (charObj && charObj.artifacts) {
-              Object.keys(charObj.artifacts).forEach((slotKey) => {
-                if (charObj.artifacts[slotKey]) {
-                  charObj.artifacts[slotKey] = sanitizeArtifact(charObj.artifacts[slotKey]);
-                }
-              });
-            }
-          });
-        }
-
-        const teams = parsed.teams || [parsed.team || ['moyan', 'kopro'], ...Array(9).fill([])];
-        // Ensure we have at least 10 slots if coming from old save
-        while (teams.length < 10) teams.push([]);
-        const activeTeamIndex = parsed.activeTeamIndex !== undefined ? parsed.activeTeamIndex : 0;
-        
-        // Daily Reset Logic
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const lastReset = parsed.events?.lastLoginDay || 0;
-        
-        let resetProfile = { ...parsed };
-        if (lastReset < startOfDay) {
-           resetProfile = {
-              ...resetProfile,
-              dailies: {
-                 battlesWon: 0,
-                 skillsUsed: 0,
-                 gachaPulls: 0,
-                 resinsSpent: 0,
-                 itemsBought: 0,
-                 claimed: [false, false, false, false, false]
-              },
-              events: {
-                 ...parsed.events,
-                 lastLoginDay: startOfDay
-              }
-           };
-        }
-
-        // Weekly Thursday Reset for Abyss
-        // Battle Pass Reset (every 3 days)
-        const bpReset = parsed.bpResetTime || 0;
-        if (now.getTime() >= bpReset) {
-           resetProfile.bpExp = 0;
-           resetProfile.bpClaimedLevels = [];
-           resetProfile.bpClaimedLevelsPremium = [];
-           resetProfile.hasGoldenPass = false;
-           resetProfile.bpResetTime = now.getTime() + 3 * 24 * 60 * 60 * 1000;
-        }
-
-        const abyssResetTime = parsed.lunarAbyssResetTime || 0;
-        if (now.getTime() >= abyssResetTime) {
-          resetProfile.lunarAbyssClaimed = [];
-          resetProfile.lunarAbyssResetTime = getNextThursdayResetTime();
-        }
-
-        return { 
-           ...defaultProfile, 
-           ...resetProfile, 
-           teams,
-           activeTeamIndex,
-           team: teams[activeTeamIndex],
-           dailies: resetProfile.dailies || { ...defaultProfile.dailies },
-           events: resetProfile.events || { ...defaultProfile.events },
-           expeditions: parsed.expeditions || [],
-           achievements: parsed.achievements || {},
-           mapState: parsed.mapState || { claimedChests: [], completedAnomalies: [], unlockedRegions: [] },
-           storyProgress: parsed.storyProgress || { unlockedChapters: ['chap1'], completedStages: [] }
-        };
-      }
-    } catch(e) {}
-    return defaultProfile;
+    return JSON.parse(JSON.stringify(defaultProfile));
   });
   const [lastDrops, setLastDrops] = useState<{exp: number, gold: number, gems: number, artifacts: Artifact[]} | null>(null);
   const [lastDamageDealt, setLastDamageDealt] = useState<Record<string, number> | null>(null);
@@ -229,52 +344,192 @@ export default function App() {
   const [bossRushTab, setBossRushTab] = useState<'all' | number>('all');
   const [lastStoryStage, setLastStoryStage] = useState<StoryStage | null>(null);
 
+  const handleLogin = (user: string, uid: string) => {
+    setUsername(user);
+    setUserId(uid);
+    setIsAuthenticated(true);
+    setIsProfileLoaded(false);
 
+    // Immediately isolate in-memory profile to this user's local cache or fresh default
+    const local = loadLocalProfileForUser(uid);
+    setProfile(local);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {}
+    localStorage.removeItem('ed_user');
+    setIsAuthenticated(false);
+    setUserId(null);
+    setUsername(null);
+    setIsProfileLoaded(false);
+    setProfile(JSON.parse(JSON.stringify(defaultProfile)));
+    setRoute('HUB');
+  };
+
+  // Synchronize profile from Supabase when user authenticates
   React.useEffect(() => {
-    if (isAuthenticated && userId && userId !== 'local_user') {
-      const loadProfile = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('game_data')
-            .eq('id', userId)
-            .single();
+    if (!isAuthenticated || !userId) {
+      return;
+    }
 
-          if (error && error.code !== 'PGRST116') {
-             console.error('Error loading profile:', error);
+    if (userId === 'local_user') {
+      const local = loadLocalProfileForUser('local_user');
+      setProfile(local);
+      setIsProfileLoaded(true);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsProfileLoaded(false);
+
+    const loadProfile = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('game_data')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (isCancelled) return;
+
+        if (error) {
+          console.warn('Error fetching cloud profile, keeping local cache:', error);
+          setIsProfileLoaded(true);
+          return;
+        }
+
+        if (data && data.game_data) {
+          // Found cloud profile for THIS user
+          let cloudProfile = normalizeAndMigrateProfile(data.game_data);
+          const cloudScore = getProfileProgressScore(cloudProfile);
+          const bestLegacy = getBestLegacySave();
+
+          // If the cloud profile has only blank initial progress (<=220), but this device has a legacy save with actual progress:
+          if (cloudScore <= 220 && bestLegacy && bestLegacy.score > 220) {
+            console.log('Restoring real progress from local backup into cloud profile:', bestLegacy.source);
+            cloudProfile = bestLegacy.profile;
+            // Immediately sync to Supabase so the cloud record holds the real progress
+            await supabase.from('profiles').upsert({
+              id: userId,
+              username: username || 'Player',
+              game_data: cloudProfile
+            });
           }
-          
-          if (data && data.game_data) {
-             setProfile(data.game_data);
+
+          if (!isCancelled) {
+            setProfile(cloudProfile);
+            const key = getUserStorageKey(userId);
+            localStorage.setItem(key, JSON.stringify(cloudProfile));
+            localStorage.setItem(`${key}_backup`, JSON.stringify(cloudProfile));
+          }
+        } else {
+          // Brand new user or first-time sync for this cloud account:
+          // Check if this specific user had a local cache on this machine
+          const key = getUserStorageKey(userId);
+          const existingLocal = localStorage.getItem(key);
+          const bestLegacy = getBestLegacySave();
+
+          let targetProfile: PlayerProfile;
+          if (existingLocal) {
+            targetProfile = normalizeAndMigrateProfile(JSON.parse(existingLocal));
+          } else if (bestLegacy && bestLegacy.score > 220) {
+            console.log('Adopting existing local save into new cloud account:', bestLegacy.source);
+            targetProfile = bestLegacy.profile;
           } else {
-             // Create initial profile in DB
-             await supabase.from('profiles').insert({
-               id: userId,
-               username: username || 'Player',
-               game_data: profile
-             });
+            targetProfile = JSON.parse(JSON.stringify(defaultProfile));
           }
-        } catch (e) {
-          console.error(e);
-        } finally {
+
+          if (!isCancelled) {
+            setProfile(targetProfile);
+            localStorage.setItem(key, JSON.stringify(targetProfile));
+            localStorage.setItem(`${key}_backup`, JSON.stringify(targetProfile));
+
+            // Create initial profile in Supabase for this new user
+            await supabase.from('profiles').upsert({
+              id: userId,
+              username: username || 'Player',
+              game_data: targetProfile
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Error loading profile:', e);
+      } finally {
+        if (!isCancelled) {
           setIsProfileLoaded(true);
         }
-      };
-      loadProfile();
-    } else {
-      setIsProfileLoaded(true);
-    }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isAuthenticated, userId]);
 
-  // Sync profile changes to Supabase and LocalStorage
-  React.useEffect(() => {
-    // Always persist to local storage and backup
+  const handleRestoreBackup = async (): Promise<{ success: boolean; message: string }> => {
+    const bestLegacy = getBestLegacySave();
+    if (!bestLegacy || bestLegacy.score <= 220) {
+      return { success: false, message: 'Локальных резервных копий с прогрессом не найдено.' };
+    }
+
+    setProfile(bestLegacy.profile);
+    if (userId) {
+      const storageKey = getUserStorageKey(userId);
+      localStorage.setItem(storageKey, JSON.stringify(bestLegacy.profile));
+      localStorage.setItem(`${storageKey}_backup`, JSON.stringify(bestLegacy.profile));
+      if (userId !== 'local_user') {
+        try {
+          await supabase.from('profiles').upsert({
+            id: userId,
+            username: username || 'Player',
+            game_data: bestLegacy.profile
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    return {
+      success: true,
+      message: `Прогресс успешно восстановлен из «${bestLegacy.source}» (${Object.keys(bestLegacy.profile.roster || {}).length} персонажей, ${bestLegacy.profile.gems} кристаллов)!`
+    };
+  };
+
+  const handleForceSyncCloud = async (): Promise<{ success: boolean; message: string }> => {
+    if (!userId || userId === 'local_user') {
+      return { success: false, message: 'Вы находитесь в локальном (гостевом) режиме. Войдите в облачный аккаунт для синхронизации.' };
+    }
     try {
-      localStorage.setItem('ed_profile_v3', JSON.stringify(profile));
-      localStorage.setItem('ed_profile_backup', JSON.stringify(profile));
+      const { error } = await supabase.from('profiles').upsert({
+        id: userId,
+        username: username || 'Player',
+        game_data: profile
+      });
+      if (error) throw error;
+      return { success: true, message: 'Профиль успешно сохранён в облако Supabase!' };
+    } catch (e: any) {
+      console.error(e);
+      return { success: false, message: 'Ошибка сохранения в облако: ' + (e?.message || 'Сеть недоступна') };
+    }
+  };
+
+  // Sync profile changes to Supabase and LocalStorage (isolated per user)
+  React.useEffect(() => {
+    if (!isAuthenticated || !userId || !isProfileLoaded) {
+      return;
+    }
+
+    const storageKey = getUserStorageKey(userId);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(profile));
+      localStorage.setItem(`${storageKey}_backup`, JSON.stringify(profile));
     } catch(e) {}
 
-    if (isAuthenticated && userId && userId !== 'local_user' && isProfileLoaded) {
+    if (userId !== 'local_user') {
       const syncToDB = async () => {
         try {
           await supabase.from('profiles').upsert({
@@ -368,7 +623,14 @@ export default function App() {
   const playerParty: Combatant[] = (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE')
     ? getPartyFromIds(route.teams[route.stage])
     : (typeof route === 'object' && route.type === 'TRIAL_BATTLE' && route.team)
-    ? route.team.map((id: string) => { const c = characterBlueprints[id](id, 80, 0, []); if (c.stats.spd < 150) c.stats.spd = 150; return c; })
+    ? route.team.map((id: string) => { 
+        const prefSet = CHARACTER_PREFERENCES[id]?.sets?.[0] || 'gladiator';
+        const slots: ArtifactSlot[] = ['flower', 'plume', 'sands', 'goblet', 'circlet'];
+        const trialArts = slots.map(slot => createGodArtifact(slot, prefSet, id));
+        const c = characterBlueprints[id](id, 80, 0, trialArts); 
+        if (c.stats.spd < 150) c.stats.spd = 150; 
+        return c; 
+      })
     : getPartyFromIds(profile.team);
 
   const getEnemies = (level: number) => {
@@ -411,18 +673,18 @@ export default function App() {
       setLastDamageDealt(stats);
       setLastBattleParty(stageParty);
 
-      const alreadyClaimed = !!profile.bossRushSeason2Claimed;
-      const expReward = alreadyClaimed ? 5000 : 20000;
-      const goldReward = alreadyClaimed ? 10000 : 50000;
+      const alreadyClaimed = !!profile.bossRushSeason3Claimed;
+      const expReward = alreadyClaimed ? 5000 : 25000;
+      const goldReward = alreadyClaimed ? 15000 : 100000;
       const gemsDrop = alreadyClaimed ? 0 : 1200;
       const droppedArtifacts = alreadyClaimed ? [] : [
-         ...Array.from({length: 5}, () => generateArtifact("ocean_song", 5)),
-         ...Array.from({length: 5}, () => generateArtifact("shattered_winter", 5))
+         ...Array.from({length: 5}, () => generateArtifact("coral_tide", 5)),
+         ...Array.from({length: 5}, () => generateArtifact("thorn_whisper", 5))
       ];
       
       setProfile(p => ({
          ...p,
-         bossRushSeason2Claimed: true,
+         bossRushSeason3Claimed: true,
          gems: p.gems + gemsDrop,
          gold: p.gold + goldReward,
          heroExp: p.heroExp + expReward,
@@ -733,7 +995,20 @@ export default function App() {
     : route;
 
   if (!isAuthenticated) {
-    return <AuthScreen onLogin={(user, uid) => { setUsername(user); setUserId(uid); setIsAuthenticated(true); }} />;
+    return <AuthScreen onLogin={handleLogin} />;
+  }
+
+  if (!isProfileLoaded) {
+    return (
+      <div className="fixed inset-0 bg-[#050505] z-50 flex flex-col items-center justify-center font-sans text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="text-xs uppercase tracking-widest text-indigo-300/70 font-mono">
+            Синхронизация профиля...
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -748,7 +1023,16 @@ export default function App() {
           className="w-full flex justify-center items-center h-full min-h-screen"
         >
       {currentRouteName === 'HUB' && (
-        <HubMenu profile={profile} updateProfile={setProfile} setRoute={setRoute} username={username || 'Игрок'} onLogout={() => { supabase.auth.signOut().then(() => { localStorage.removeItem('ed_user'); setIsAuthenticated(false); setUserId(null); setUsername(null); }); }} />
+        <HubMenu 
+          profile={profile} 
+          updateProfile={setProfile} 
+          setRoute={setRoute} 
+          username={username || 'Игрок'} 
+          userId={userId}
+          onLogout={handleLogout} 
+          onRestoreBackup={handleRestoreBackup}
+          onForceSyncCloud={handleForceSyncCloud}
+        />
       )}
 
       {currentRouteName === 'ROSTER' && (

@@ -358,3 +358,448 @@ export const RavenPhantomAura: React.FC<{
     </AnimatePresence>
   );
 });
+
+// 7. Nereus: Abyssal Sea Garden Aura on Nereus Card
+export const NereusSeaGardenAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isNereus = unit.id === 'nereus';
+  const gardenTurns = unit.buffs.nereusGardenTurns ?? 0;
+  const eAtkBuff = unit.buffs.nereusEAtkBuffTurns ?? 0;
+  const active = isNereus && !isDead && (gardenTurns > 0 || eAtkBuff > 0);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="nereus-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Ocean current light blue border (GPU CSS) */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-sky-400/90 shadow-[0_0_12px_rgba(56,189,248,0.6)] bg-sky-400/[0.08] anim-subtle-pulse" />
+
+        {/* Floating coral motif */}
+        <div className="absolute bottom-2 left-1 text-[10px] text-sky-300 drop-shadow-[0_0_4px_rgba(56,189,248,0.8)] anim-float-particle">
+          🪸
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#031424]/95 border border-sky-400/80 text-[8px] font-black text-sky-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🪸</span>
+          <span>{gardenTurns > 0 ? `Сад Моря ${gardenTurns}х` : `Водоворот ${eAtkBuff}х`}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 8. Nereus: Sea Flower Reticle on Marked Enemy
+export const NereusSeaFlowerAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const flower = unit.buffs.nereusFlower;
+  const hits = flower?.hits ?? 0;
+  const active = !isDead && hits > 0;
+
+  if (!active) return null;
+
+  const isEruptionReady = hits >= 2;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="nereus-flower-aura"
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.2 }}
+        className="absolute -inset-1 pointer-events-none rounded-xl sm:rounded-2xl z-35 select-none"
+      >
+        {/* Undersea flower reticle border */}
+        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border ${
+          isEruptionReady 
+            ? 'border-sky-300 shadow-[0_0_14px_rgba(56,189,248,0.8)] bg-sky-500/[0.12] animate-pulse' 
+            : 'border-sky-400/75 shadow-[0_0_8px_rgba(56,189,248,0.4)]'
+        }`} />
+
+        {/* Coral corner ticks */}
+        <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-sky-300/90 rounded-tl-sm" />
+        <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-sky-300/90 rounded-tr-sm" />
+        <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-sky-300/90 rounded-bl-sm" />
+        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-sky-300/90 rounded-br-sm" />
+
+        {/* Badge */}
+        <div className={`absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase shadow whitespace-nowrap z-40 border ${
+          isEruptionReady 
+            ? 'bg-[#031726]/95 border-sky-300 text-sky-100 shadow-[0_0_8px_rgba(56,189,248,0.6)]' 
+            : 'bg-[#02111d]/95 border-sky-500/70 text-sky-200'
+        }`}>
+          <span>🪸</span>
+          <span>ЦВЕТОК ({hits}/2)</span>
+          {isEruptionReady && (
+            <span className="text-[7px] text-sky-200 font-bold px-1 rounded bg-sky-950 border border-sky-400/50">
+              ВЗРЫВ
+            </span>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 9. Iva: Flora Bond & Blooming Aura on Iva / Party
+export const IvaFloraBondAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isIva = unit.id === 'iva';
+  const floralBondTurns = unit.buffs.ivaFloralBondTurns ?? 0;
+  const bloomTurns = unit.buffs.ivaBloomTurns ?? 0;
+  const thornHealStacks = unit.buffs.ivaThornHealStacks ?? 0;
+  const active = !isDead && (
+    (isIva && (floralBondTurns > 0 || bloomTurns > 0 || thornHealStacks > 0)) ||
+    (!isIva && floralBondTurns > 0)
+  );
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="iva-flora-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Emerald Botanical Vine border */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-emerald-400/80 shadow-[0_0_10px_rgba(16,185,129,0.45)] bg-emerald-500/[0.06] anim-subtle-pulse" />
+
+        {/* Floating Sprout/Leaf */}
+        <div className="absolute top-1 -left-1 text-[10px] text-emerald-300 anim-float-particle">
+          🌿
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#041a0f]/95 border border-emerald-400/70 text-[8px] font-black text-emerald-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>{bloomTurns > 0 ? '🌸' : '🌿'}</span>
+          <span>
+            {bloomTurns > 0 
+              ? `Цветение ${bloomTurns}х` 
+              : floralBondTurns > 0 
+              ? `Связь ${floralBondTurns}х` 
+              : `Шипы ${thornHealStacks}`}
+          </span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 10. Iva: Thorns & RES-Down Aura on Enemy Card
+export const IvaThornDebuffAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const thorns = unit.buffs.thorns ?? 0;
+  const resDown = unit.buffs.resDown ?? 0;
+  const active = !isDead && (thorns > 0 || resDown > 0);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="iva-thorn-enemy-aura"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute -inset-1 pointer-events-none rounded-xl sm:rounded-2xl z-35 select-none"
+      >
+        {/* Thorny green corner indicators */}
+        <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-emerald-500/90 rounded-tl-sm" />
+        <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-emerald-500/90 rounded-tr-sm" />
+        <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-emerald-500/90 rounded-bl-sm" />
+        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-emerald-500/90 rounded-br-sm" />
+
+        {/* Badge */}
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#03180c]/95 border border-emerald-500/60 shadow text-[8px] font-bold text-emerald-200 uppercase whitespace-nowrap z-40">
+          <span>🌿</span>
+          <span>{thorns > 0 ? `Шипы (${thorns})` : `-20% RES`}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 11. Kern: Tectonic Overload & Critical Overload (C6) Aura
+export const KernTectonicAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isKern = unit.id === 'kern';
+  const overloadTurns = unit.buffs.kernOverloadTurns ?? 0;
+  const qBonusTurns = unit.buffs.kernQBonusTurns ?? 0;
+  const isCritOverload = Boolean(unit.buffs.kernCritOverloadActive);
+  const critTurns = unit.buffs.kernCritOverloadTurns ?? 0;
+  const c2Stacks = unit.buffs.kernC2DefStacks ?? 0;
+
+  const active = isKern && !isDead && (overloadTurns > 0 || isCritOverload || qBonusTurns > 0 || c2Stacks > 0);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="kern-tectonic-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Tectonic Molten Magma Border */}
+        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border-2 ${
+          isCritOverload
+            ? 'border-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.7)] bg-rose-500/[0.1] animate-pulse'
+            : qBonusTurns > 0
+            ? 'border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.6)] bg-orange-500/[0.08]'
+            : 'border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)] bg-amber-500/[0.06] anim-subtle-pulse'
+        }`} />
+
+        {/* Floating Magma Spark */}
+        <div className="absolute top-1 -right-1 text-[10px] text-amber-300 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)] anim-float-particle">
+          {isCritOverload ? '🌋' : '⚡'}
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#1c0b02]/95 border border-amber-400 text-[8px] font-black text-amber-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🌋</span>
+          <span>
+            {isCritOverload 
+              ? `КРИТ. ПЕРЕГРУЗКА (${critTurns}х)` 
+              : (qBonusTurns > 0 ? `РАЗЛОМ (${qBonusTurns}х)` : `ПЕРЕГРУЗКА (${overloadTurns}х)`)}
+          </span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 12. Aelita: Thorns Empower & Wild Botanical Aura
+export const AelitaThornsEmpowerAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isAelita = unit.id === 'aelita';
+  const atkBuff = (unit.buffs.atk ?? 0) > 0;
+  const shield = (unit.buffs.shield ?? 0) > 0;
+  const active = isAelita && !isDead && (atkBuff || shield);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="aelita-thorns-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Emerald botanical glowing border */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_12px_rgba(16,185,129,0.55)] bg-emerald-500/[0.08] anim-subtle-pulse" />
+
+        {/* Floating Thorn Leaves */}
+        <div className="absolute top-1 -right-1 text-[10px] text-emerald-300 drop-shadow-[0_0_4px_rgba(16,185,129,0.9)] anim-float-particle">
+          🌱
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#022214]/95 border border-emerald-400 text-[8px] font-black text-emerald-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🌿</span>
+          <span>{shield ? 'ОРАНЖЕРЕЯ +ЩИТ' : 'ТЕОРЕМА +АТК'}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 13. Maestro: Conductor Electric Soundwave Aura
+export const MaestroConductorAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isMaestro = unit.id === 'maestro';
+  const active = isMaestro && !isDead;
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="maestro-conductor-aura"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="absolute -inset-1 pointer-events-none rounded-xl sm:rounded-2xl z-25 select-none"
+      >
+        {/* Subtle violet acoustic frame */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border border-purple-500/50 shadow-[0_0_8px_rgba(168,85,247,0.3)] bg-purple-900/[0.04] anim-subtle-pulse" />
+
+        {/* Floating Music Note */}
+        <div className="absolute top-0 -left-1 text-[9px] text-purple-300 anim-float-particle">
+          🎵
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 14. Maestro: Isolation Target Reticle Aura on Enemy
+export const MaestroIsolationTargetAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isolation = unit.buffs.isolationMark ?? 0;
+  const active = !isDead && isolation > 0;
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="maestro-isolation-enemy-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-35 select-none"
+      >
+        {/* Violet Acoustic Isolation Border */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.6)] bg-purple-500/[0.08] anim-subtle-pulse" />
+
+        {/* Floating Targeting Crosshair */}
+        <div className="absolute top-0.5 -right-1 text-[10px] text-purple-300 animate-spin" style={{ animationDuration: '6s' }}>
+          🎯
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#1e072b]/95 border border-purple-400 shadow-md text-[8px] font-black text-purple-200 uppercase whitespace-nowrap z-40">
+          <span>🎯</span>
+          <span>ИЗОЛЯЦИЯ ({isolation}х)</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 15. Ineffa: Prismatic Solar Mirror Aura
+export const IneffaMirrorAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isIneffa = unit.id === 'ineffa';
+  const reflectedForm = unit.buffs.reflectedForm ?? 0;
+  const mirrorFragments = unit.buffs.mirrorFragment ?? 0;
+  const active = isIneffa && !isDead && (reflectedForm > 0 || mirrorFragments > 0);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="ineffa-mirror-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Prismatic Crimson-Ruby Border */}
+        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border-2 ${
+          mirrorFragments >= 4 
+            ? 'border-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.7)] bg-rose-500/[0.1] animate-pulse'
+            : 'border-red-400 shadow-[0_0_10px_rgba(239,68,68,0.5)] bg-red-500/[0.06] anim-subtle-pulse'
+        }`} />
+
+        {/* Floating Mirror Spark */}
+        <div className="absolute top-1 -right-1 text-[10px] text-rose-300 drop-shadow-[0_0_4px_rgba(244,63,94,0.9)] anim-float-particle">
+          🔥
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#20050a]/95 border border-rose-400 text-[8px] font-black text-rose-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🪞</span>
+          <span>
+            {reflectedForm > 0 ? `ОТРАЖЕНИЕ (${reflectedForm}х)` : `ФРАГМЕНТЫ: ${mirrorFragments}`}
+          </span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 16. Gotka: Dark Marionette Threads Aura
+export const GotkaPuppetAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isGotka = unit.id === 'gotka';
+  const puppets = unit.buffs.puppets ?? 0;
+  const active = isGotka && !isDead && puppets > 0;
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="gotka-puppet-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Dark Crimson Shadow Puppet Border */}
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-red-500/90 shadow-[0_0_12px_rgba(220,38,38,0.6)] bg-red-950/[0.12] anim-subtle-pulse" />
+
+        {/* Floating Marionette Mask */}
+        <div className="absolute top-0.5 -left-1 text-[10px] text-red-300 anim-float-particle">
+          🎭
+        </div>
+
+        {/* Badge */}
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#1f0404]/95 border border-red-500 text-[8px] font-black text-red-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🎭</span>
+          <span>МАРИОНЕТКИ: {puppets}/4</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 17. Volosatinya: Azure Wave & Hair Blade Aura
+export const VolosatinyaHairAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isVolosatinya = unit.id === 'volosatinya';
+  const atkBuff = (unit.buffs.atk ?? 0) > 0;
+  const active = isVolosatinya && !isDead;
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="volosatinya-hair-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Flowing Azure Hydro Hair Border */}
+        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border-2 ${
+          atkBuff 
+            ? 'border-sky-300 shadow-[0_0_14px_rgba(56,189,248,0.7)] bg-sky-400/[0.1] animate-pulse' 
+            : 'border-blue-400/80 shadow-[0_0_8px_rgba(59,130,246,0.4)] bg-blue-500/[0.05] anim-subtle-pulse'
+        }`} />
+
+        {/* Floating Ocean Water / Hair Sparkle */}
+        <div className="absolute top-1 -right-1 text-[10px] text-sky-300 anim-float-particle">
+          🌊
+        </div>
+
+        {/* Badge */}
+        {atkBuff && (
+          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#031525]/95 border border-sky-400 text-[8px] font-black text-sky-200 uppercase shadow-md whitespace-nowrap z-40">
+            <span>💇‍♂️</span>
+            <span>ПОЛЯНА ВОЛОС (+АТК)</span>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+

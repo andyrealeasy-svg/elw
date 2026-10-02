@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, Step, EventData, STATUS } from 'react-joyride';
 import { PlayerProfile, GameRoute } from '../types';
-import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle, Sparkles } from 'lucide-react';
+import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle, Sparkles, Cloud, Database, RefreshCw, Check } from 'lucide-react';
 import { characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import EventsMenu from './EventsMenu';
 import { cn } from '../lib/utils';
@@ -14,11 +14,26 @@ interface Props {
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
   onLogout?: () => void;
   username?: string;
+  userId?: string | null;
+  onRestoreBackup?: () => Promise<{ success: boolean; message: string }>;
+  onForceSyncCloud?: () => Promise<{ success: boolean; message: string }>;
 }
 
-export default function HubMenu({ profile, setRoute, updateProfile, onLogout, username }: Props) {
+export default function HubMenu({ 
+  profile, 
+  setRoute, 
+  updateProfile, 
+  onLogout, 
+  username, 
+  userId,
+  onRestoreBackup,
+  onForceSyncCloud 
+}: Props) {
   const [showTutorial, setShowTutorial] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -666,19 +681,42 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
             </div>
          </nav>
          {onLogout && (
-           <div className="p-4 border-t border-white/5 flex flex-col gap-3">
-              <div className="flex items-center gap-3 px-2">
+           <div className="p-4 border-t border-white/5 flex flex-col gap-2.5">
+              <div 
+                onClick={() => { setShowAccountModal(true); setSyncFeedback(null); }}
+                className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 cursor-pointer transition-all"
+                title="Настройки аккаунта и облачной синхронизации"
+              >
                  <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold uppercase text-lg shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                     {username?.charAt(0) || 'И'}
                  </div>
                  <div className="flex-1 truncate">
-                    <div className="text-[10px] text-white/50 font-mono uppercase tracking-widest">Аккаунт</div>
+                    <div className="flex items-center gap-1 text-[10px] font-mono">
+                      {userId && userId !== 'local_user' ? (
+                        <span className="text-emerald-400 font-bold">☁️ Supabase</span>
+                      ) : (
+                        <span className="text-amber-400 font-bold">💾 Локально</span>
+                      )}
+                    </div>
                     <div className="text-sm font-bold text-white truncate">{username || 'Игрок'}</div>
                  </div>
+                 <div className="text-[10px] text-indigo-300/60 font-mono underline">Инфо</div>
               </div>
-              <button onClick={onLogout} className="flex items-center justify-center gap-3 p-3 w-full rounded-xl font-bold bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors">
-                 <X className="w-5 h-5" /> Выйти
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setShowAccountModal(true); setSyncFeedback(null); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 transition-colors border border-indigo-500/20"
+                >
+                   <Cloud className="w-3.5 h-3.5" /> Облако
+                </button>
+                <button 
+                  onClick={onLogout} 
+                  className="px-3 py-2.5 rounded-xl font-bold text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors border border-red-500/20"
+                  title="Выйти"
+                >
+                   <X className="w-4 h-4" />
+                </button>
+              </div>
            </div>
          )}
       </div>
@@ -912,19 +950,41 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
                   </div>
                </div>
                {onLogout && (
-                  <div className="pt-4 border-t border-white/5 mt-auto flex flex-col gap-3">
-                     <div className="flex items-center gap-3 px-2">
+                  <div className="pt-4 border-t border-white/5 mt-auto flex flex-col gap-2.5">
+                     <div 
+                       onClick={() => { setShowAccountModal(true); setMenuOpen(false); setSyncFeedback(null); }}
+                       className="flex items-center gap-3 p-2.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 cursor-pointer transition-all active:scale-98"
+                     >
                         <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold uppercase text-xl shadow-[0_0_10px_rgba(99,102,241,0.2)]">
                            {username?.charAt(0) || 'И'}
                         </div>
                         <div className="flex-1 truncate">
-                           <div className="text-[10px] text-white/50 font-mono uppercase tracking-widest">Аккаунт</div>
+                           <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                             {userId && userId !== 'local_user' ? (
+                               <span className="text-emerald-400 font-bold">☁️ Supabase</span>
+                             ) : (
+                               <span className="text-amber-400 font-bold">💾 Локально</span>
+                             )}
+                           </div>
                            <div className="text-sm font-bold text-white truncate">{username || 'Игрок'}</div>
                         </div>
+                        <div className="text-xs text-indigo-300 font-mono underline">Инфо</div>
                      </div>
-                     <button onClick={onLogout} className="flex items-center justify-center gap-3 p-4 w-full rounded-2xl font-medium bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors active:scale-95">
-                        <X className="w-5 h-5" /> Выйти
-                     </button>
+                     <div className="flex gap-2">
+                       <button 
+                         onClick={() => { setShowAccountModal(true); setMenuOpen(false); setSyncFeedback(null); }}
+                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 transition-colors border border-indigo-500/20"
+                       >
+                          <Cloud className="w-4 h-4" /> Облако / Бэкап
+                       </button>
+                       <button 
+                         onClick={onLogout} 
+                         className="px-4 py-3 rounded-2xl font-bold text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors border border-red-500/20"
+                         title="Выйти"
+                       >
+                          <X className="w-4 h-4" />
+                       </button>
+                     </div>
                   </div>
                )}
             </div>
@@ -1495,6 +1555,124 @@ export default function HubMenu({ profile, setRoute, updateProfile, onLogout, us
             )}
          </div>
       </div>
+
+      {/* Account & Cloud Sync Modal */}
+      {showAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#111111] border border-indigo-500/30 rounded-3xl w-full max-w-md p-6 shadow-2xl relative font-sans text-white">
+            <button 
+              onClick={() => setShowAccountModal(false)}
+              className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3.5 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold uppercase text-2xl shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                {username?.charAt(0) || 'И'}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">{username || 'Игрок'}</h3>
+                <div className="text-xs font-mono flex items-center gap-1.5 mt-0.5">
+                  {userId && userId !== 'local_user' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-emerald-400">Облако Supabase подключено</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      <span className="text-amber-400">Локальный профиль (Гость)</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Stats summary */}
+            <div className="grid grid-cols-2 gap-2 bg-white/5 border border-white/5 rounded-2xl p-3.5 mb-5 text-xs font-mono">
+              <div>
+                <div className="text-white/40">Персонажи:</div>
+                <div className="font-bold text-white text-sm">{Object.keys(profile.roster || {}).length} открыто</div>
+              </div>
+              <div>
+                <div className="text-white/40">Кристаллы:</div>
+                <div className="font-bold text-indigo-300 text-sm">{profile.gems} 💎</div>
+              </div>
+              <div>
+                <div className="text-white/40">Золото:</div>
+                <div className="font-bold text-amber-300 text-sm">{profile.gold.toLocaleString()} 🪙</div>
+              </div>
+              <div>
+                <div className="text-white/40">Пройдено сюжета:</div>
+                <div className="font-bold text-white text-sm">{profile.storyProgress?.completedStages?.length || 0} этапов</div>
+              </div>
+            </div>
+
+            {syncFeedback && (
+              <div className={cn(
+                "mb-4 text-xs font-mono p-3 rounded-xl border flex items-start gap-2",
+                syncFeedback.type === 'success' 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                  : "bg-red-500/10 border-red-500/30 text-red-300"
+              )}>
+                {syncFeedback.type === 'success' ? <Check className="w-4 h-4 shrink-0 mt-0.5" /> : <Info className="w-4 h-4 shrink-0 mt-0.5" />}
+                <div>{syncFeedback.text}</div>
+              </div>
+            )}
+
+            <div className="space-y-2.5">
+              {onForceSyncCloud && userId && userId !== 'local_user' && (
+                <button
+                  disabled={isSyncingCloud}
+                  onClick={async () => {
+                    setIsSyncingCloud(true);
+                    setSyncFeedback(null);
+                    const res = await onForceSyncCloud();
+                    setIsSyncingCloud(false);
+                    setSyncFeedback({ type: res.success ? 'success' : 'error', text: res.message });
+                  }}
+                  className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-indigo-600/20 cursor-pointer"
+                >
+                  {isSyncingCloud ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Cloud className="w-4 h-4" />
+                  )}
+                  Синхронизировать с Облаком сейчас
+                </button>
+              )}
+
+              {onRestoreBackup && (
+                <button
+                  onClick={async () => {
+                    setSyncFeedback(null);
+                    const res = await onRestoreBackup();
+                    setSyncFeedback({ type: res.success ? 'success' : 'error', text: res.message });
+                  }}
+                  className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-indigo-300 border border-indigo-500/20 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Восстановить прогресс из резервной копии
+                </button>
+              )}
+
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    setShowAccountModal(false);
+                    onLogout();
+                  }}
+                  className="w-full py-3 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  Выйти из аккаунта
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
