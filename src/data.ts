@@ -1,4 +1,4 @@
-import { Combatant, Skill, Element, Artifact, ArtifactSlot, StatType, BattleState, Rarity, ArtifactSet, Dungeon, ArtifactSubStat } from "./types";
+import { Combatant, Skill, Element, Artifact, ArtifactSlot, StatType, BattleState, Rarity, ArtifactSet, Dungeon, ArtifactSubStat, PlayerProfile } from "./types";
 import { playCritSound } from "./lib/sound";
 import { SPLASH_IMAGES } from "./lib/images";
 
@@ -3704,30 +3704,68 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
 
 export const baseCharacterPool = Object.keys(characterBlueprints);
 
+export const getAdaptiveStoryStageLevel = (
+  stage: { id: string; level?: number; isBoss?: boolean },
+  chapterId?: string,
+  profile?: PlayerProfile
+): number => {
+  if (!profile || !profile.team || profile.team.length === 0) {
+    return Math.max(1, stage.level || 1);
+  }
+
+  // 1. Calculate active team power level (average and top hero level)
+  const teamMemberLevels = profile.team
+    .map(id => profile.roster?.[id]?.level || 1)
+    .filter(lvl => typeof lvl === 'number' && lvl > 0);
+
+  const avgLevel = teamMemberLevels.length > 0
+    ? teamMemberLevels.reduce((sum, l) => sum + l, 0) / teamMemberLevels.length
+    : 1;
+  const maxLevel = teamMemberLevels.length > 0 ? Math.max(...teamMemberLevels) : 1;
+  
+  // Weighted player base level: 70% average of current 4-man team, 30% top hero
+  const playerBaseLevel = Math.max(1, Math.round(avgLevel * 0.7 + maxLevel * 0.3));
+
+  // 2. Identify chapter and stage progression
+  const targetChapterId = chapterId || 'chap1';
+  const chapIndex = STORY_CHAPTERS.findIndex(c => c.id === targetChapterId);
+  const currentChapter = STORY_CHAPTERS[chapIndex >= 0 ? chapIndex : 0] || STORY_CHAPTERS[0];
+  
+  const stageIndex = currentChapter ? currentChapter.stages.findIndex(s => s.id === stage.id) : 0;
+  const totalStages = Math.max(1, currentChapter?.stages?.length || 20);
+  const stageProgressRatio = stageIndex >= 0 ? stageIndex / Math.max(1, totalStages - 1) : 0;
+
+  // 3. Progressive offset:
+  // - Early stages (stage 1-3) start directly at player level (or Level 1 for starter)
+  // - Stage progression adds +0 to +3 levels smoothly across the chapter
+  // - Boss stages add a +2 level challenge
+  // - Subsequent chapters add +1 base per chapter
+  const chapterBaseBonus = Math.max(0, chapIndex >= 0 ? chapIndex : 0);
+  const stageProgressionBonus = Math.round(stageProgressRatio * 3); // 0, 1, 2, 3
+  const bossBonus = stage.isBoss ? 2 : 0;
+
+  let adaptiveLevel = playerBaseLevel + chapterBaseBonus + (stageProgressionBonus - (playerBaseLevel <= 3 ? 0 : 1)) + bossBonus;
+
+  // At the absolute beginning of the game (player level 1 and early stages):
+  if (playerBaseLevel === 1 && stageProgressRatio < 0.25) {
+    adaptiveLevel = 1;
+  }
+
+  return Math.max(1, Math.min(100, adaptiveLevel));
+};
+
 export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbyss: boolean = false, isBoss: boolean = false): Combatant => {
-  // Scaling for dungeon levels (1-6) vs absolute levels (> 6)
-  const isDungeonRank = level <= 6;
-  const dungeonLevelTiers = [20, 35, 50, 65, 80, 95];
-  const effectiveLevel = isDungeonRank ? dungeonLevelTiers[level - 1] : level;
-
-  // Multipliers based on dungeon level 1-6
-  const dungeonHpMults = [1.0, 1.6, 2.4, 3.4, 4.8, 6.8];
-  const dungeonAtkMults = [1.0, 1.25, 1.55, 1.9, 2.35, 2.9];
-  const dungeonDefMults = [1.0, 1.15, 1.3, 1.5, 1.75, 2.1];
-
-  const rankHpMult = isDungeonRank ? dungeonHpMults[level - 1] : 1;
-  const rankAtkMult = isDungeonRank ? dungeonAtkMults[level - 1] : 1;
-  const rankDefMult = isDungeonRank ? dungeonDefMults[level - 1] : 1;
+  const effectiveLevel = Math.max(1, Math.min(100, Math.round(level)));
 
   if (blueprintId && characterBlueprints[blueprintId]) {
     const enemy = characterBlueprints[blueprintId]("v_" + Math.random(), effectiveLevel, 0);
     enemy.isEnemy = true;
     enemy.name = isBoss ? `БОСС: ${enemy.name}` : `${enemy.name} (Заражённый)`;
     
-    // Scale enemy HP significantly for challenge
-    const hpMult = isAbyss ? (isBoss ? 10 : 4) : (2.0 * rankHpMult);
-    const atkMult = isAbyss ? (isBoss ? 1.6 : 1.2) : (1.0 * rankAtkMult);
-    const defMult = isAbyss ? 1.2 : (1.0 * rankDefMult);
+    // Balanced HP and damage scaling for standard vs abyss vs boss
+    const hpMult = isAbyss ? (isBoss ? 10 : 4) : (isBoss ? 2.5 : 1.2);
+    const atkMult = isAbyss ? (isBoss ? 1.6 : 1.2) : (isBoss ? 1.15 : 0.95);
+    const defMult = isAbyss ? 1.2 : 1.0;
     
     enemy.stats.hp = Math.floor(enemy.stats.hp * hpMult);
     enemy.stats.maxHp = enemy.stats.hp;
@@ -3742,8 +3780,12 @@ export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbys
     '/src/assets/images/glitch_robot_enemy_1779480865219.png',
     '/src/assets/images/glitch_void_enemy_1779480881509.png'
   ];
-  const hpMult = isAbyss ? (isBoss ? 25 : 8) : (1.0 * rankHpMult);
-  const atkMult = isAbyss ? (isBoss ? 3 : 2) : (1.0 * rankAtkMult);
+  const hpMult = isAbyss ? (isBoss ? 25 : 8) : (isBoss ? 2.8 : 1.2);
+  const atkMult = isAbyss ? (isBoss ? 3 : 2) : (isBoss ? 1.2 : 0.95);
+
+  const baseHp = isBoss ? 2800 : 1300;
+  const baseAtk = isBoss ? 160 : 120;
+  const baseDef = isBoss ? 80 : 60;
 
   return {
     id: "virus_" + Math.random(), 
@@ -3755,7 +3797,7 @@ export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbys
     color: "bg-gray-700", 
     level: effectiveLevel, 
     constellation: 0,
-    stats: scaleStats(6000 * rankHpMult, 150 * rankAtkMult, 80 * rankDefMult, 30, effectiveLevel, 0, [], isAbyss, isBoss), 
+    stats: scaleStats(baseHp * hpMult, baseAtk * atkMult, baseDef, 30, effectiveLevel, 0, [], isAbyss, isBoss), 
     atb: 0, 
     cooldowns: {}, 
     buffs: {},

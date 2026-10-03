@@ -20,13 +20,13 @@ import {
   List
 } from 'lucide-react';
 import { PlayerProfile, StoryChapter, StoryStage } from '../types';
-import { STORY_CHAPTERS, getCharSplash, getCharEmoji } from '../data';
+import { STORY_CHAPTERS, getCharSplash, getCharEmoji, getAdaptiveStoryStageLevel } from '../data';
 
 interface Props {
   profile: PlayerProfile;
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
   onBack: () => void;
-  onStartStage: (stage: StoryStage) => void;
+  onStartStage: (stage: StoryStage, chapterId?: string) => void;
 }
 
 export default function StoryMenu({ profile, updateProfile, onBack, onStartStage }: Props) {
@@ -75,7 +75,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
       setShowRiddleFeedback(null);
       setShowHint(false);
     } else {
-      onStartStage(stage);
+      onStartStage(stage, selectedChapter?.id || 'chap1');
     }
   };
 
@@ -274,6 +274,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                   const completed = isStageCompleted(stage.id);
                   const previousStage = idx > 0 ? selectedChapter.stages[idx - 1] : null;
                   const unlocked = !previousStage || isStageCompleted(previousStage.id);
+                  const stageLevel = getAdaptiveStoryStageLevel(stage, selectedChapter.id, profile);
 
                   let typeColor = 'text-blue-400 bg-blue-500/10 border-blue-500/30';
                   let typeLabel = 'ДИАЛОГ';
@@ -318,7 +319,7 @@ export default function StoryMenu({ profile, updateProfile, onBack, onStartStage
                               {typeLabel}
                             </span>
                             <span className="text-[10px] font-mono text-white/40 font-bold">
-                              УР. {stage.level}
+                              УР. {stageLevel}
                             </span>
                             <h5 className="font-bold text-sm sm:text-base text-white truncate group-hover:text-amber-300 transition-colors">
                               {stage.name}

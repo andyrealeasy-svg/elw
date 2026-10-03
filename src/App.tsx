@@ -12,7 +12,7 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES } from './data';
+import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES, getAdaptiveStoryStageLevel } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage, ArtifactSlot } from './types';
 import { createGodArtifact } from './components/BattlePassCheatMenu';
 import ArtifactDungeon from './components/ArtifactDungeon';
@@ -326,7 +326,7 @@ export default function App() {
   const [route, setRoute] = useState<GameRoute | 
     { type: 'DUNGEON', level: number, dungeonType: 'GOLD' | 'EXP' | 'ARTIFACT', runs?: number } |
     { type: 'ABYSS_FLOOR', level: number, floorId: number } |
-    { type: 'STORY_STAGE', stage: StoryStage } |
+    { type: 'STORY_STAGE', stage: StoryStage, chapterId?: string } |
     { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } |
     { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string }
   >('HUB');
@@ -1067,7 +1067,7 @@ export default function App() {
             route.type === 'BOSS_RUSH_BATTLE'
               ? `ТЕНЕВОЙ НАТИСК • ЭТАП ${route.stage + 1} / 3`
               : route.type === 'STORY_STAGE'
-                ? `СЮЖЕТ: ${route.stage.name.toUpperCase()}${route.stage.isBoss ? ' • [БОСС]' : ''}`
+                ? `СЮЖЕТ: ${route.stage.name.toUpperCase()} (УР. ${getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile)})${route.stage.isBoss ? ' • [БОСС]' : ''}`
                 : route.type === 'GLITCH_BATTLE'
                   ? `ОХОТА НА ГЛИТЧИ: ${route.name.toUpperCase()}`
                   : route.type === 'TRIAL_BATTLE'
@@ -1092,7 +1092,14 @@ export default function App() {
                     ))
                   : [
                       route.type === 'STORY_STAGE' && (route as any).stage.enemyBlueprintIds
-                        ? (route as any).stage.enemyBlueprintIds.map((id: string) => createBasicEnemy((route as any).stage.level, id, false, (route as any).stage.isBoss || false))
+                        ? (route as any).stage.enemyBlueprintIds.map((id: string) => 
+                            createBasicEnemy(
+                              getAdaptiveStoryStageLevel((route as any).stage, (route as any).chapterId || 'chap1', profile),
+                              id,
+                              false,
+                              (route as any).stage.isBoss || false
+                            )
+                          )
                         : getEnemies((route as any).level || 1)
                     ]
           } 
@@ -1129,7 +1136,7 @@ export default function App() {
       {currentRouteName === 'ARTIFACT_DUNGEON_SELECTOR' && (
         <ArtifactDungeon 
           profile={profile} 
-          updateProfile={setProfile}
+          updateProfile={setProfile} 
           setRoute={setRoute} 
           onBack={() => setRoute('HUB')} 
         />
@@ -1153,7 +1160,7 @@ export default function App() {
           profile={profile} 
           updateProfile={setProfile} 
           onBack={() => setRoute('HUB')} 
-          onStartStage={(stage) => setRoute({ type: 'STORY_STAGE', stage })}
+          onStartStage={(stage, chapterId) => setRoute({ type: 'STORY_STAGE', stage, chapterId })}
         />
       )}
 
@@ -1162,7 +1169,7 @@ export default function App() {
           profile={profile} 
           updateProfile={setProfile} 
           onBack={() => setRoute('STORY')} 
-          onStartStage={(stage) => setRoute({ type: 'STORY_STAGE', stage })}
+          onStartStage={(stage, chapterId) => setRoute({ type: 'STORY_STAGE', stage, chapterId })}
         />
       )}
 
