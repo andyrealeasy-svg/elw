@@ -802,4 +802,194 @@ export const VolosatinyaHairAura: React.FC<{ unit: Combatant; isDead: boolean }>
   );
 });
 
+// 17. Vairen: Ancient Forest Dark Flora & Thorn Seed Aura
+export const VairenDarkFloraAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isVairen = unit.id === 'vairen';
+  const seeds = unit.buffs.vairenDarkSeeds?.length ?? 0;
+  const flowers = unit.buffs.vairenDarkFlowers?.length ?? 0;
+  const heartStacks = unit.buffs.vairenForestHeartStacks ?? 0;
+  const eternalStacks = unit.buffs.vairenEternalBloomStacks ?? 0;
+
+  const active = isVairen && !isDead && (seeds > 0 || flowers > 0 || heartStacks > 0 || eternalStacks > 0);
+
+  if (!active) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="vairen-dark-flora-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border-2 ${
+          eternalStacks >= 3
+            ? 'border-emerald-300 shadow-[0_0_16px_rgba(52,211,153,0.9)] bg-emerald-500/[0.15] animate-pulse'
+            : flowers > 0
+            ? 'border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.7)] bg-emerald-950/[0.2] anim-subtle-pulse'
+            : 'border-teal-400/80 shadow-[0_0_10px_rgba(20,184,166,0.5)] bg-teal-950/[0.15]'
+        }`} />
+
+        <div className="absolute top-1 -right-1 text-[10px] text-emerald-300 anim-float-particle">
+          {flowers > 0 ? '🥀' : '🌱'}
+        </div>
+
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#021f15]/95 border border-emerald-400 text-[8px] font-black text-emerald-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>{flowers > 0 ? '🥀' : '🌱'}</span>
+          <span>
+            {eternalStacks >= 3
+              ? `ВЕЛИКОЕ ЦВЕТЕНИЕ ГОТОВО!`
+              : flowers > 0
+              ? `ЦВЕТКИ: ${flowers}/3`
+              : (heartStacks > 0 ? `СЕРДЦЕ ЛЕСА: +${heartStacks * 10}%` : `СЕМЕНА: ${seeds}`)}
+          </span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 18. Fenris: Beast Stance Aura (Aggressive vs Protective Mode)
+export const FenrisBeastModeAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isFenris = unit.id === 'fenris';
+  if (!isFenris || isDead) return null;
+
+  const mode = unit.buffs.beastMode || 'Aggressive';
+  const isAggressive = mode === 'Aggressive';
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={`fenris-stance-${mode}`}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        {/* Dynamic Mode Glowing Border */}
+        <div
+          className={cn(
+            "absolute inset-0 rounded-xl sm:rounded-2xl border-2 transition-all duration-300",
+            isAggressive
+              ? "border-red-500/90 shadow-[0_0_14px_rgba(239,68,68,0.7)] bg-red-950/[0.18] animate-pulse"
+              : "border-emerald-400/90 shadow-[0_0_14px_rgba(16,185,129,0.65)] bg-emerald-950/[0.18] anim-subtle-pulse"
+          )}
+        />
+
+        {/* Floating Mode Icon */}
+        <div className="absolute top-0.5 -right-1 text-[11px] drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] anim-float-particle">
+          {isAggressive ? '🔥' : '🛡️'}
+        </div>
+
+        {/* Clear Stance Mode Pill Badge at bottom */}
+        <div
+          className={cn(
+            "absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[7.5px] sm:text-[8px] font-black uppercase shadow-lg whitespace-nowrap z-40 transition-colors",
+            isAggressive
+              ? "bg-[#200606]/95 border-red-500 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.6)]"
+              : "bg-[#042014]/95 border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+          )}
+        >
+          <span>{isAggressive ? '⚔️' : '🛡️'}</span>
+          <span>{isAggressive ? 'РЕЖИМ: АТАКА' : 'РЕЖИМ: ЗАЩИТА'}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 19. Krona: Chrono Vector & Temporal Stasis Aura
+export const KronaTimeAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isKrona = unit.id === 'krona';
+  if (!isKrona || isDead) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="krona-time-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-cyan-400/80 shadow-[0_0_12px_rgba(34,211,238,0.55)] bg-cyan-950/[0.12] anim-subtle-pulse" />
+        <div className="absolute top-0.5 -right-1 text-[10px] text-cyan-300 anim-float-particle">
+          ⏳
+        </div>
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#041a24]/95 border border-cyan-400 text-[8px] font-black text-cyan-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>⏳</span>
+          <span>ХРОНО-КОНТРОЛЬ</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 20. Aurum: Golden Aegis & Wealth Resonance Aura
+export const AurumGoldAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isAurum = unit.id === 'aurum';
+  if (!isAurum || isDead) return null;
+
+  const hasShield = (unit.buffs.shield ?? 0) > 0;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="aurum-gold-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        <div className={cn(
+          "absolute inset-0 rounded-xl sm:rounded-2xl border-2 transition-all duration-300",
+          hasShield
+            ? "border-yellow-300 shadow-[0_0_16px_rgba(253,224,71,0.8)] bg-amber-950/[0.22] animate-pulse"
+            : "border-amber-400/80 shadow-[0_0_12px_rgba(245,158,11,0.55)] bg-amber-950/[0.15] anim-subtle-pulse"
+        )} />
+        <div className="absolute top-0.5 -right-1 text-[10px] text-amber-300 anim-float-particle">
+          🪙
+        </div>
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#241704]/95 border border-yellow-400 text-[8px] font-black text-amber-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🪙</span>
+          <span>{hasShield ? 'ЗОЛОТОЙ ЩИТ' : 'ЭГИДА РОСКОШИ'}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
+// 21. Zephyr: Prismatic Mirror & Lightning Conductor Aura
+export const ZephyrMirrorAura: React.FC<{ unit: Combatant; isDead: boolean }> = React.memo(({ unit, isDead }) => {
+  const isZephyr = unit.id === 'zephyr';
+  if (!isZephyr || isDead) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="zephyr-mirror-aura"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.25 }}
+        className="absolute -inset-1 sm:-inset-1.5 pointer-events-none rounded-xl sm:rounded-2xl z-30 select-none"
+      >
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-purple-400/80 shadow-[0_0_14px_rgba(192,132,252,0.6)] bg-purple-950/[0.16] anim-subtle-pulse" />
+        <div className="absolute top-0.5 -right-1 text-[10px] text-fuchsia-300 anim-float-particle">
+          🪞
+        </div>
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#1e082c]/95 border border-purple-400 text-[8px] font-black text-purple-200 uppercase shadow-md whitespace-nowrap z-40">
+          <span>🪞</span>
+          <span>ЗЕРКАЛЬНАЯ ПРИЗМА</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+
 

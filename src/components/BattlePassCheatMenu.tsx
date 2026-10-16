@@ -149,6 +149,69 @@ export const createGodArtifact = (
   };
 };
 
+// Helper to generate a Medium-Tier 4-star +12 artifact for Test Runs
+export const createMediumArtifact = (
+  slot: ArtifactSlot,
+  setName: string,
+  charId: string,
+  forcedMainType?: StatType
+): Artifact => {
+  const prefs = CHARACTER_PREFERENCES[charId] || { main: ["atk"], sub: ["atk", "spd", "critRate", "critDamage"], sets: [setName] };
+  const isHpScaler = prefs.main[0] === "hp" || (!prefs.main.includes("atk") && prefs.main.includes("hp"));
+  const isDefScaler = prefs.main[0] === "def" || (!prefs.main.includes("atk") && prefs.main.includes("def"));
+  const hasCrit = prefs.main.includes("critDamage") || prefs.main.includes("critRate");
+
+  let mainType: StatType = "atk";
+  let mainValue = 900;
+
+  if (forcedMainType) {
+    mainType = forcedMainType;
+    if (mainType === "hp") mainValue = 1350;
+    else if (mainType === "def") mainValue = 750;
+    else if (mainType === "atk") mainValue = 900;
+    else if (mainType === "spd") mainValue = 16;
+    else if (mainType === "critRate") mainValue = 18.5;
+    else if (mainType === "critDamage") mainValue = 37.0;
+  } else if (slot === "flower") {
+    mainType = "hp";
+    mainValue = 1350;
+  } else if (slot === "plume") {
+    mainType = "atk";
+    mainValue = 900;
+  } else if (slot === "sands") {
+    if (isHpScaler) { mainType = "hp"; mainValue = 1350; }
+    else if (isDefScaler) { mainType = "def"; mainValue = 750; }
+    else if (prefs.main[0] === "spd") { mainType = "spd"; mainValue = 16; }
+    else { mainType = "atk"; mainValue = 900; }
+  } else if (slot === "goblet") {
+    if (isHpScaler) { mainType = "hp"; mainValue = 1350; }
+    else if (isDefScaler) { mainType = "def"; mainValue = 750; }
+    else { mainType = "atk"; mainValue = 900; }
+  } else if (slot === "circlet") {
+    if (hasCrit) {
+      mainType = prefs.main.includes("critDamage") ? "critDamage" : "critRate";
+      mainValue = mainType === "critDamage" ? 37.0 : 18.5;
+    } else if (isHpScaler) { mainType = "hp"; mainValue = 1350; }
+    else if (isDefScaler) { mainType = "def"; mainValue = 750; }
+    else { mainType = "atk"; mainValue = 900; }
+  }
+
+  return {
+    id: `med_${charId}_${slot}_${Math.random().toString(36).substr(2, 9)}`,
+    slot,
+    setName,
+    mainStat: { type: mainType, value: mainValue },
+    subStats: [
+      { type: "spd", value: 6 },
+      { type: "critRate", value: 7.2 },
+      { type: "critDamage", value: 14.8 },
+      { type: isDefScaler ? "def" : "atk", value: isDefScaler ? 110 : 130 }
+    ],
+    rarity: 4,
+    level: 12
+  };
+};
+
 export default function BattlePassCheatMenu({ profile, updateProfile }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -373,6 +436,8 @@ export default function BattlePassCheatMenu({ profile, updateProfile }: Props) {
     const setPrimaryChar: Record<string, string> = {
       coral_tide: 'nereus', // HP & Crit Hydro DPS (Nereus)
       thorn_whisper: 'iva', // HP, SPD, DEF Dendro Healer (Iva)
+      dark_grove: 'vairen', // ATK & Crit Dendro Sub-DPS (Vairen)
+      wild_hunt: 'fenris', // ATK & Crit Beast DPS (Fenris)
       crystal_resonance: 'kern', // DEF & Crit Geo DPS (Kern)
       ocean_song: 'aveline', // HP & SPD Hydro Healer (Aveline)
       voltage_circuit: 'volta', // HP & DEF Electro Sustain (Volta)
@@ -437,10 +502,33 @@ export default function BattlePassCheatMenu({ profile, updateProfile }: Props) {
       added.push(createGodArtifact('circlet', preferredSet, charId, 'def'));
     }
 
-    updateProfile(p => ({
-      ...p,
-      artifacts: [...p.artifacts, ...added]
-    }));
+    updateProfile(p => {
+      const nextRoster = { ...p.roster };
+      const currentRosterData = nextRoster[charId] || {
+        level: 90,
+        constellation: 0,
+        artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null }
+      };
+      
+      const equippedArts: Record<ArtifactSlot, string | null> = {
+        flower: added[0]?.id || null,
+        plume: added[1]?.id || null,
+        sands: added[2]?.id || null,
+        goblet: added[3]?.id || null,
+        circlet: added[4]?.id || null
+      };
+
+      nextRoster[charId] = {
+        ...currentRosterData,
+        artifacts: equippedArts
+      };
+
+      return {
+        ...p,
+        roster: nextRoster,
+        artifacts: [...p.artifacts, ...added]
+      };
+    });
 
     const charName = characterBlueprints[charId]?.name || charId;
     const setName = ARTIFACT_SETS[preferredSet]?.name || preferredSet;

@@ -14,19 +14,19 @@ export const DivingTransition: React.FC<{ onComplete?: () => void }> = ({ onComp
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 40 }).map((_, i) => ({
+    const newParticles = Array.from({ length: 15 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       size: Math.random() * 2 + 1,
-      duration: Math.random() * 0.4 + 0.4,
-      delay: Math.random() * 0.4,
+      duration: Math.random() * 0.35 + 0.35,
+      delay: Math.random() * 0.25,
     }));
     setParticles(newParticles);
 
     const timer = setTimeout(() => {
       if (onComplete) onComplete();
-    }, 850);
+    }, 550);
 
     return () => clearTimeout(timer);
   }, []); // Only run once on mount
@@ -36,11 +36,12 @@ export const DivingTransition: React.FC<{ onComplete?: () => void }> = ({ onComp
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden"
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden transform-gpu"
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.2)_0%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.25)_0%,transparent_70%)]" />
       
-      {/* Faster Tunnel Particles */}
+      {/* Lightweight GPU Tunnel Particles */}
       {particles.map((p) => (
         <motion.div
           key={p.id}
@@ -52,8 +53,8 @@ export const DivingTransition: React.FC<{ onComplete?: () => void }> = ({ onComp
             zIndex: 0 
           }}
           animate={{ 
-            scale: 25, 
-            opacity: [0, 1, 0],
+            scale: 18, 
+            opacity: [0, 0.9, 0],
             zIndex: 50
           }}
           transition={{ 
@@ -62,7 +63,7 @@ export const DivingTransition: React.FC<{ onComplete?: () => void }> = ({ onComp
             repeat: 0,
             ease: "easeIn"
           }}
-          className="absolute w-1 h-1 bg-indigo-400 rounded-full blur-[1px]"
+          className="absolute w-1.5 h-1.5 bg-indigo-300 rounded-full pointer-events-none transform-gpu"
           style={{
             left: '50%',
             top: '50%',
@@ -71,31 +72,31 @@ export const DivingTransition: React.FC<{ onComplete?: () => void }> = ({ onComp
         />
       ))}
 
-      {/* Warp Lines */}
-      {Array.from({ length: 20 }).map((_, i) => (
+      {/* Lightweight Warp Lines */}
+      {Array.from({ length: 8 }).map((_, i) => (
         <motion.div
           key={`line-${i}`}
-          initial={{ rotate: (i * 18), scaleX: 0, opacity: 0 }}
+          initial={{ rotate: (i * 45), scaleX: 0, opacity: 0 }}
           animate={{ 
             scaleX: [0, 2, 0], 
-            opacity: [0, 0.5, 0],
-            x: [0, (i % 2 === 0 ? 1000 : -1000)] 
+            opacity: [0, 0.6, 0],
+            x: [0, (i % 2 === 0 ? 800 : -800)] 
           }}
           transition={{ 
-            duration: 0.8, 
-            delay: Math.random() * 0.5,
+            duration: 0.6, 
+            delay: i * 0.05,
             repeat: Infinity,
             ease: "circIn"
           }}
-          className="absolute w-64 h-[1px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent origin-left"
+          className="absolute w-48 h-[1px] bg-gradient-to-r from-transparent via-indigo-400 to-transparent origin-left pointer-events-none transform-gpu"
           style={{ left: '50%', top: '50%' }}
         />
       ))}
 
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1.2, opacity: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1.1, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative z-[100] text-center"
       >
         <h2 className="text-2xl sm:text-4xl font-black italic text-white uppercase tracking-tighter animate-pulse">

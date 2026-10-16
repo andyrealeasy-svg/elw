@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Combatant, BattleState, TargetType, Skill } from '../types';
-import { Shovel, Shield, Volume2, VolumeX, Sword, Zap, Sparkles, Target, Info, Activity, LogOut } from 'lucide-react';
+import { Shovel, Shield, Volume2, VolumeX, Sword, Zap, Sparkles, Target, Info, Activity, LogOut, Clapperboard, Crown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { EffectsOverlay, EffectsOverlayRef } from './EffectsOverlay';
 import { WhiteFieldOverlay } from './WhiteFieldOverlay';
@@ -9,22 +9,45 @@ import { UltimateAftermathField, UltimateAftermathData } from './battle/Ultimate
 import { UnitCard } from './battle/UnitCard';
 import { UltimateCutsceneOverlay, UltimateCutsceneData, ULTIMATE_CHARACTER_CONFIGS } from './battle/UltimateCutsceneOverlay';
 import { motion, AnimatePresence } from 'motion/react';
-import { dealDamage } from '../data';
-import { playNormalAttackSound, playElementalSkillSound, playUltimateBurstSound, playVictorySound, getSoundMuteState, setSoundMuteState } from '../lib/sound';
+import { dealDamage, bloomDarkFlower } from '../data';
+import { 
+  playNormalAttackSound, 
+  playElementalSkillSound, 
+  playUltimateBurstSound, 
+  playVictorySound, 
+  getSoundMuteState, 
+  setSoundMuteState,
+  playVairenAttackSound,
+  playVairenSkillSound,
+  playVairenUltimateSound
+} from '../lib/sound';
 
 interface BattleScreenProps {
   key?: React.Key;
   playerParty: Combatant[];
   enemyWaves: Combatant[][]; // Changed from enemyParty
-  onDefeat: (stats: Record<string, number>) => void;
-  onVictory: (stats: Record<string, number>) => void;
+  onDefeat: (stats: Record<string, number>, finalParty?: Combatant[]) => void;
+  onVictory: (stats: Record<string, number>, finalParty?: Combatant[]) => void;
   onExit?: () => void;
   onSkillUse?: () => void;
   battleBuff?: string;
   stageTitle?: string;
+  isDistortionMode?: boolean;
+  distortionBuffIds?: string[];
 }
 
-export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, onDefeat, onVictory, onExit, onSkillUse, battleBuff, stageTitle }: BattleScreenProps) {
+export default function BattleScreen({ 
+  playerParty: initialPlayers, 
+  enemyWaves, 
+  onDefeat, 
+  onVictory, 
+  onExit, 
+  onSkillUse, 
+  battleBuff, 
+  stageTitle,
+  isDistortionMode,
+  distortionBuffIds 
+}: BattleScreenProps) {
   const [players, setPlayers] = useState<Combatant[]>(() => {
     if (!battleBuff) return initialPlayers;
     return initialPlayers.map(p => {
@@ -39,12 +62,71 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
   const [enemies, setEnemies] = useState<Combatant[]>(enemyWaves[0]);
   const [muted, setMuted] = useState(getSoundMuteState());
   const [isAutoBattle, setIsAutoBattle] = useState(false);
+  const [cutsceneSpeedMode, setCutsceneSpeedMode] = useState<'full' | 'fast' | 'skip'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ed_cutscene_speed_mode');
+      if (saved === 'full' || saved === 'fast' || saved === 'skip') return saved;
+    }
+    return 'full';
+  });
   const [showExitModal, setShowExitModal] = useState(false);
+  const [victoryCelebration, setVictoryCelebration] = useState(false);
 
+  const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const victoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const damageDealtRef = useRef<Record<string, number>>({});
   const battleStartTimeRef = useRef<number>(Date.now());
+  const battleEndedRef = useRef(false);
+  const victorySoundPlayedRef = useRef(false);
   const totalCutsceneTimeRef = useRef<number>(0);
   const cutsceneStartTimeRef = useRef<number | null>(null);
+
+  const triggerVictorySequence = React.useCallback((stats: Record<string, number>, finalParty?: Combatant[]) => {
+    if (battleEndedRef.current) return;
+    battleEndedRef.current = true;
+
+    // Immediately stop loop ticks so no further calculations occur
+    if (tickIntervalRef.current) {
+      clearInterval(tickIntervalRef.current);
+      tickIntervalRef.current = null;
+    }
+    stateRef.current.isRunning = false;
+
+    setVictoryCelebration(true);
+    if (!victorySoundPlayedRef.current) {
+      victorySoundPlayedRef.current = true;
+      playVictorySound();
+    }
+    
+    const party = (finalParty && finalParty.length > 0) ? finalParty : stateRef.current.players;
+    
+    // When the game is minimized (e.g. in Telegram Mini App or background tab),
+    // setTimeout is throttled and can fire duplicate/batched events on resume.
+    // Complete immediately without delayed timer if backgrounded.
+    const isHidden = typeof document !== 'undefined' && document.hidden;
+    if (isHidden) {
+      onVictory(stats, party);
+      return;
+    }
+
+    if (victoryTimeoutRef.current) {
+      clearTimeout(victoryTimeoutRef.current);
+    }
+    // Give player a brief triumphant moment (850ms) then transition to victory screen
+    victoryTimeoutRef.current = setTimeout(() => {
+      onVictory(stats, party);
+    }, 850);
+  }, [onVictory]);
+
+  const toggleCutsceneSpeedMode = () => {
+    setCutsceneSpeedMode(prev => {
+      const next = prev === 'full' ? 'fast' : prev === 'fast' ? 'skip' : 'full';
+      try {
+        localStorage.setItem('ed_cutscene_speed_mode', next);
+      } catch (e) {}
+      return next;
+    });
+  };
 
   const getBattleDurationSeconds = React.useCallback(() => {
     const now = Date.now();
@@ -85,8 +167,9 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     const el = arenaRef.current;
     if (el) {
       el.classList.remove('anim-screen-shake');
-      void el.offsetWidth;
-      el.classList.add('anim-screen-shake');
+      requestAnimationFrame(() => {
+        el?.classList.add('anim-screen-shake');
+      });
     }
   }, []);
 
@@ -143,7 +226,8 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
     damageDealt: damageDealtRef.current,
     effectsRefs: {} as Record<string, EffectsOverlayRef>,
     lastChecksum: 0,
-    isAutoBattle: false
+    isAutoBattle: false,
+    isDistortionMode: false
   });
 
   const registerEffectsRef = React.useCallback((uid: string, el: any) => {
@@ -174,9 +258,10 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       playEffect,
       damageDealt: damageDealtRef.current,
       lastChecksum: 0,
-      isAutoBattle
+      isAutoBattle,
+      isDistortionMode: !!isDistortionMode
     };
-  }, [players, enemies, activeUnitId, addFloatText, playEffect, isAutoBattle, showExitModal, activeCutscene]);
+  }, [players, enemies, activeUnitId, addFloatText, playEffect, isAutoBattle, showExitModal, activeCutscene, isDistortionMode]);
 
   const addLog = React.useCallback((msg: string) => {
     logsRef.current.push(msg);
@@ -186,12 +271,41 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
   // Game Loop
   useEffect(() => {
     const tick = setInterval(() => {
+      if (battleEndedRef.current) {
+        if (tickIntervalRef.current) {
+          clearInterval(tickIntervalRef.current);
+          tickIntervalRef.current = null;
+        }
+        return;
+      }
+
       const { players: currPlayers, enemies: currEnemies, damageDealt } = stateRef.current;
       
+      // Distortion Mode: Heroes cannot die, instant revive with 50% max HP if somehow <= 0
+      if (isDistortionMode || stateRef.current.isDistortionMode) {
+        currPlayers.forEach(p => {
+          if (p.stats.hp <= 0) {
+            const reviveHp = Math.max(1, Math.floor(p.stats.maxHp * 0.50));
+            p.stats.hp = reviveHp;
+            addFloatText(p.uid, "🌀 ВОСКРЕШЕНИЕ (+50% HP)", "text-purple-300 font-black text-xs");
+            playEffect(p.uid, "heal");
+            addLog(`🌀 «Искажение пространства»: ${p.name} возрождается с ${reviveHp} HP!`);
+          }
+        });
+      }
+
       // Check Win/Loss
-      if (currPlayers.every(p => p.stats.hp <= 0)) {
-        const stats = { ...damageDealt, __duration: getBattleDurationSeconds() };
-        onDefeat(stats);
+      if (!isDistortionMode && !stateRef.current.isDistortionMode && currPlayers.every(p => p.stats.hp <= 0)) {
+        if (!battleEndedRef.current) {
+          battleEndedRef.current = true;
+          if (tickIntervalRef.current) {
+            clearInterval(tickIntervalRef.current);
+            tickIntervalRef.current = null;
+          }
+          stateRef.current.isRunning = false;
+          const stats = { ...damageDealt, __duration: getBattleDurationSeconds() };
+          onDefeat(stats, currPlayers);
+        }
         return;
       }
       if (currEnemies.every(e => e.stats.hp <= 0)) {
@@ -215,9 +329,10 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           setSelectedSkill(null);
           return;
         } else {
-          playVictorySound();
-          const stats = { ...damageDealt, __duration: getBattleDurationSeconds() };
-          onVictory(stats);
+          if (!battleEndedRef.current) {
+            const stats = { ...damageDealt, __duration: getBattleDurationSeconds() };
+            triggerVictorySequence(stats, currPlayers);
+          }
           return;
         }
       }
@@ -271,26 +386,65 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
 
       if (aiPlayerAction) {
          const p = aiPlayerAction as Combatant;
-         const availableSkills = p.skills.filter(s => (!p.cooldowns[s.id] || p.cooldowns[s.id] <= 0) && (!s.cost || s.cost <= 0)); // actually only check cooldown
          const usableSkills = p.skills.filter(s => !p.cooldowns[s.id] || p.cooldowns[s.id] <= 0);
-         const skill = usableSkills[Math.floor(Math.random() * usableSkills.length)] || p.skills[0];
+         let skill: Skill = p.skills[0];
+
+         // Smart Tactical Skill Selection for Vairen & Team
+         if (p.id === 'vairen') {
+            const qSkill = usableSkills.find(s => s.type === "Skill2" || s.id === 'vairen_q');
+            const eSkill = usableSkills.find(s => s.type === "Skill1" || s.id === 'vairen_e');
+            const darkFlowers = Array.isArray(p.buffs.vairenDarkFlowers) ? p.buffs.vairenDarkFlowers.length : (typeof p.buffs.vairenDarkFlowers === 'number' ? p.buffs.vairenDarkFlowers : 0);
+            const darkSeeds = Array.isArray(p.buffs.vairenDarkSeeds) ? p.buffs.vairenDarkSeeds.length : (typeof p.buffs.vairenDarkSeeds === 'number' ? p.buffs.vairenDarkSeeds : 0);
+            const aliveEnemyCount = newEnemies.filter(e => e.stats.hp > 0).length;
+
+            if (qSkill && (darkFlowers >= 1 || darkSeeds >= 2 || aliveEnemyCount >= 2)) {
+               skill = qSkill;
+            } else if (eSkill && (darkFlowers < 3 || darkSeeds === 0)) {
+               skill = eSkill;
+            } else {
+               skill = usableSkills.find(s => s.type === "Skill2") || usableSkills.find(s => s.type === "Skill1") || usableSkills[0] || p.skills[0];
+            }
+         } else {
+            const qSkill = usableSkills.find(s => s.type === "Skill2");
+            const eSkill = usableSkills.find(s => s.type === "Skill1");
+            const normalSkill = usableSkills.find(s => s.type === "Attack") || p.skills[0];
+            if (qSkill) skill = qSkill;
+            else if (eSkill) skill = eSkill;
+            else skill = normalSkill;
+         }
 
          let targets: Combatant[] = [];
-         if (skill.target === "AllEnemies") targets = newEnemies.filter(e => e.stats.hp > 0);
+         const aliveEnemies = newEnemies.filter(e => e.stats.hp > 0);
+         const aliveAllies = newPlayers.filter(a => a.stats.hp > 0);
+
+         if (skill.target === "AllEnemies") targets = aliveEnemies;
          else if (skill.target === "SingleEnemy") {
-            const aliveEnemies = newEnemies.filter(e => e.stats.hp > 0);
             if (aliveEnemies.length > 0) {
-               const dueledEnemy = aliveEnemies.find(e => e.buffs && e.buffs.duelMark);
-               if (dueledEnemy) {
-                  targets = [dueledEnemy];
+               if (p.id === 'vairen') {
+                  // Vairen prioritizes enemies with Hydro aura to trigger Bloom reaction immediately
+                  const hydroTarget = aliveEnemies.find(e => e.aura === 'Hydro' || e.element === 'Hydro');
+                  if (hydroTarget) {
+                     targets = [hydroTarget];
+                  } else {
+                     const sorted = [...aliveEnemies].sort((a, b) => a.stats.hp - b.stats.hp);
+                     targets = [sorted[0]];
+                  }
                } else {
-                  targets = [aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)]];
+                  const dueledEnemy = aliveEnemies.find(e => e.buffs && e.buffs.duelMark);
+                  if (dueledEnemy) {
+                     targets = [dueledEnemy];
+                  } else {
+                     const sorted = [...aliveEnemies].sort((a, b) => a.stats.hp - b.stats.hp);
+                     targets = [sorted[0]];
+                  }
                }
             }
          } else if (skill.target === "SingleAlly") {
-            const aliveAllies = newPlayers.filter(a => a.stats.hp > 0);
-            if (aliveAllies.length > 0) targets = [aliveAllies[Math.floor(Math.random() * aliveAllies.length)]];
-         } else if (skill.target === "AllAllies") targets = newPlayers.filter(a => a.stats.hp > 0);
+            if (aliveAllies.length > 0) {
+               const sorted = [...aliveAllies].sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp));
+               targets = [sorted[0]];
+            }
+         } else if (skill.target === "AllAllies") targets = aliveAllies;
          else if (skill.target === "Self") targets = [p];
 
           if (targets.length > 0) {
@@ -306,9 +460,15 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
 
               skill.execute(p, targets, fakeState, addLog, stateRef.current.addFloatText, stateRef.current.playEffect);
               
-              if (skill.type === "Attack") playNormalAttackSound();
-              else if (skill.type === "Skill1") playElementalSkillSound();
-              else playUltimateBurstSound();
+              if (p.id === 'vairen') {
+                if (skill.type === "Attack") playVairenAttackSound();
+                else if (skill.type === "Skill1") playVairenSkillSound();
+                else playVairenUltimateSound();
+              } else {
+                if (skill.type === "Attack") playNormalAttackSound();
+                else if (skill.type === "Skill1") playElementalSkillSound();
+                else playUltimateBurstSound();
+              }
 
               if (skill.type !== "Attack" && onSkillUse) onSkillUse();
 
@@ -329,7 +489,7 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
               }
             };
 
-            if (charConfig && isThirdSkill) {
+            if (charConfig && isThirdSkill && cutsceneSpeedMode !== 'skip') {
               pendingUltimateRef.current = runAISkill;
               pendingAftermathRef.current = {
                 charId: p.id,
@@ -426,6 +586,35 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                   }
                }
             }
+
+             if (p.id === "vairen") {
+                p.buffs.vairenC3HealCountThisTurn = 0;
+                if (p.buffs.vairenForestHeartTurns && p.buffs.vairenForestHeartTurns > 0) {
+                   p.buffs.vairenForestHeartTurns--;
+                   if (p.buffs.vairenForestHeartTurns === 0) {
+                      p.buffs.vairenForestHeartStacks = 0;
+                      addLog("Действие «Сердца леса» Вайрена завершилось.");
+                   }
+                }
+                if (p.buffs.vairenDarkSeeds && p.buffs.vairenDarkSeeds.length > 0) {
+                   p.buffs.vairenDarkSeeds.forEach((s: any) => s.turns--);
+                   p.buffs.vairenDarkSeeds = p.buffs.vairenDarkSeeds.filter((s: any) => s.turns > 0);
+                }
+                if (p.buffs.vairenDarkFlowers && p.buffs.vairenDarkFlowers.length > 0) {
+                   const expiredFlowers: any[] = [];
+                   const remainingFlowers: any[] = [];
+                   p.buffs.vairenDarkFlowers.forEach((f: any) => {
+                      f.turns--;
+                      if (f.turns <= 0) expiredFlowers.push(f);
+                      else remainingFlowers.push(f);
+                   });
+                   p.buffs.vairenDarkFlowers = remainingFlowers;
+                   expiredFlowers.forEach((f: any) => {
+                      const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: p, logs: [], damageDealt: damageDealtRef.current, lastChecksum: 0 };
+                      bloomDarkFlower(p, f, fakeState, addLog, stateRef.current.addFloatText, stateRef.current.playEffect, 0.5);
+                   });
+                }
+             }
 
             // Reset per-turn reaction explosion on enemies' flowers
             newEnemies.forEach(e => {
@@ -569,9 +758,19 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       setEnemies(newEnemies);
       
     }, 125); // 8 ticks per second, throttled for smooth 60fps rendering
+    tickIntervalRef.current = tick;
 
-    return () => clearInterval(tick);
-  }, [onDefeat, onVictory]);
+    return () => {
+      if (tickIntervalRef.current) {
+        clearInterval(tickIntervalRef.current);
+        tickIntervalRef.current = null;
+      }
+      if (victoryTimeoutRef.current) {
+        clearTimeout(victoryTimeoutRef.current);
+        victoryTimeoutRef.current = null;
+      }
+    };
+  }, [onDefeat, onVictory, isDistortionMode]);
 
   const handleSkillSelect = (skill: Skill) => {
     if (selectedSkill?.id === skill.id) {
@@ -620,12 +819,25 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       selectedSkill.execute(activeUnit, targets, fakeState, addLog, addFloatText, playEffect);
       
       // Play sound matching skill type
-      if (selectedSkill.type === "Attack") {
-        playNormalAttackSound();
-      } else if (selectedSkill.type === "Skill1") {
-        playElementalSkillSound();
+      if (activeUnit.id === 'vairen') {
+        if (selectedSkill.type === "Attack") {
+          playVairenAttackSound();
+        } else if (selectedSkill.type === "Skill1") {
+          playVairenSkillSound();
+        } else {
+          playVairenUltimateSound();
+        }
       } else {
-        playUltimateBurstSound();
+        if (selectedSkill.type === "Attack") {
+          playNormalAttackSound();
+        } else if (selectedSkill.type === "Skill1") {
+          playElementalSkillSound();
+        } else {
+          playUltimateBurstSound();
+        }
+      }
+
+      if (selectedSkill.type !== "Attack" && selectedSkill.type !== "Skill1") {
         if (activeUnit.buffs && activeUnit.buffs.noblesse4pc && !activeUnit.isEnemy) {
           players.forEach(p => {
             if (p.stats.hp > 0) {
@@ -664,6 +876,35 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
          activeUnit.buffs.conductionCircuit--;
       }
 
+      if (activeUnit.id === 'vairen') {
+         activeUnit.buffs.vairenC3HealCountThisTurn = 0;
+         if (activeUnit.buffs.vairenForestHeartTurns && activeUnit.buffs.vairenForestHeartTurns > 0) {
+            activeUnit.buffs.vairenForestHeartTurns--;
+            if (activeUnit.buffs.vairenForestHeartTurns === 0) {
+               activeUnit.buffs.vairenForestHeartStacks = 0;
+               addLog(`Действие «Сердца леса» Вайрена завершилось.`);
+            }
+         }
+         if (activeUnit.buffs.vairenDarkSeeds && activeUnit.buffs.vairenDarkSeeds.length > 0) {
+            activeUnit.buffs.vairenDarkSeeds.forEach((s: any) => s.turns--);
+            activeUnit.buffs.vairenDarkSeeds = activeUnit.buffs.vairenDarkSeeds.filter((s: any) => s.turns > 0);
+         }
+         if (activeUnit.buffs.vairenDarkFlowers && activeUnit.buffs.vairenDarkFlowers.length > 0) {
+            const expiredFlowers: any[] = [];
+            const remainingFlowers: any[] = [];
+            activeUnit.buffs.vairenDarkFlowers.forEach((f: any) => {
+               f.turns--;
+               if (f.turns <= 0) expiredFlowers.push(f);
+               else remainingFlowers.push(f);
+            });
+            activeUnit.buffs.vairenDarkFlowers = remainingFlowers;
+            expiredFlowers.forEach((f: any) => {
+               const fakeState = { playerParty: players, enemyParty: enemies, turnQueue: [], activeUnit: activeUnit, logs: [], damageDealt: damageDealtRef.current, lastChecksum: 0 };
+               bloomDarkFlower(activeUnit, f, fakeState, addLog, addFloatText, playEffect, 0.5);
+            });
+         }
+      }
+
       // Reset ATB and clear active state
       activeUnit.atb = 0;
       setSelectedSkill(null);
@@ -672,9 +913,19 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
       // Force React to deep update arrays
       setPlayers([...players]);
       setEnemies([...enemies]);
+
+      // Ensure victory triggers immediately if this skill defeated the last enemy
+      setTimeout(() => {
+        if (!battleEndedRef.current && enemies.every(e => e.stats.hp <= 0)) {
+          if (currentWave >= enemyWaves.length - 1) {
+            const stats = { ...damageDealtRef.current, __duration: getBattleDurationSeconds() };
+            triggerVictorySequence(stats, players);
+          }
+        }
+      }, 350);
     };
 
-    if (charConfig && isThirdSkill) {
+    if (charConfig && isThirdSkill && cutsceneSpeedMode !== 'skip') {
       pendingUltimateRef.current = runPlayerSkill;
       pendingAftermathRef.current = {
         charId: activeUnit.id,
@@ -791,18 +1042,53 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
   const volosatinyaUnit = players.find(p => p.id === 'volosatinya' && p.stats.hp > 0);
   const volosatinyaMeadowActive = Boolean(volosatinyaUnit && (volosatinyaUnit.buffs.atk ?? 0) > 0);
 
+  // Vairen battle effect primitives
+  const vairenUnit = players.find(p => p.id === 'vairen' && p.stats.hp > 0);
+  const vairenDarkSeedsCount = vairenUnit?.buffs.vairenDarkSeeds?.length ?? 0;
+  const vairenDarkFlowersCount = vairenUnit?.buffs.vairenDarkFlowers?.length ?? 0;
+  const vairenForestHeartStacks = vairenUnit?.buffs.vairenForestHeartStacks ?? 0;
+  const vairenForestHeartTurns = vairenUnit?.buffs.vairenForestHeartTurns ?? 0;
+  const vairenEternalBloomStacks = vairenUnit?.buffs.vairenEternalBloomStacks ?? 0;
+
+  // Fenris battle effect primitives
+  const fenrisUnit = players.find(p => p.id === 'fenris' && p.stats.hp > 0);
+  const isFenrisInParty = Boolean(fenrisUnit);
+  const fenrisMode = fenrisUnit?.buffs.beastMode || 'Aggressive';
+
+  // Krona battle effect primitives
+  const kronaUnit = players.find(p => p.id === 'krona' && p.stats.hp > 0);
+  const isKronaInParty = Boolean(kronaUnit);
+
+  // Aurum battle effect primitives
+  const aurumUnit = players.find(p => p.id === 'aurum' && p.stats.hp > 0);
+  const isAurumInParty = Boolean(aurumUnit);
+  const aurumShield = aurumUnit?.buffs.shield ?? 0;
+
+  // Zephyr battle effect primitives
+  const zephyrUnit = players.find(p => p.id === 'zephyr' && p.stats.hp > 0);
+  const isZephyrInParty = Boolean(zephyrUnit);
+
   return (
     <div 
       className="w-full max-w-7xl h-[100dvh] md:h-[95dvh] flex flex-col bg-[#07080b] md:rounded-3xl overflow-hidden md:border border-white/10 shadow-2xl font-sans text-white/90 ring-1 ring-white/5 relative"
     >
       
       {/* Top Half: Arena */}
-      <div ref={arenaRef} className="flex-1 relative bg-gradient-to-br from-[#101216] via-[#07080b] to-[#101216] p-3 sm:p-5 md:p-6 flex flex-col justify-between overflow-hidden min-h-0">
+      <div 
+        ref={arenaRef} 
+        style={{
+          visibility: activeCutscene ? 'hidden' : 'visible'
+        }}
+        className={cn(
+          "flex-1 relative bg-gradient-to-br from-[#101216] via-[#07080b] to-[#101216] p-3 sm:p-5 md:p-6 flex flex-col justify-between overflow-hidden min-h-0",
+          activeCutscene && "pointer-events-none"
+        )}
+      >
         
         {/* White Field Battle Visual Effect (Белое поле Фарины) */}
         <WhiteFieldOverlay active={isWhiteFieldActive} duration={whiteFieldDuration} />
 
-        {/* Dynamic Character Arena Overlays (Вольта, Снежана, Авелин, Кайрен, Сайрус, Рейвен, Нереус, Ива, Керн, Аэлита, Маэстро, Инеффа, Готка, Волосатиня) */}
+        {/* Dynamic Character Arena Overlays (Вольта, Снежана, Авелин, Кайрен, Сайрус, Рейвен, Нереус, Ива, Керн, Аэлита, Маэстро, Инеффа, Готка, Волосатиня, Вайрен) */}
         <BattleArenaOverlays 
           circuitTurns={circuitTurns}
           isPermafrostActive={isPermafrostActive}
@@ -832,6 +1118,17 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
           ineffaFragmentsCount={ineffaFragmentsCount}
           gotkaPuppetsCount={gotkaPuppetsCount}
           volosatinyaMeadowActive={volosatinyaMeadowActive}
+          vairenDarkSeedsCount={vairenDarkSeedsCount}
+          vairenDarkFlowersCount={vairenDarkFlowersCount}
+          vairenForestHeartStacks={vairenForestHeartStacks}
+          vairenForestHeartTurns={vairenForestHeartTurns}
+          vairenEternalBloomStacks={vairenEternalBloomStacks}
+          isFenrisInParty={isFenrisInParty}
+          fenrisMode={fenrisMode}
+          isKronaInParty={isKronaInParty}
+          isAurumInParty={isAurumInParty}
+          aurumShield={aurumShield}
+          isZephyrInParty={isZephyrInParty}
         />
 
         {/* Lingering Ultimate Aftermath Elemental Field Effects */}
@@ -865,6 +1162,23 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
               <Sword className={cn("w-4 h-4", isAutoBattle ? "opacity-100 animate-pulse" : "opacity-50")} />
               <span className="hidden sm:inline uppercase tracking-tighter">Авто</span>
             </button>
+            <button 
+              onClick={toggleCutsceneSpeedMode}
+              className={cn(
+                "group relative bg-[#111111]/60 hover:bg-white/10 border p-1.5 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center gap-1.5 text-xs font-bold backdrop-blur-md", 
+                cutsceneSpeedMode === 'skip' 
+                  ? "text-rose-400 border-rose-500/40 hover:bg-rose-500/10" 
+                  : cutsceneSpeedMode === 'fast' 
+                    ? "text-amber-400 border-amber-500/40 hover:bg-amber-500/10" 
+                    : "text-cyan-400 border-cyan-500/40 hover:bg-cyan-500/10"
+              )}
+              title="Режим катсцен ульты: 100% (Обычные) / 2x (Быстрые) / Выкл (Без катсцен)"
+            >
+              <Zap className={cn("w-4 h-4", cutsceneSpeedMode === 'skip' ? "opacity-40" : "opacity-100")} />
+              <span className="hidden sm:inline uppercase tracking-tighter">
+                {cutsceneSpeedMode === 'full' ? 'Ульта: 1x' : cutsceneSpeedMode === 'fast' ? 'Ульта: 2x' : 'Ульта: Выкл'}
+              </span>
+            </button>
             {onExit && (
               <button 
                 onClick={() => setShowExitModal(true)}
@@ -879,9 +1193,9 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
 
           <div className="flex flex-col items-end gap-1 scale-90 sm:scale-100 origin-right">
              {stageTitle ? (
-               <div className="bg-fuchsia-950/80 border border-fuchsia-500/50 px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-black text-fuchsia-300 shadow-sm flex items-center gap-1.5 backdrop-blur-md">
-                 <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-ping" />
-                 {stageTitle}
+               <div className="bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold text-slate-100 shadow-md flex items-center gap-2 backdrop-blur-md">
+                 <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                 <span>{stageTitle}</span>
                </div>
              ) : (
                <>
@@ -962,17 +1276,35 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                         </div>
                       )}
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <h2 className="text-sm sm:text-base font-black text-white tracking-tight uppercase truncate">{activePlayer.name}</h2>
                           <span className={cn("px-1.5 py-0.2 rounded text-[8px] font-black uppercase text-white shadow-sm shrink-0", activePlayer.color)}>
                             {activePlayer.element}
                           </span>
+                          {activePlayer.id === 'fenris' && (
+                            <span 
+                              className={cn(
+                                "px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-tight shadow-md shrink-0 border",
+                                activePlayer.buffs.beastMode === 'Protective' 
+                                  ? "bg-emerald-950 text-emerald-300 border-emerald-400/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]" 
+                                  : "bg-red-950 text-red-300 border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse"
+                              )}
+                              title={activePlayer.buffs.beastMode === 'Protective' ? "Режим Зверя: Защита (Щит 20% HP)" : "Режим Зверя: Атака (180% АТК + Кровотечение)"}
+                            >
+                              {activePlayer.buffs.beastMode === 'Protective' ? '🛡️ ЗАЩИТА' : '🔥 АТАКА'}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-white/40 text-[9px] font-mono font-bold uppercase">ATK</span>
                           <span className="text-xs font-black text-white tabular-nums">
                             {activePlayer.buffs.atk ? <span className="text-emerald-400 font-bold">+{Math.round(activePlayer.stats.atk + activePlayer.buffs.atk)}</span> : Math.round(activePlayer.stats.atk)}
                           </span>
+                          {activePlayer.id === 'fenris' && (
+                            <span className="text-[9px] text-white/50 font-mono ml-1">
+                              [Зверь: {activePlayer.buffs.beastMode === 'Protective' ? 'Охрана' : 'Ярость'}]
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1060,7 +1392,13 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
                                             {skill.name}
                                           </div>
                                           <div className="text-[8px] sm:text-[9px] text-white/40 font-mono mt-0.5 truncate">
-                                            {idx === 0 ? "Базовая" : idx === 1 ? "Навык (E)" : "Ульта (Q)"}
+                                            {idx === 0 ? "Базовая" : idx === 1 ? (
+                                              activePlayer.id === 'fenris' ? (
+                                                <span className={activePlayer.buffs.beastMode === 'Protective' ? "text-emerald-300 font-bold" : "text-red-400 font-bold"}>
+                                                  {activePlayer.buffs.beastMode === 'Protective' ? "E: [Защита ➔ Смена]" : "E: [Атака ➔ Смена]"}
+                                                </span>
+                                              ) : "Навык (E)"
+                                            ) : "Ульта (Q)"}
                                           </div>
                                         </div>
                                       </div>
@@ -1149,9 +1487,41 @@ export default function BattleScreen({ playerParty: initialPlayers, enemyWaves, 
         </div>
       )}
 
+      {/* In-Battle Victory Celebration Splash */}
+      {victoryCelebration && (
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/75 backdrop-blur-md animate-in fade-in zoom-in duration-300 pointer-events-auto">
+          <motion.div 
+            initial={{ scale: 0.6, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="flex flex-col items-center text-center p-8 max-w-md mx-auto"
+          >
+            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 p-0.5 shadow-[0_0_50px_rgba(234,179,8,0.5)] mb-4 animate-bounce">
+              <div className="w-full h-full rounded-full bg-black/90 flex items-center justify-center">
+                <Crown className="w-10 h-10 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
+              </div>
+            </div>
+
+            <span className="text-[11px] font-mono tracking-[0.3em] text-yellow-400 uppercase font-black mb-1">
+              Боевая операция завершена
+            </span>
+
+            <h1 className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-yellow-100 to-yellow-500 uppercase tracking-widest drop-shadow-[0_4px_24px_rgba(234,179,8,0.6)]">
+              ПОБЕДА!
+            </h1>
+
+            <div className="flex items-center gap-2 mt-4 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs font-mono">
+              <Sparkles className="w-3.5 h-3.5 animate-spin text-yellow-400" />
+              <span>Распределение наград и статистики...</span>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Fullscreen Ultimate Cinematic Cutscene Overlay (Time Freeze & 2-3s Burst Animation) */}
       <UltimateCutsceneOverlay 
         cutscene={activeCutscene} 
+        fastMode={cutsceneSpeedMode === 'fast'}
         onImpact={handleCutsceneImpact}
         onComplete={handleCutsceneComplete} 
       />

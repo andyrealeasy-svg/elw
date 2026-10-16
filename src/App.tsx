@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Crown, Sparkles, Trophy, Clock, Swords, Sword, Flame, Zap, Mountain, ChevronRight, Shield, Book, ArrowRight, RotateCcw, Package } from 'lucide-react';
+import { Crown, Sparkles, Trophy, Clock, Swords, Sword, Flame, Zap, Mountain, ChevronRight, Shield, Book, ArrowRight, RotateCcw, Package, Gem, Layers } from 'lucide-react';
 import BattleScreen from './components/BattleScreen';
 import CharacterMenu from './components/CharacterMenu';
 import HubMenu from './components/HubMenu';
@@ -12,12 +12,24 @@ import { AbyssMenu } from './components/AbyssMenu';
 import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
+import { DistortionMenu } from './components/DistortionMenu';
+import { 
+  createDistortionCombatant, 
+  applyDistortionBuffsToParty, 
+  generateDistortionWave, 
+  DISTORTION_BUFFS,
+  DISTORTION_EXP_PER_CLEAR,
+  DISTORTION_WEEKLY_FULL_CLEAR_LIMIT,
+  addDistortionExpToProgression,
+  saveDistortionProgression
+} from './data/distortionData';
 import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES, getAdaptiveStoryStageLevel } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage, ArtifactSlot } from './types';
-import { createGodArtifact } from './components/BattlePassCheatMenu';
+import { createGodArtifact, createMediumArtifact } from './components/BattlePassCheatMenu';
 import ArtifactDungeon from './components/ArtifactDungeon';
 import WorldMap from './components/WorldMap';
 import { getNextThursdayResetTime } from './lib/utils';
+import { parseTransferCode, usernameToUUID } from './lib/transferCode';
 
 export interface BossRushStageResult {
   stage: number;
@@ -39,9 +51,10 @@ const defaultProfile: PlayerProfile = {
   clearedAbyssFloor: 0,
   artifacts: [],
   roster: { 
-     // Give them Moyan and Kopro to start
+     // Starter heroes
      moyan: { level: 1, constellation: 0, artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null } },
-     kopro: { level: 1, constellation: 0, artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null } }
+     kopro: { level: 1, constellation: 0, artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null } },
+     vairen: { level: 1, constellation: 0, artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null } }
   },
   team: ['moyan', 'kopro'], // Up to 4 or 5
   teams: [['moyan', 'kopro'], ...Array(9).fill([])],
@@ -55,6 +68,7 @@ const defaultProfile: PlayerProfile = {
   lunarAbyssResetTime: getNextThursdayResetTime(),
   bossRushSeason2Claimed: false,
   bossRushSeason3Claimed: false,
+  bossRushSeason4Claimed: false,
   achievements: {},
   expeditions: [],
   events: {
@@ -150,6 +164,9 @@ export const normalizeAndMigrateProfile = (raw: any): PlayerProfile => {
   }
 
   let roster = parsed.roster ? { ...parsed.roster } : { ...defaultProfile.roster };
+  if (!roster.vairen) {
+    roster.vairen = { level: 1, constellation: 0, artifacts: { flower: null, plume: null, sands: null, goblet: null, circlet: null } };
+  }
   Object.keys(roster).forEach((charKey) => {
     const charObj = roster[charKey];
     if (charObj && charObj.artifacts) {
@@ -333,6 +350,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [profileDbId, setProfileDbId] = useState<string | null>(null);
   const [isProfileLoaded, setIsProfileLoaded] = useState(false);
   const [profile, setProfile] = useState<PlayerProfile>(() => {
     return JSON.parse(JSON.stringify(defaultProfile));
@@ -343,41 +361,63 @@ export default function App() {
   const [bossRushResults, setBossRushResults] = useState<BossRushStageResult[] | null>(null);
   const [bossRushTab, setBossRushTab] = useState<'all' | number>('all');
   const [lastStoryStage, setLastStoryStage] = useState<StoryStage | null>(null);
+  const [lastStoryChapterId, setLastStoryChapterId] = useState<string>('chap1');
+  const [lastDistortionStageResult, setLastDistortionStageResult] = useState<{ 
+    clearedStage: number; 
+    nextStage: number;
+    expEarned?: number;
+    newLevel?: number;
+    weeklyFullClearsClaimed?: number;
+    canClaimDirectRewards?: boolean;
+    weeklyLimitReached?: boolean;
+  } | null>(null);
+  const [lastAbyssFloorResult, setLastAbyssFloorResult] = useState<{
+    floorId: number;
+    isLunar: boolean;
+    wasAlreadyCleared: boolean;
+  } | null>(null);
+  const isVictoryProcessingRef = useRef(false);
 
-  const handleLogin = (user: string, uid: string) => {
+  // Reset battle victory lock whenever a new battle route is entered
+  React.useEffect(() => {
+    if (typeof route === 'object') {
+      isVictoryProcessingRef.current = false;
+    }
+  }, [route]);
+
+  const handleLogin = (user: string, uid: string, initialProfile?: PlayerProfile) => {
     setUsername(user);
     setUserId(uid);
     setIsAuthenticated(true);
     setIsProfileLoaded(false);
 
-    // Immediately isolate in-memory profile to this user's local cache or fresh default
-    const local = loadLocalProfileForUser(uid);
-    setProfile(local);
+    if (initialProfile) {
+      setProfile(initialProfile);
+      const key = getUserStorageKey(uid);
+      try {
+        localStorage.setItem(key, JSON.stringify(initialProfile));
+        localStorage.setItem(`${key}_backup`, JSON.stringify(initialProfile));
+      } catch (e) {}
+    } else {
+      const local = loadLocalProfileForUser(uid);
+      setProfile(local);
+    }
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {}
+  const handleLogout = () => {
     localStorage.removeItem('ed_user');
     setIsAuthenticated(false);
     setUserId(null);
     setUsername(null);
+    setProfileDbId(null);
     setIsProfileLoaded(false);
     setProfile(JSON.parse(JSON.stringify(defaultProfile)));
     setRoute('HUB');
   };
 
-  // Synchronize profile from Supabase when user authenticates
+  // Synchronize profile from Supabase when user enters game with nickname
   React.useEffect(() => {
-    if (!isAuthenticated || !userId) {
-      return;
-    }
-
-    if (userId === 'local_user') {
-      const local = loadLocalProfileForUser('local_user');
-      setProfile(local);
-      setIsProfileLoaded(true);
+    if (!isAuthenticated || !username) {
       return;
     }
 
@@ -386,56 +426,94 @@ export default function App() {
 
     const loadProfile = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('game_data')
-          .eq('id', userId)
-          .maybeSingle();
+        const cleanNick = (username || '').trim();
+        const effectiveUserId = userId || usernameToUUID(cleanNick);
+        let cloudRow: { id: string; username: string; game_data: any } | null = null;
+        let rlsError: any = null;
+
+        // 1. First attempt: search by nickname (case-insensitive) in profiles table
+        if (cleanNick) {
+          const byUser = await supabase
+            .from('profiles')
+            .select('id, username, game_data')
+            .ilike('username', cleanNick)
+            .maybeSingle();
+
+          if (byUser.data) {
+            cloudRow = byUser.data;
+          } else if (byUser.error) {
+            if (byUser.error.code === '42501' || byUser.error.message?.includes('policy') || byUser.error.message?.includes('security')) {
+              rlsError = byUser.error;
+            }
+          }
+        }
+
+        // 2. Second attempt: search by id in profiles table
+        if (!cloudRow && effectiveUserId) {
+          const byId = await supabase
+            .from('profiles')
+            .select('id, username, game_data')
+            .eq('id', effectiveUserId)
+            .maybeSingle();
+
+          if (byId.data) {
+            cloudRow = byId.data;
+          } else if (byId.error) {
+            if (byId.error.code === '42501' || byId.error.message?.includes('policy') || byId.error.message?.includes('security')) {
+              rlsError = byId.error;
+            }
+          }
+        }
 
         if (isCancelled) return;
 
-        if (error) {
-          console.warn('Error fetching cloud profile, keeping local cache:', error);
-          setIsProfileLoaded(true);
-          return;
+        if (rlsError) {
+          console.warn('Supabase RLS is currently blocking read access to profiles table:', rlsError);
         }
 
-        if (data && data.game_data) {
-          // Found cloud profile for THIS user
-          let cloudProfile = normalizeAndMigrateProfile(data.game_data);
+        if (cloudRow && cloudRow.game_data) {
+          // Found existing cloud profile in DB for this nickname
+          setProfileDbId(cloudRow.id);
+          let rawData = cloudRow.game_data;
+          if (typeof rawData === 'string') {
+            try { rawData = JSON.parse(rawData); } catch (e) {}
+          }
+          let cloudProfile = normalizeAndMigrateProfile(rawData);
           const cloudScore = getProfileProgressScore(cloudProfile);
           const bestLegacy = getBestLegacySave();
 
-          // If the cloud profile has only blank initial progress (<=220), but this device has a legacy save with actual progress:
-          if (cloudScore <= 220 && bestLegacy && bestLegacy.score > 220) {
-            console.log('Restoring real progress from local backup into cloud profile:', bestLegacy.source);
+          // If cloud record is blank but this local machine has existing gameplay progress:
+          if (cloudScore <= 330 && bestLegacy && bestLegacy.score > 330) {
+            console.log('Adopting local progress into cloud profile for:', cleanNick);
             cloudProfile = bestLegacy.profile;
-            // Immediately sync to Supabase so the cloud record holds the real progress
-            await supabase.from('profiles').upsert({
-              id: userId,
-              username: username || 'Player',
-              game_data: cloudProfile
-            });
+            try {
+              await supabase.from('profiles').upsert({
+                id: cloudRow.id,
+                username: cleanNick,
+                game_data: cloudProfile
+              });
+            } catch (e) {}
           }
 
           if (!isCancelled) {
             setProfile(cloudProfile);
-            const key = getUserStorageKey(userId);
-            localStorage.setItem(key, JSON.stringify(cloudProfile));
-            localStorage.setItem(`${key}_backup`, JSON.stringify(cloudProfile));
+            const key = getUserStorageKey(effectiveUserId);
+            try {
+              localStorage.setItem(key, JSON.stringify(cloudProfile));
+              localStorage.setItem(`${key}_backup`, JSON.stringify(cloudProfile));
+            } catch (e) {}
           }
         } else {
-          // Brand new user or first-time sync for this cloud account:
-          // Check if this specific user had a local cache on this machine
-          const key = getUserStorageKey(userId);
+          // No profile found in DB for this nickname
+          const key = getUserStorageKey(effectiveUserId);
           const existingLocal = localStorage.getItem(key);
           const bestLegacy = getBestLegacySave();
 
           let targetProfile: PlayerProfile;
           if (existingLocal) {
             targetProfile = normalizeAndMigrateProfile(JSON.parse(existingLocal));
-          } else if (bestLegacy && bestLegacy.score > 220) {
-            console.log('Adopting existing local save into new cloud account:', bestLegacy.source);
+          } else if (bestLegacy && bestLegacy.score > 330) {
+            console.log('Adopting existing local save into new profile for:', cleanNick);
             targetProfile = bestLegacy.profile;
           } else {
             targetProfile = JSON.parse(JSON.stringify(defaultProfile));
@@ -443,19 +521,26 @@ export default function App() {
 
           if (!isCancelled) {
             setProfile(targetProfile);
-            localStorage.setItem(key, JSON.stringify(targetProfile));
-            localStorage.setItem(`${key}_backup`, JSON.stringify(targetProfile));
+            try {
+              localStorage.setItem(key, JSON.stringify(targetProfile));
+              localStorage.setItem(`${key}_backup`, JSON.stringify(targetProfile));
+            } catch (e) {}
 
-            // Create initial profile in Supabase for this new user
-            await supabase.from('profiles').upsert({
-              id: userId,
-              username: username || 'Player',
-              game_data: targetProfile
-            });
+            // Save to DB if targetProfile actually has progress
+            if (getProfileProgressScore(targetProfile) > 330) {
+              setProfileDbId(effectiveUserId);
+              try {
+                await supabase.from('profiles').upsert({
+                  id: effectiveUserId,
+                  username: cleanNick,
+                  game_data: targetProfile
+                });
+              } catch (e) {}
+            }
           }
         }
       } catch (e) {
-        console.error('Error loading profile:', e);
+        console.error('Error in loadProfile:', e);
       } finally {
         if (!isCancelled) {
           setIsProfileLoaded(true);
@@ -468,30 +553,31 @@ export default function App() {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, userId]);
+  }, [isAuthenticated, username, userId]);
 
   const handleRestoreBackup = async (): Promise<{ success: boolean; message: string }> => {
     const bestLegacy = getBestLegacySave();
-    if (!bestLegacy || bestLegacy.score <= 220) {
+    if (!bestLegacy || bestLegacy.score <= 330) {
       return { success: false, message: 'Локальных резервных копий с прогрессом не найдено.' };
     }
 
     setProfile(bestLegacy.profile);
-    if (userId) {
-      const storageKey = getUserStorageKey(userId);
+    const cleanNick = (username || 'Игрок').trim();
+    const effectiveId = profileDbId || userId || usernameToUUID(cleanNick);
+    const storageKey = getUserStorageKey(effectiveId);
+    try {
       localStorage.setItem(storageKey, JSON.stringify(bestLegacy.profile));
       localStorage.setItem(`${storageKey}_backup`, JSON.stringify(bestLegacy.profile));
-      if (userId !== 'local_user') {
-        try {
-          await supabase.from('profiles').upsert({
-            id: userId,
-            username: username || 'Player',
-            game_data: bestLegacy.profile
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      }
+    } catch (e) {}
+    
+    try {
+      await supabase.from('profiles').upsert({
+        id: effectiveId,
+        username: cleanNick,
+        game_data: bestLegacy.profile
+      });
+    } catch (e) {
+      console.error(e);
     }
     return {
       success: true,
@@ -500,52 +586,172 @@ export default function App() {
   };
 
   const handleForceSyncCloud = async (): Promise<{ success: boolean; message: string }> => {
-    if (!userId || userId === 'local_user') {
-      return { success: false, message: 'Вы находитесь в локальном (гостевом) режиме. Войдите в облачный аккаунт для синхронизации.' };
+    const cleanNick = (username || '').trim();
+    if (!cleanNick) {
+      return { success: false, message: 'Сначала укажите никнейм.' };
     }
+    const targetId = profileDbId || userId || usernameToUUID(cleanNick);
     try {
       const { error } = await supabase.from('profiles').upsert({
-        id: userId,
-        username: username || 'Player',
+        id: targetId,
+        username: cleanNick,
         game_data: profile
       });
-      if (error) throw error;
-      return { success: true, message: 'Профиль успешно сохранён в облако Supabase!' };
+      if (error) {
+        if (error.code === '42501' || error.message?.includes('policy') || error.message?.includes('security')) {
+          return {
+            success: false,
+            message: 'Ошибка: В Supabase включена блокировка RLS. Отключите её в Supabase SQL Editor: ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;'
+          };
+        }
+        throw error;
+      }
+      setProfileDbId(targetId);
+      return { success: true, message: `Профиль «${cleanNick}» успешно сохранён в облако Supabase!` };
     } catch (e: any) {
       console.error(e);
       return { success: false, message: 'Ошибка сохранения в облако: ' + (e?.message || 'Сеть недоступна') };
     }
   };
 
+  const handleForceLoadCloud = async (): Promise<{ success: boolean; message: string }> => {
+    const cleanNick = (username || '').trim();
+    if (!cleanNick) {
+      return { success: false, message: 'Укажите никнейм для загрузки из облака.' };
+    }
+    try {
+      let cloudRow: { id: string; username: string; game_data: any } | null = null;
+      let rlsErr: any = null;
+
+      // 1. Search by nickname (case-insensitive)
+      const byUser = await supabase
+        .from('profiles')
+        .select('id, username, game_data')
+        .ilike('username', cleanNick)
+        .maybeSingle();
+
+      if (byUser.data) {
+        cloudRow = byUser.data;
+      } else if (byUser.error) {
+        if (byUser.error.code === '42501' || byUser.error.message?.includes('policy') || byUser.error.message?.includes('security')) {
+          rlsErr = byUser.error;
+        }
+      }
+
+      // 2. Search by id
+      const effectiveId = profileDbId || userId || usernameToUUID(cleanNick);
+      if (!cloudRow && effectiveId) {
+        const byId = await supabase
+          .from('profiles')
+          .select('id, username, game_data')
+          .eq('id', effectiveId)
+          .maybeSingle();
+
+        if (byId.data) {
+          cloudRow = byId.data;
+        } else if (byId.error && (byId.error.code === '42501' || byId.error.message?.includes('policy'))) {
+          rlsErr = byId.error;
+        }
+      }
+
+      if (rlsErr) {
+        return {
+          success: false,
+          message: 'Доступ заблокирован RLS в Supabase. Для загрузки без авторизации отключите RLS в SQL Editor: ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;'
+        };
+      }
+
+      if (!cloudRow || !cloudRow.game_data) {
+        return { 
+          success: false, 
+          message: `В БД не найден профиль с ником «${cleanNick}». Убедитесь, что ник совпадает с тем, что записан в таблице profiles.` 
+        };
+      }
+
+      setProfileDbId(cloudRow.id);
+      let rawData = cloudRow.game_data;
+      if (typeof rawData === 'string') {
+        try { rawData = JSON.parse(rawData); } catch (e) {}
+      }
+      const cloudProfile = normalizeAndMigrateProfile(rawData);
+      setProfile(cloudProfile);
+      
+      const storageKey = getUserStorageKey(effectiveId);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(cloudProfile));
+        localStorage.setItem(`${storageKey}_backup`, JSON.stringify(cloudProfile));
+      } catch (e) {}
+
+      const count = Object.keys(cloudProfile.roster || {}).length;
+      return {
+        success: true,
+        message: `Профиль «${cloudRow.username || cleanNick}» успешно загружен: ${count} героев, ${cloudProfile.gems} кристаллов, этаж ${cloudProfile.clearedAbyssFloor || 0} Бездны!`
+      };
+    } catch (e: any) {
+      console.error(e);
+      return { success: false, message: 'Ошибка загрузки из облака: ' + (e?.message || 'Сеть недоступна') };
+    }
+  };
+
+  const handleImportTransferCode = async (code: string): Promise<{ success: boolean; message: string }> => {
+    const parsed = parseTransferCode(code);
+    if (!parsed) {
+      return { success: false, message: 'Неверный код переноса. Убедитесь, что скопировали код полностью (начинается с DD-).' };
+    }
+
+    const norm = normalizeAndMigrateProfile(parsed);
+    setProfile(norm);
+    const cleanNick = (username || 'Игрок').trim();
+    const effectiveId = profileDbId || userId || usernameToUUID(cleanNick);
+    const storageKey = getUserStorageKey(effectiveId);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(norm));
+      localStorage.setItem(`${storageKey}_backup`, JSON.stringify(norm));
+    } catch (e) {}
+
+    try {
+      await supabase.from('profiles').upsert({
+        id: effectiveId,
+        username: cleanNick,
+        game_data: norm
+      });
+    } catch (e) {}
+
+    const count = Object.keys(norm.roster || {}).length;
+    return {
+      success: true,
+      message: `Прогресс успешно импортирован: ${count} героев, ${norm.gems} 💎, ${norm.gold.toLocaleString()} 🪙!`
+    };
+  };
+
   // Sync profile changes to Supabase and LocalStorage (isolated per user)
   React.useEffect(() => {
-    if (!isAuthenticated || !userId || !isProfileLoaded) {
+    if (!isAuthenticated || !username || !isProfileLoaded) {
       return;
     }
 
-    const storageKey = getUserStorageKey(userId);
+    const cleanNick = username.trim();
+    const effectiveId = profileDbId || userId || usernameToUUID(cleanNick);
+    const storageKey = getUserStorageKey(effectiveId);
     try {
       localStorage.setItem(storageKey, JSON.stringify(profile));
       localStorage.setItem(`${storageKey}_backup`, JSON.stringify(profile));
-    } catch(e) {}
+    } catch (e) {}
 
-    if (userId !== 'local_user') {
-      const syncToDB = async () => {
-        try {
-          await supabase.from('profiles').upsert({
-             id: userId,
-             username: username || 'Player',
-             game_data: profile
-          });
-        } catch (e) {
-           console.error('Failed to sync to DB', e);
-        }
-      };
-      // Simple debounce
-      const timer = setTimeout(syncToDB, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [profile, isAuthenticated, userId, isProfileLoaded]);
+    const syncToDB = async () => {
+      try {
+        await supabase.from('profiles').upsert({
+          id: effectiveId,
+          username: cleanNick,
+          game_data: profile
+        });
+      } catch (e) {
+        console.error('Failed to auto-sync to DB:', e);
+      }
+    };
+    const timer = setTimeout(syncToDB, 1500);
+    return () => clearTimeout(timer);
+  }, [profile, isAuthenticated, userId, username, profileDbId, isProfileLoaded]);
 
 
   // Periodic Daily Reset Check
@@ -593,12 +799,12 @@ export default function App() {
            updated = true;
         }
 
-        // Lunar Abyss Reset (every 1 hour)
+        // Lunar Abyss Reset (every Thursday 04:00 AM)
         if (nowTime > (p.lunarAbyssResetTime || 0)) {
            newP = {
               ...newP,
               lunarAbyssClaimed: [],
-              lunarAbyssResetTime: nowTime + 3600000 // Reset in 1 hour
+              lunarAbyssResetTime: getNextThursdayResetTime()
            };
            updated = true;
         }
@@ -626,9 +832,9 @@ export default function App() {
     ? route.team.map((id: string) => { 
         const prefSet = CHARACTER_PREFERENCES[id]?.sets?.[0] || 'gladiator';
         const slots: ArtifactSlot[] = ['flower', 'plume', 'sands', 'goblet', 'circlet'];
-        const trialArts = slots.map(slot => createGodArtifact(slot, prefSet, id));
-        const c = characterBlueprints[id](id, 80, 0, trialArts); 
-        if (c.stats.spd < 150) c.stats.spd = 150; 
+        const trialArts = slots.map(slot => createMediumArtifact(slot, prefSet, id));
+        const c = characterBlueprints[id](id, 75, 0, trialArts); 
+        if (c.stats.spd < 118) c.stats.spd = 118; 
         return c; 
       })
     : getPartyFromIds(profile.team);
@@ -637,9 +843,15 @@ export default function App() {
      return Array.from({ length: Math.min(level, 4) }).map(() => createBasicEnemy(level));
   };
 
-  const handleVictory = (stats: Record<string, number>) => {
+  const handleVictory = (stats: Record<string, number>, finalParty?: Combatant[]) => {
+    // Prevent duplicate victory triggers (e.g. from backgrounded Telegram Mini App, WebView sleep/wake, or race conditions)
+    if (isVictoryProcessingRef.current || typeof route !== 'object') {
+      return;
+    }
+    isVictoryProcessingRef.current = true;
+
     if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
-      const stageParty = getPartyFromIds(route.teams[route.stage]);
+      const stageParty = (finalParty && finalParty.length > 0) ? finalParty : getPartyFromIds(route.teams[route.stage]);
       const bossConfig = [
         { name: '«Магистр Теней»', element: 'Physical', title: 'Этап 1: «Магистр Теней» (Physical)' },
         { name: '«Сверхпроводящий Колосс»', element: 'Electro', title: 'Этап 2: «Сверхпроводящий Колосс» (Electro)' },
@@ -662,6 +874,7 @@ export default function App() {
          setBossRushResults(prev => [...(prev || []), stageResult]);
          setLastDamageDealt(stats);
          setLastBattleParty(stageParty);
+         isVictoryProcessingRef.current = false;
          setRoute({ ...route, stage: route.stage + 1 });
          return;
       }
@@ -673,18 +886,18 @@ export default function App() {
       setLastDamageDealt(stats);
       setLastBattleParty(stageParty);
 
-      const alreadyClaimed = !!profile.bossRushSeason3Claimed;
-      const expReward = alreadyClaimed ? 5000 : 25000;
-      const goldReward = alreadyClaimed ? 15000 : 100000;
-      const gemsDrop = alreadyClaimed ? 0 : 1200;
+      const alreadyClaimed = !!profile.bossRushSeason4Claimed;
+      const expReward = alreadyClaimed ? 6000 : 30000;
+      const goldReward = alreadyClaimed ? 20000 : 150000;
+      const gemsDrop = alreadyClaimed ? 0 : 1500;
       const droppedArtifacts = alreadyClaimed ? [] : [
-         ...Array.from({length: 5}, () => generateArtifact("coral_tide", 5)),
-         ...Array.from({length: 5}, () => generateArtifact("thorn_whisper", 5))
+         ...Array.from({length: 5}, () => generateArtifact("dark_grove", 5)),
+         ...Array.from({length: 5}, () => generateArtifact("wild_hunt", 5))
       ];
       
       setProfile(p => ({
          ...p,
-         bossRushSeason3Claimed: true,
+         bossRushSeason4Claimed: true,
          gems: p.gems + gemsDrop,
          gold: p.gold + goldReward,
          heroExp: p.heroExp + expReward,
@@ -698,7 +911,7 @@ export default function App() {
     }
 
     setBossRushResults(null);
-    setLastBattleParty(playerParty);
+    setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : playerParty);
 
     const isAbyss = typeof route === 'object' && route.type === 'ABYSS_FLOOR';
     const isStory = typeof route === 'object' && route.type === 'STORY_STAGE';
@@ -730,10 +943,13 @@ export default function App() {
     if (isTrial && typeof route === 'object' && route.type === 'TRIAL_BATTLE') {
       const trialId = route.trialId;
       const testId = route.testId;
-      const isTestRun = Boolean(route.isTestRun || testId);
+      const isTestRun = Boolean(route.isTestRun);
+      const isGroveCombat = Boolean(testId && testId.startsWith('grove_combat_'));
 
-      // Check if this test run or trial was already completed before
-      const alreadyCompleted = isTestRun && testId
+      // Check if this test run, grove stage, or trial was already completed before
+      const alreadyCompleted = isGroveCombat
+        ? ((profile.events && profile.events.wildGroveCombat) || []).includes(testId!)
+        : (isTestRun && testId)
         ? ((profile.events && profile.events.completedTestRuns) || []).includes(testId)
         : ((profile.events && profile.events.completedTrials) || []).includes(trialId);
 
@@ -748,8 +964,13 @@ export default function App() {
           ? [...prevCompletedTestRuns, testId]
           : prevCompletedTestRuns;
 
+        const prevWildGroveCombat: string[] = events.wildGroveCombat || [];
+        const newWildGroveCombat = (isGroveCombat && testId && !prevWildGroveCombat.includes(testId))
+          ? [...prevWildGroveCombat, testId]
+          : prevWildGroveCombat;
+
         const prevCompletedTrials: number[] = events.completedTrials || [];
-        const newCompletedTrials = (!isTestRun && !prevCompletedTrials.includes(trialId))
+        const newCompletedTrials = (!isTestRun && !isGroveCombat && !prevCompletedTrials.includes(trialId))
           ? [...prevCompletedTrials, trialId]
           : prevCompletedTrials;
 
@@ -760,6 +981,7 @@ export default function App() {
           events: {
             ...events,
             completedTestRuns: newCompletedTestRuns,
+            wildGroveCombat: newWildGroveCombat,
             completedTrials: newCompletedTrials
           },
           dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 }
@@ -772,7 +994,146 @@ export default function App() {
       return;
     }
 
-    const dungeonLevel = typeof route === 'object' ? (route.type === 'STORY_STAGE' ? route.stage.level : (route as any).level || 1) : 1;
+    if (typeof route === 'object' && route.type === 'DISTORTION_BATTLE') {
+      const currentStage = Math.max(1, Math.min(10, Math.floor(Number(route.stage) || 1)));
+      const duration = (stats.__duration as number) || 10;
+      const distortionBattleParty = (finalParty && finalParty.length > 0)
+        ? finalParty
+        : route.teamSlots.map((slot, idx) => createDistortionCombatant(slot.charId, slot.usePlayerBuild, profile, idx));
+      
+      try {
+        const saved = localStorage.getItem('ed_distortion_run_state_v1');
+        const stateObj = saved ? JSON.parse(saved) : {};
+        
+        if (currentStage >= 10) {
+          // Final Victory (Stage 10 Defeated)
+          localStorage.removeItem('ed_distortion_run_state_v1');
+          
+          // Add Distortion Level EXP
+          const expResult = addDistortionExpToProgression(DISTORTION_EXP_PER_CLEAR, profile);
+          const canClaimDirectRewards = expResult.updatedProgression.weeklyFullClearsClaimed < DISTORTION_WEEKLY_FULL_CLEAR_LIMIT;
+
+          if (canClaimDirectRewards) {
+            expResult.updatedProgression.weeklyFullClearsClaimed += 1;
+            saveDistortionProgression(expResult.updatedProgression);
+
+            const droppedArts: Artifact[] = [];
+            for (let i = 0; i < 12; i++) {
+              const randomSet = ARTIFACT_DUNGEONS[Math.floor(Math.random() * ARTIFACT_DUNGEONS.length)].rewardSets[0];
+              droppedArts.push(generateArtifact(randomSet, 5));
+            }
+
+            setProfile(p => ({
+              ...p,
+              gems: p.gems + 1500,
+              gold: p.gold + 150000,
+              heroExp: p.heroExp + 50000,
+              artifacts: [...p.artifacts, ...droppedArts],
+              dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 },
+              bpExp: p.bpExp + 2000,
+              distortionProgress: expResult.updatedProgression
+            }));
+
+            setLastDrops({ exp: 50000, gold: 150000, gems: 1500, artifacts: droppedArts });
+          } else {
+            saveDistortionProgression(expResult.updatedProgression);
+
+            setProfile(p => ({
+              ...p,
+              dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 },
+              bpExp: p.bpExp + 500,
+              distortionProgress: expResult.updatedProgression
+            }));
+
+            setLastDrops({ exp: 0, gold: 0, gems: 0, artifacts: [] });
+          }
+
+          setLastDamageDealt(stats);
+          setLastBattleParty(distortionBattleParty);
+          setLastDistortionStageResult({ 
+            clearedStage: 10, 
+            nextStage: 10,
+            expEarned: expResult.effectiveExpAdded,
+            newLevel: expResult.updatedProgression.level,
+            weeklyFullClearsClaimed: expResult.updatedProgression.weeklyFullClearsClaimed,
+            canClaimDirectRewards,
+            weeklyLimitReached: expResult.weeklyLimitReached
+          });
+          setRoute('VICTORY');
+          return;
+        } else if (currentStage === 5) {
+          // Stage 5 Mid-boss cleared -> Checkpoint (5 options, pick 3)
+          const active = route.distortionBuffIds || [];
+          const available = DISTORTION_BUFFS.filter(b => !active.includes(b.id)).map(b => b.id);
+          const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 5);
+
+          const updatedState = {
+            currentStage: 6,
+            activeBuffIds: active,
+            team: route.teamSlots,
+            status: 'CHECKPOINT_STAGE_5',
+            pendingBuffPicks: shuffled,
+            pendingPickCount: 3,
+            selectedInBatch: [],
+            historyStages: [...(stateObj.historyStages || []), { stage: 5, duration }]
+          };
+          localStorage.setItem('ed_distortion_run_state_v1', JSON.stringify(updatedState));
+
+          // Stage completion without direct currency rewards (moved to Distortion Levels)
+          setProfile(p => ({ 
+            ...p, 
+            dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 },
+            bpExp: p.bpExp + 100
+          }));
+          setLastDrops({ exp: 0, gold: 0, gems: 0, artifacts: [] });
+          setLastDamageDealt(stats);
+          setLastBattleParty(distortionBattleParty);
+          setLastDistortionStageResult({ clearedStage: 5, nextStage: 6 });
+          setRoute('VICTORY');
+          return;
+        } else {
+          // Normal Stage cleared (1..4, 6..9)
+          const nextStage = currentStage + 1;
+          const active = route.distortionBuffIds || [];
+          const available = DISTORTION_BUFFS.filter(b => !active.includes(b.id)).map(b => b.id);
+          const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 3);
+
+          const updatedState = {
+            currentStage: nextStage,
+            activeBuffIds: active,
+            team: route.teamSlots,
+            status: 'SELECTING_BUFFS',
+            pendingBuffPicks: shuffled,
+            pendingPickCount: 1,
+            selectedInBatch: [],
+            historyStages: [...(stateObj.historyStages || []), { stage: currentStage, duration }]
+          };
+          localStorage.setItem('ed_distortion_run_state_v1', JSON.stringify(updatedState));
+
+          // Stage completion without direct currency rewards (moved to Distortion Levels)
+          setProfile(p => ({ 
+            ...p, 
+            dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + 1 },
+            bpExp: p.bpExp + 50
+          }));
+          setLastDrops({ exp: 0, gold: 0, gems: 0, artifacts: [] });
+          setLastDamageDealt(stats);
+          setLastBattleParty(distortionBattleParty);
+          setLastDistortionStageResult({ clearedStage: currentStage, nextStage });
+          setRoute('VICTORY');
+          return;
+        }
+      } catch (e) {
+        setRoute('DISTORTION');
+        return;
+      }
+    }
+
+    const dungeonLevel = typeof route === 'object' 
+      ? (route.type === 'STORY_STAGE' 
+          ? getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile)
+          : (route as any).level || 1) 
+      : 1;
     const dungeonType = typeof route === 'object' && route.type === 'DUNGEON' ? route.dungeonType : 'EXP';
     const dungeonRuns = (typeof route === 'object' && route.type === 'DUNGEON' && route.runs) ? route.runs : 1;
     
@@ -787,24 +1148,51 @@ export default function App() {
     let abyssGems = 0;
     let newFloorCleared = 0;
     let possibleSets = ["gladiator", "noblesse"];
+    let isAbyssAlreadyCleared = false;
+    let abyssFloorId = 0;
+    let isLunarAbyssFloor = false;
 
     if (isAbyss && typeof route === 'object' && route.type === 'ABYSS_FLOOR') {
-      const floorId = route.floorId;
-      if (floorId >= 9) {
-         // Lunar Abyss (Weekly Thursday Reset)
-         if (!profile.lunarAbyssClaimed.includes(floorId)) {
-            const lunarRewards = [500, 600, 700, 800];
-            abyssGems = lunarRewards[floorId - 9];
-            setProfile(p => ({ ...p, lunarAbyssClaimed: [...p.lunarAbyssClaimed || [], floorId] }));
-         }
-      } else if (floorId > profile.clearedAbyssFloor) {
-        const floorRewards = [100, 150, 200, 300, 450, 600, 1000, 1600];
-        abyssGems = floorRewards[floorId - 1] || 100;
-        newFloorCleared = floorId;
+      abyssFloorId = route.floorId;
+      isLunarAbyssFloor = abyssFloorId >= 9;
+      gemsDrop = 0; // In Abyss, no random RNG gem drops
+
+      if (isLunarAbyssFloor) {
+        // Lunar Abyss (Floors 9-12) - periodic reset
+        const alreadyClaimedThisPeriod = (profile.lunarAbyssClaimed || []).includes(abyssFloorId);
+        if (alreadyClaimedThisPeriod) {
+          isAbyssAlreadyCleared = true;
+          abyssGems = 0;
+          expReward = 0;
+          goldReward = 0;
+          artifactDropChance = 0;
+        } else {
+          isAbyssAlreadyCleared = false;
+          const lunarRewards = [500, 600, 700, 800];
+          abyssGems = lunarRewards[abyssFloorId - 9] || 500;
+          expReward = dungeonLevel * 2000;
+          goldReward = dungeonLevel * 5000;
+          artifactDropChance = 0.8;
+        }
+      } else {
+        // Corridor Abyss (Floors 1-8) - one-time permanent clear
+        const alreadyClearedBase = abyssFloorId <= (profile.clearedAbyssFloor || 0);
+        if (alreadyClearedBase) {
+          isAbyssAlreadyCleared = true;
+          abyssGems = 0;
+          expReward = 0;
+          goldReward = 0;
+          artifactDropChance = 0;
+        } else {
+          isAbyssAlreadyCleared = false;
+          const floorRewards = [100, 150, 200, 300, 450, 600, 1000, 1600];
+          abyssGems = floorRewards[abyssFloorId - 1] || 100;
+          newFloorCleared = abyssFloorId;
+          expReward = dungeonLevel * 2000;
+          goldReward = dungeonLevel * 5000;
+          artifactDropChance = 0.8;
+        }
       }
-      expReward = dungeonLevel * 2000;
-      goldReward = dungeonLevel * 5000;
-      artifactDropChance = 0.8;
     } else if (dungeonType === 'GOLD') {
        const goldSpecialTiers = [15000, 35000, 65000, 110000, 180000, 300000];
        goldReward = dungeonLevel <= 6 ? (goldSpecialTiers[dungeonLevel - 1] || dungeonLevel * 50000) : dungeonLevel * 50000;
@@ -878,7 +1266,7 @@ export default function App() {
        }
     }
 
-    if (isAbyss) {
+    if (isAbyss && !isAbyssAlreadyCleared) {
        const rollAttempts = Math.floor(dungeonLevel / 2) + 1;
        for (let i = 0; i < rollAttempts; i++) {
           if (Math.random() < artifactDropChance) {
@@ -889,6 +1277,10 @@ export default function App() {
     }
 
     const currentStoryStage = (isStory && typeof route === 'object' && route.type === 'STORY_STAGE') ? route.stage : null;
+    if (currentStoryStage) {
+      setLastStoryStage(currentStoryStage);
+      setLastStoryChapterId((route as any).chapterId || 'chap1');
+    }
     
     setProfile(p => {
       let storyProgress = p.storyProgress || { unlockedChapters: ['chap1'], completedStages: [] };
@@ -924,19 +1316,34 @@ export default function App() {
         }
       }
 
+      const updatedLunarClaimed = (isLunarAbyssFloor && !isAbyssAlreadyCleared)
+        ? [...(p.lunarAbyssClaimed || []), abyssFloorId]
+        : (p.lunarAbyssClaimed || []);
+
       return {
         ...p,
         gold: p.gold + goldReward,
         heroExp: p.heroExp + expReward,
         gems: p.gems + gemsDrop + abyssGems,
-        clearedAbyssFloor: Math.max(p.clearedAbyssFloor, newFloorCleared),
+        clearedAbyssFloor: Math.max(p.clearedAbyssFloor || 0, newFloorCleared),
+        lunarAbyssClaimed: updatedLunarClaimed,
         artifacts: [...p.artifacts, ...droppedArtifacts],
-        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + dungeonRuns },
-        bpExp: p.bpExp + (dungeonLevel * 100 * dungeonRuns),
+        dailies: { ...p.dailies, battlesWon: p.dailies.battlesWon + (isAbyssAlreadyCleared ? 0 : dungeonRuns) },
+        bpExp: p.bpExp + (isAbyssAlreadyCleared ? 0 : (dungeonLevel * 100 * dungeonRuns)),
         storyProgress,
         mapState
       };
     });
+
+    if (isAbyss) {
+      setLastAbyssFloorResult({
+        floorId: abyssFloorId,
+        isLunar: isLunarAbyssFloor,
+        wasAlreadyCleared: isAbyssAlreadyCleared
+      });
+    } else {
+      setLastAbyssFloorResult(null);
+    }
 
     setLastDrops({ exp: expReward, gold: goldReward, gems: gemsDrop + abyssGems, artifacts: droppedArtifacts });
     setLastDamageDealt(stats);
@@ -944,23 +1351,35 @@ export default function App() {
     setRoute('VICTORY');
   };
 
-  const handleDefeat = (stats: Record<string, number>) => {
-    if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
-      setLastBattleParty(getPartyFromIds(route.teams[route.stage]));
+  const handleDefeat = (stats: Record<string, number>, finalParty?: Combatant[]) => {
+    isVictoryProcessingRef.current = false;
+    if (typeof route === 'object' && route.type === 'DISTORTION_BATTLE') {
+      setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : route.teamSlots.map((slot, idx) => createDistortionCombatant(slot.charId, slot.usePlayerBuild, profile, idx)));
+      setLastStoryStage(null);
+    } else if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
+      setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : getPartyFromIds(route.teams[route.stage]));
       setLastStoryStage(null);
     } else if (typeof route === 'object' && route.type === 'STORY_STAGE') {
-      setLastBattleParty(playerParty);
+      setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : playerParty);
       setLastStoryStage(route.stage);
+      setLastStoryChapterId((route as any).chapterId || 'chap1');
     } else {
-      setLastBattleParty(playerParty);
+      setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : playerParty);
       setLastStoryStage(null);
     }
+    setLastAbyssFloorResult(null);
     setLastDamageDealt(stats);
     setRoute('DEFEAT');
   };
 
   const handleExitBattle = () => {
+    isVictoryProcessingRef.current = false;
+    setLastAbyssFloorResult(null);
     if (typeof route === 'object') {
+      if (route.type === 'DISTORTION_BATTLE') {
+        setRoute('DISTORTION');
+        return;
+      }
       if (route.type === 'STORY_STAGE') {
         setRoute('STORY');
         return;
@@ -1016,11 +1435,11 @@ export default function App() {
       <AnimatePresence mode="wait">
         <motion.div
           key={routeKey}
-          initial={{ opacity: 0, scale: 0.98, filter: 'blur(8px)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 1.02, filter: 'blur(8px)' }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full flex justify-center items-center h-full min-h-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: "easeInOut" }}
+          className="w-full flex justify-center items-center h-full min-h-screen transform-gpu will-change-opacity"
         >
       {currentRouteName === 'HUB' && (
         <HubMenu 
@@ -1032,6 +1451,8 @@ export default function App() {
           onLogout={handleLogout} 
           onRestoreBackup={handleRestoreBackup}
           onForceSyncCloud={handleForceSyncCloud}
+          onForceLoadCloud={handleForceLoadCloud}
+          onImportTransferCode={handleImportTransferCode}
         />
       )}
 
@@ -1047,10 +1468,28 @@ export default function App() {
         <BattlePass profile={profile} updateProfile={setProfile} onBack={() => setRoute('HUB')} />
       )}
 
-      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || currentRouteName === 'GLITCH_BATTLE' || currentRouteName === 'TRIAL_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
+      {currentRouteName === 'DISTORTION' && (
+        <DistortionMenu 
+          profile={profile} 
+          updateProfile={setProfile}
+          onBack={() => setRoute('HUB')} 
+          onStartBattle={(stage, buffIds, teamSlots) => {
+            setRoute({
+              type: 'DISTORTION_BATTLE',
+              stage,
+              distortionBuffIds: buffIds,
+              teamSlots
+            });
+          }}
+        />
+      )}
+
+      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || currentRouteName === 'GLITCH_BATTLE' || currentRouteName === 'TRIAL_BATTLE' || currentRouteName === 'DISTORTION_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
         <BattleScreen 
           key={
-            route.type === 'BOSS_RUSH_BATTLE'
+            route.type === 'DISTORTION_BATTLE'
+              ? `distortion_stage_${route.stage}_${route.distortionBuffIds.length}`
+              : route.type === 'BOSS_RUSH_BATTLE'
               ? `boss_rush_stage_${route.stage}`
               : route.type === 'ABYSS_FLOOR'
                 ? `abyss_floor_${route.floorId}_${route.level}`
@@ -1062,9 +1501,22 @@ export default function App() {
                       ? (route.testId ? `testrun_${route.testId}` : `trial_${route.trialId}`)
                       : `story_stage_${(route as any).stage?.id || 'stage'}`
           }
-          playerParty={playerParty} 
+          playerParty={
+            route.type === 'DISTORTION_BATTLE'
+              ? applyDistortionBuffsToParty(
+                  route.teamSlots.map((slot, idx) => createDistortionCombatant(slot.charId, slot.usePlayerBuild, profile, idx)),
+                  route.distortionBuffIds
+                )
+              : route.type === 'BOSS_RUSH_BATTLE'
+              ? getPartyFromIds(route.teams[route.stage])
+              : route.type === 'TRIAL_BATTLE' && route.team 
+                ? getPartyFromIds(route.team) 
+                : playerParty
+          }
           stageTitle={
-            route.type === 'BOSS_RUSH_BATTLE'
+            route.type === 'DISTORTION_BATTLE'
+              ? `ИСКАЖЕНИЕ • ЭТАП ${route.stage} / 10${route.stage === 5 ? ' • [МИД-БОСС]' : route.stage === 10 ? ' • [ФИНАЛЬНЫЙ БОСС]' : ''}`
+              : route.type === 'BOSS_RUSH_BATTLE'
               ? `ТЕНЕВОЙ НАТИСК • ЭТАП ${route.stage + 1} / 3`
               : route.type === 'STORY_STAGE'
                 ? `СЮЖЕТ: ${route.stage.name.toUpperCase()} (УР. ${getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile)})${route.stage.isBoss ? ' • [БОСС]' : ''}`
@@ -1074,34 +1526,71 @@ export default function App() {
                     ? `БОЕВОЕ ИСПЫТАНИЕ: ${route.title.toUpperCase()}`
                     : undefined
           }
+          isDistortionMode={route.type === 'DISTORTION_BATTLE'}
+          distortionBuffIds={route.type === 'DISTORTION_BATTLE' ? route.distortionBuffIds : undefined}
           battleBuff={route.type === 'ABYSS_FLOOR' ? currentBlessing : undefined}
           enemyWaves={
-            route.type === 'ABYSS_FLOOR' 
+            route.type === 'DISTORTION_BATTLE'
+              ? generateDistortionWave(route.stage)
+              : route.type === 'ABYSS_FLOOR' 
               ? generateAbyssWaves(route.floorId, route.level)
               : route.type === 'BOSS_RUSH_BATTLE'
                 ? [generateBossRushWave(route.stage)]
                 : route.type === 'GLITCH_BATTLE'
                   ? [[createGlitchSectorEnemy(route.sectorId)]]
                 : route.type === 'TRIAL_BATTLE'
-                  ? (route.isTestRun ? [Array.from({ length: 3 }).map(() => createBasicEnemy(80, 'slime_fire'))] : [[createTrialEnemy(route.trialId)]])
+                  ? (route.testId && route.testId.startsWith('grove_combat_')
+                      ? [
+                          route.testId === 'grove_combat_1' 
+                            ? [createBasicEnemy(55), createBasicEnemy(55), createBasicEnemy(55)]
+                            : route.testId === 'grove_combat_2'
+                            ? [createBasicEnemy(70, 'viper'), createBasicEnemy(70, 'pulse')]
+                            : route.testId === 'grove_combat_3'
+                            ? [createBasicEnemy(85, 'glacier'), createBasicEnemy(85, 'spark')]
+                            : [createBasicEnemy(95, 'gaia', false, true)]
+                        ]
+                      : route.isTestRun
+                        ? [
+                            route.testId === 'test_vairen'
+                              ? [createBasicEnemy(75, 'tide'), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
+                              : route.testId === 'test_zephyr'
+                              ? [createBasicEnemy(75, 'blaze'), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
+                              : route.testId === 'test_aurum'
+                              ? [createBasicEnemy(75), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
+                              : route.testId === 'test_krona'
+                              ? [createBasicEnemy(75, 'pulse'), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
+                              : [createBasicEnemy(75), createBasicEnemy(75), createBasicEnemy(75)]
+                          ]
+                        : [[createTrialEnemy(route.trialId)]])
                 : route.type === 'DUNGEON'
                   ? Array.from({ length: route.runs || 1 }).map(() => (
                       route.dungeonType === 'ARTIFACT' && (route as any).dungeonId
                         ? ARTIFACT_DUNGEONS.find(d => d.id === (route as any).dungeonId)?.enemyTeam.map(id => createBasicEnemy(route.level, id)) || getEnemies(route.level)
                         : getEnemies(route.level)
                     ))
-                  : [
-                      route.type === 'STORY_STAGE' && (route as any).stage.enemyBlueprintIds
-                        ? (route as any).stage.enemyBlueprintIds.map((id: string) => 
-                            createBasicEnemy(
-                              getAdaptiveStoryStageLevel((route as any).stage, (route as any).chapterId || 'chap1', profile),
-                              id,
-                              false,
-                              (route as any).stage.isBoss || false
+                  : route.type === 'STORY_STAGE'
+                    ? [
+                        (route.stage.enemyBlueprintIds && route.stage.enemyBlueprintIds.length > 0)
+                          ? route.stage.enemyBlueprintIds.map((id: string) => 
+                              createBasicEnemy(
+                                getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile),
+                                id,
+                                false,
+                                route.stage.isBoss || false
+                              )
                             )
-                          )
-                        : getEnemies((route as any).level || 1)
-                    ]
+                          : Array.from({ 
+                              length: Math.min(3, Math.max(1, (profile.team?.length || 2))) 
+                            }).map(() => 
+                              createBasicEnemy(
+                                getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile),
+                                undefined,
+                                false,
+                                route.stage.isBoss || false
+                              )
+                            )
+                      ]
+                    : [getEnemies((route as any).level || 1)]
           } 
           onDefeat={handleDefeat} 
           onVictory={handleVictory}
@@ -1468,10 +1957,47 @@ export default function App() {
                     </h3>
                     
                     {lastDrops.gems === 0 && lastDrops.gold === 0 && lastDrops.exp === 0 ? (
-                      <div className="text-center py-3 px-4 bg-[#0a0a0a] rounded-2xl border border-white/5">
-                        <span className="text-white/40 text-xs font-mono">
-                          Повторный тестовый забег: награды за первый проход уже получены ранее
-                        </span>
+                      <div className="text-center py-4 px-4 bg-[#0a0a0a] rounded-2xl border border-white/5 flex flex-col items-center gap-1.5">
+                        {lastDistortionStageResult ? (
+                          lastDistortionStageResult.clearedStage < 10 ? (
+                            <>
+                              <span className="text-purple-300 text-xs font-bold uppercase tracking-wider">
+                                Награды перенесены в Систему Уровней Искажения
+                              </span>
+                              <span className="text-white/50 text-[11px] max-w-md">
+                                Промежуточные этапы 1–9 не содержат прямых наград. Выберите усиление и продолжайте продвижение к боссу!
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-purple-300 text-xs font-bold uppercase tracking-wider">
+                                Лимит прямых наград за зачистку (2/2) исчерпан
+                              </span>
+                              <span className="text-white/50 text-[11px] max-w-md">
+                                Прямые награды за полное прохождение выдаются 2 раза в неделю. Опыт уровней Искажения успешно начислен!
+                              </span>
+                            </>
+                          )
+                        ) : lastAbyssFloorResult ? (
+                          <>
+                            <span className="text-indigo-400 text-xs font-bold uppercase tracking-wider">
+                              {lastAbyssFloorResult.wasAlreadyCleared
+                                ? (lastAbyssFloorResult.isLunar 
+                                    ? "Награды Лунной Бездны уже получены в текущем периоде" 
+                                    : "Награды за этот этаж уже были получены ранее")
+                                : "Боевая задача выполнена"}
+                            </span>
+                            <span className="text-white/50 text-[11px] max-w-md">
+                              {lastAbyssFloorResult.isLunar 
+                                ? "Награды за этот этаж выдаются один раз за период (до сброса в четверг). Повторное прохождение не приносит ресурсов." 
+                                : "Награды за этажи 1–8 выдаются только за первое прохождение. Повторные прохождения не приносят ресурсов."}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-white/40 text-xs font-mono">
+                            Повторный тестовый забег: награды за первый проход уже получены ранее
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -1486,9 +2012,25 @@ export default function App() {
                         {lastDrops.gems > 0 && (
                           <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
                              <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Кристаллы</span>
-                             <span className="font-black text-pink-400 text-lg">+{lastDrops.gems} 💎</span>
+                             <span className="font-black text-pink-400 text-lg flex items-center justify-center gap-1">
+                               +{lastDrops.gems}
+                               <Gem className="w-4 h-4 text-pink-400" />
+                             </span>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Distortion EXP bonus callout */}
+                    {lastDistortionStageResult && lastDistortionStageResult.clearedStage === 10 && (
+                      <div className="mt-4 p-3 bg-purple-950/40 border border-purple-500/30 rounded-2xl flex items-center justify-between text-xs">
+                        <span className="text-purple-300 font-bold flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                          Опыт Искажения: <b className="text-white font-mono">+{lastDistortionStageResult.expEarned || 0} EXP</b>
+                        </span>
+                        <span className="text-white/60 font-mono text-[11px]">
+                          Уровень: <b className="text-cyan-300">{lastDistortionStageResult.newLevel}</b> | Зачистки недели: <b className="text-amber-300">{lastDistortionStageResult.weeklyFullClearsClaimed}/2</b>
+                        </span>
                       </div>
                     )}
                     
@@ -1511,41 +2053,45 @@ export default function App() {
                 )}
 
                 {/* Damage Statistics */}
-                {lastDamageDealt && (
-                  <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 w-full text-left transition-colors hover:border-white/10">
-                    <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-5">
-                      <h3 className="text-[11px] font-bold text-white/70 uppercase tracking-widest flex items-center gap-2">
-                        <Swords className="w-4 h-4 text-white/50" /> Анализ боя
-                      </h3>
-                      {lastDamageDealt.__duration && (
-                        <div className="text-[10px] font-mono text-white/40 font-bold uppercase tracking-widest flex flex-col items-end">
-                          <span>Средний DPS</span>
-                          <span className="text-white/90 text-sm mt-0.5">
-                            {Math.floor(
-                              Object.entries(lastDamageDealt)
-                                .filter(([uid]) => (lastBattleParty.length > 0 ? lastBattleParty : playerParty).some(p => p.uid === uid) && uid !== '__duration')
-                                .reduce((sum, [, d]) => sum + (d as number), 0) / 
-                               (lastDamageDealt.__duration as number || 1)
-                            ).toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {Object.entries(lastDamageDealt)
-                        .filter(([uid]) => (lastBattleParty.length > 0 ? lastBattleParty : playerParty).some(p => p.uid === uid) && uid !== '__duration')
-                        .sort(([, a], [, b]) => (b as number) - (a as number))
-                        .map(([uid, dmg]) => {
-                          const activeParty = lastBattleParty.length > 0 ? lastBattleParty : playerParty;
-                          const hero = activeParty.find(p => p.uid === uid);
+                {lastDamageDealt && (() => {
+                  const activeParty = (lastBattleParty && lastBattleParty.length > 0) ? lastBattleParty : playerParty;
+                  const matchHero = (uid: string) => {
+                    return activeParty.find(p => p.uid === uid)
+                      || activeParty.find(p => p.id === uid)
+                      || activeParty.find(p => uid.startsWith(`dist_hero_${p.id}_`) || uid === `dist_hero_${p.id}`)
+                      || activeParty.find(p => uid.includes(p.id));
+                  };
+                  const partyStats = Object.entries(lastDamageDealt)
+                    .filter(([uid]) => uid !== '__duration' && !!matchHero(uid))
+                    .sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0));
+                  const totalPartyDmg = partyStats.reduce((sum, [, d]) => sum + (Number(d) || 0), 0);
+                  const duration = Math.max(1, Number(lastDamageDealt.__duration) || 1);
+                  const avgDps = Math.floor(totalPartyDmg / duration);
+                  const maxDmg = Math.max(1, ...partyStats.map(([, d]) => Number(d) || 0));
+
+                  return (
+                    <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 w-full text-left transition-colors hover:border-white/10">
+                      <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-5">
+                        <h3 className="text-[11px] font-bold text-white/70 uppercase tracking-widest flex items-center gap-2">
+                          <Swords className="w-4 h-4 text-white/50" /> Анализ боя
+                        </h3>
+                        {lastDamageDealt.__duration && (
+                          <div className="text-[10px] font-mono text-white/40 font-bold uppercase tracking-widest flex flex-col items-end">
+                            <span>Средний DPS</span>
+                            <span className="text-white/90 text-sm mt-0.5">
+                              {avgDps.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {partyStats.map(([uid, dmgVal]) => {
+                          const dmg = Number(dmgVal) || 0;
+                          const hero = matchHero(uid);
                           const name = hero?.name || uid;
                           const splash = hero ? getCharSplash(hero.id) : null;
-                          const playerStats = Object.entries(lastDamageDealt)
-                            .filter(([u]) => activeParty.some(p => p.uid === u) && u !== '__duration')
-                            .map(([, d]) => d as number);
-                          const maxDmg = Math.max(1, ...playerStats);
-                          const percent = Math.max(2, ((dmg as number) / maxDmg) * 100);
+                          const percent = Math.max(2, (dmg / maxDmg) * 100);
                           
                           return (
                             <div key={uid} className="flex flex-col gap-2">
@@ -1560,7 +2106,7 @@ export default function App() {
                                   )}
                                   <span className="text-white/90 font-bold tracking-widest uppercase">{name}</span>
                                 </div>
-                                <span className="text-white/90 font-black text-sm">{Math.floor(dmg as number).toLocaleString()} DMG</span>
+                                <span className="text-white/90 font-black text-sm">{Math.floor(dmg).toLocaleString()} DMG</span>
                               </div>
                               <div className="w-full bg-[#0a0a0a] h-1.5 rounded-full overflow-hidden border border-white/5">
                                 <motion.div 
@@ -1573,17 +2119,68 @@ export default function App() {
                             </div>
                           );
                         })}
-                      {Object.entries(lastDamageDealt).filter(([uid]) => (lastBattleParty.length > 0 ? lastBattleParty : playerParty).some(p => p.uid === uid) && uid !== '__duration').length === 0 && (
-                        <div className="text-white/40 text-[10px] font-mono tracking-widest uppercase text-center py-4 border border-dashed border-white/5 rounded-2xl bg-[#0a0a0a]/50">Урон не зафиксирован</div>
-                      )}
+                        {partyStats.length === 0 && (
+                          <div className="text-white/40 text-[10px] font-mono tracking-widest uppercase text-center py-4 border border-dashed border-white/5 rounded-2xl bg-[#0a0a0a]/50">Урон не зафиксирован</div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </>
           )}
 
-          {lastStoryStage ? (
+          {lastDistortionStageResult ? (
+            <div className="flex flex-col items-center gap-4 w-full max-w-lg mt-6">
+              <div className="text-xs font-mono text-cyan-300 bg-slate-900/90 border border-cyan-500/40 px-6 py-3 rounded-2xl uppercase tracking-widest text-center shadow-lg">
+                🌀 Искажение: Этап <span className="text-white font-bold text-sm mx-1">{lastDistortionStageResult.clearedStage}</span> успешно пройден!
+                {lastDistortionStageResult.clearedStage < 10 && (
+                  <div className="text-[11px] text-slate-300 font-normal mt-1">
+                    Следующий этап: <span className="text-cyan-400 font-bold">Этап {lastDistortionStageResult.nextStage}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+                {lastDistortionStageResult.clearedStage < 10 ? (
+                  <button 
+                    onClick={() => { 
+                      setRoute('DISTORTION'); 
+                      setLastDamageDealt(null); 
+                      setLastDrops(null); 
+                      setLastDistortionStageResult(null); 
+                    }}
+                    className="w-full sm:w-2/3 px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-2xl font-mono uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 text-xs shadow-lg cursor-pointer"
+                  >
+                    <span>Выбрать усиление для Этапа {lastDistortionStageResult.nextStage}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => { 
+                      setRoute('DISTORTION'); 
+                      setLastDamageDealt(null); 
+                      setLastDrops(null); 
+                      setLastDistortionStageResult(null); 
+                    }}
+                    className="w-full sm:w-1/2 px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-2xl font-mono uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 text-xs shadow-lg cursor-pointer"
+                  >
+                    <span>В Меню Искажения</span>
+                  </button>
+                )}
+                <button 
+                  onClick={() => { 
+                    setRoute('HUB'); 
+                    setLastDamageDealt(null); 
+                    setLastDrops(null); 
+                    setLastDistortionStageResult(null); 
+                  }}
+                  className="w-full sm:w-1/3 px-6 py-4 bg-[#111111] hover:bg-white/10 text-white/70 hover:text-white font-bold rounded-2xl font-mono uppercase tracking-widest transition-all border border-white/10 hover:border-white/20 hover:scale-[1.02] active:scale-95 text-xs cursor-pointer"
+                >
+                  В Хаб
+                </button>
+              </div>
+            </div>
+          ) : lastStoryStage ? (
             <div className="flex flex-col items-center gap-5 w-full max-w-lg mt-6">
               <div className="text-[10px] font-mono text-white/70 bg-[#111111] border border-white/5 px-6 py-3 rounded-full uppercase tracking-widest">
                 Сюжетный этап <span className="text-white font-bold mx-1">«{lastStoryStage.name}»</span> пройден
@@ -1604,9 +2201,25 @@ export default function App() {
                 </button>
               </div>
             </div>
+          ) : lastAbyssFloorResult ? (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-lg mt-6">
+              <button 
+                onClick={() => { setRoute('ABYSS'); setLastDamageDealt(null); setLastDrops(null); setLastAbyssFloorResult(null); }}
+                className="w-full sm:w-1/2 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-full font-mono uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 text-xs shadow-lg shadow-indigo-600/30 cursor-pointer"
+              >
+                <Layers className="w-4 h-4" />
+                <span>В Бездну</span>
+              </button>
+              <button 
+                onClick={() => { setRoute('HUB'); setLastDamageDealt(null); setLastDrops(null); setLastAbyssFloorResult(null); }}
+                className="w-full sm:w-1/2 px-6 py-4 bg-[#111111] hover:bg-white/10 text-white/70 hover:text-white font-bold rounded-full font-mono uppercase tracking-widest transition-all border border-white/10 hover:border-white/20 hover:scale-[1.02] active:scale-95 text-xs cursor-pointer"
+              >
+                В Хаб
+              </button>
+            </div>
           ) : (
             <button 
-              onClick={() => { setRoute('HUB'); setLastDamageDealt(null); setBossRushResults(null); setLastDrops(null); }}
+              onClick={() => { setRoute('HUB'); setLastDamageDealt(null); setBossRushResults(null); setLastDrops(null); setLastAbyssFloorResult(null); }}
               className="w-full sm:w-auto min-w-[240px] px-10 py-4 bg-white hover:bg-white/90 text-black font-black rounded-full font-mono uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 mt-6 text-xs"
             >
               Продолжить
@@ -1629,41 +2242,45 @@ export default function App() {
            </div>
 
             {/* Damage Statistics (Defeat) */}
-            {lastDamageDealt && (
-              <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 w-full max-w-2xl text-left transition-colors hover:border-white/10">
-                <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-5">
-                  <h3 className="text-[11px] font-bold text-white/70 uppercase tracking-widest flex items-center gap-2">
-                    <Swords className="w-4 h-4 text-white/50" /> Анализ неудачи
-                  </h3>
-                  {lastDamageDealt.__duration && (
-                    <div className="text-[10px] font-mono text-white/40 font-bold uppercase tracking-widest flex flex-col items-end">
-                      <span>Средний DPS</span>
-                      <span className="text-white/70 text-sm mt-0.5">
-                        {Math.floor(
-                          Object.entries(lastDamageDealt)
-                            .filter(([uid]) => (lastBattleParty.length > 0 ? lastBattleParty : playerParty).some(p => p.uid === uid) && uid !== '__duration')
-                            .reduce((sum, [, d]) => sum + (d as number), 0) / 
-                           (lastDamageDealt.__duration as number || 1)
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-4">
-                  {Object.entries(lastDamageDealt)
-                    .filter(([uid]) => (lastBattleParty.length > 0 ? lastBattleParty : playerParty).some(p => p.uid === uid) && uid !== '__duration')
-                    .sort(([, a], [, b]) => (b as number) - (a as number))
-                    .map(([uid, dmg]) => {
-                      const activeParty = lastBattleParty.length > 0 ? lastBattleParty : playerParty;
-                      const hero = activeParty.find(p => p.uid === uid);
+            {lastDamageDealt && (() => {
+              const activeParty = (lastBattleParty && lastBattleParty.length > 0) ? lastBattleParty : playerParty;
+              const matchHero = (uid: string) => {
+                return activeParty.find(p => p.uid === uid)
+                  || activeParty.find(p => p.id === uid)
+                  || activeParty.find(p => uid.startsWith(`dist_hero_${p.id}_`) || uid === `dist_hero_${p.id}`)
+                  || activeParty.find(p => uid.includes(p.id));
+              };
+              const partyStats = Object.entries(lastDamageDealt)
+                .filter(([uid]) => uid !== '__duration' && !!matchHero(uid))
+                .sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0));
+              const totalPartyDmg = partyStats.reduce((sum, [, d]) => sum + (Number(d) || 0), 0);
+              const duration = Math.max(1, Number(lastDamageDealt.__duration) || 1);
+              const avgDps = Math.floor(totalPartyDmg / duration);
+              const maxDmg = Math.max(1, ...partyStats.map(([, d]) => Number(d) || 0));
+
+              return (
+                <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 w-full max-w-2xl text-left transition-colors hover:border-white/10">
+                  <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-5">
+                    <h3 className="text-[11px] font-bold text-white/70 uppercase tracking-widest flex items-center gap-2">
+                      <Swords className="w-4 h-4 text-white/50" /> Анализ неудачи
+                    </h3>
+                    {lastDamageDealt.__duration && (
+                      <div className="text-[10px] font-mono text-white/40 font-bold uppercase tracking-widest flex flex-col items-end">
+                        <span>Средний DPS</span>
+                        <span className="text-white/70 text-sm mt-0.5">
+                          {avgDps.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {partyStats.map(([uid, dmgVal]) => {
+                      const dmg = Number(dmgVal) || 0;
+                      const hero = matchHero(uid);
                       const name = hero?.name || uid;
                       const splash = hero ? getCharSplash(hero.id) : null;
-                      const playerStats = Object.entries(lastDamageDealt)
-                        .filter(([u]) => activeParty.some(p => p.uid === u) && u !== '__duration')
-                        .map(([, d]) => d as number);
-                      const maxDmg = Math.max(1, ...playerStats);
-                      const percent = Math.max(2, ((dmg as number) / maxDmg) * 100);
+                      const percent = Math.max(2, (dmg / maxDmg) * 100);
                       
                       return (
                         <div key={uid} className="flex flex-col gap-2">
@@ -1678,7 +2295,7 @@ export default function App() {
                               )}
                               <span className="text-white/60 font-bold tracking-widest uppercase">{name}</span>
                             </div>
-                            <span className="text-white/70 font-black text-sm">{Math.floor(dmg as number).toLocaleString()} DMG</span>
+                            <span className="text-white/70 font-black text-sm">{Math.floor(dmg).toLocaleString()} DMG</span>
                           </div>
                           <div className="w-full bg-[#0a0a0a] h-1.5 rounded-full overflow-hidden border border-white/5">
                             <motion.div 
@@ -1691,14 +2308,18 @@ export default function App() {
                         </div>
                       );
                     })}
+                    {partyStats.length === 0 && (
+                      <div className="text-white/40 text-[10px] font-mono tracking-widest uppercase text-center py-4 border border-dashed border-white/5 rounded-2xl bg-[#0a0a0a]/50">Урон не зафиксирован</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
           {lastStoryStage ? (
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md mt-4">
               <button 
-                onClick={() => { setRoute({ type: 'STORY_STAGE', stage: lastStoryStage }); setLastDamageDealt(null); }}
+                onClick={() => { setRoute({ type: 'STORY_STAGE', stage: lastStoryStage, chapterId: lastStoryChapterId }); setLastDamageDealt(null); }}
                 className="w-full sm:w-1/2 px-6 py-4 bg-white hover:bg-white/90 text-black font-black rounded-full font-mono uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 text-xs"
               >
                 <RotateCcw className="w-4 h-4" />

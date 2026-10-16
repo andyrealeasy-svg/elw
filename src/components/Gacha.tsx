@@ -1,11 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerProfile } from '../types';
-import { ArrowLeft, Sparkles, Gem, Star, SkipForward, Info, X } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Sparkles, 
+  Gem, 
+  Star, 
+  SkipForward, 
+  Info, 
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Shield,
+  Zap,
+  Snowflake,
+  Flower2,
+  Hammer,
+  Crosshair,
+  Feather,
+  Layers,
+  Award,
+  User
+} from 'lucide-react';
 import { baseCharacterPool, characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { CosmicComet, CometTheme } from './CosmicComet';
 
-const LIMITED_S = ["iva", "nereus", "volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita", "aveline", "kairen"];
+const LIMITED_S = ["vairen", "iva", "nereus", "volta", "selina", "krona", "asher", "cyrus", "raven", "maestro", "ineffa", "zephyr", "aurum", "aelita", "aveline", "kairen"];
 const S_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "S");
 const STANDARD_S_POOL = S_POOL.filter(id => !LIMITED_S.includes(id));
 const A_POOL = Object.keys(charRarity).filter(id => charRarity[id] === "A");
@@ -29,9 +50,9 @@ type PullResult = {
 };
 
 export default function Gacha({ profile, updateProfile, onBack }: Props) {
-  const [activeBanner, setActiveBanner] = useState<string>('NEREUS');
+  const [activeBanner, setActiveBanner] = useState<string>('VAIREN');
   
-  const permanentBanners: ('NEREUS' | 'IVA' | 'AELITA' | 'MAESTRO')[] = ['NEREUS', 'IVA', 'AELITA', 'MAESTRO'];
+  const permanentBanners: ('VAIREN' | 'ZEPHYR' | 'AURUM' | 'KRONA')[] = ['VAIREN', 'ZEPHYR', 'AURUM', 'KRONA'];
   const allAvailableBanners = permanentBanners;
 
   const bannerDisplayDetails: Record<string, {
@@ -45,49 +66,49 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     desc: string;
     aRateUps: string[];
   }> = {
-    NEREUS: {
-      title: "ВУАЛЬ ПРИЛИВА",
-      subtitle: "Сад Вечного Моря",
-      sId: "nereus",
-      sName: "Нереус",
-      sElement: "Hydro",
-      sThemeColor: "text-teal-400 border-teal-500/40 bg-teal-950/40",
-      sBgAccent: "from-teal-600/20 to-transparent",
-      desc: "Шанс на получение Нереуса [S] увеличен! Hydro Саб-DPS/Аппликатор: взрывает Морские цветы от элементальных реакций и создаёт Сад вечного моря!",
-      aRateUps: ["kern", "glacier", "echo"]
-    },
-    IVA: {
-      title: "ПЕРВЫЕ РОСТКИ",
-      subtitle: "Связь с Флорой",
-      sId: "iva",
-      sName: "Ива",
+    VAIREN: {
+      title: "ТЁМНЫЕ ЛОЗЫ",
+      subtitle: "Сердце Древнего Леса",
+      sId: "vairen",
+      sName: "Вайрен",
       sElement: "Dendro",
       sThemeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
       sBgAccent: "from-emerald-600/20 to-transparent",
-      desc: "Шанс на получение Ивы [S] увеличен! Dendro Support / Sustain: снижает Dendro и Cryo RES врагов, генерирует Шипы от атак союзников и исцеляет отряд при получении Шипов!",
-      aRateUps: ["kern", "glacier", "echo"]
+      desc: "Шанс на получение Вайрена [S] увеличен! Dendro Саб-DPS/Аппликатор: поглощает Бутонизацию Семенами и Цветками мрака, усиливает урон отряда и запускает Великое цветение!",
+      aRateUps: ["rix", "gotka", "echo"]
     },
-    AELITA: {
-      title: "ШИПЫ СПРАВЕДЛИВОСТИ",
-      subtitle: "Теорема Дикой Природы",
-      sId: "aelita",
-      sName: "Аэлита",
-      sElement: "Dendro",
-      sThemeColor: "text-emerald-400 border-emerald-500/40 bg-emerald-950/40",
-      sBgAccent: "from-emerald-600/20 to-transparent",
-      desc: "Шанс на получение Аэлиты [S] увеличен! Dendro DPS: накладывает и взрывает стаки [Шипы] на противниках для нанесения колоссального урона!",
-      aRateUps: ["kern", "glacier", "echo"]
-    },
-    MAESTRO: {
-      title: "СИМФОНИЯ ОДИНОЧЕСТВА",
-      subtitle: "Эхо Разлома",
-      sId: "maestro",
-      sName: "Маэстро",
+    ZEPHYR: {
+      title: "ЗЕРКАЛЬНЫЙ ШТОРМ",
+      subtitle: "Призма Иллюзий",
+      sId: "zephyr",
+      sName: "Зефир",
       sElement: "Electro",
       sThemeColor: "text-purple-400 border-purple-500/40 bg-purple-950/40",
       sBgAccent: "from-purple-600/20 to-transparent",
-      desc: "Шанс на получение Маэстро [S] увеличен! Electro Саб-DPS: атакует вместе с союзниками через «Эхо Одиночества» и изолирует врагов!",
-      aRateUps: ["kern", "glacier", "echo"]
+      desc: "Шанс на получение Зефира [S] увеличен! Electro DPS: превращает Перегрузку в Отражение, накладывает Грозовую призму и урезает защиту врагов!",
+      aRateUps: ["rix", "gotka", "echo"]
+    },
+    AURUM: {
+      title: "ЗОЛОТАЯ ЭГИДА",
+      subtitle: "Блеск Роскоши",
+      sId: "aurum",
+      sName: "Аурум",
+      sElement: "Geo",
+      sThemeColor: "text-amber-400 border-amber-500/40 bg-amber-950/40",
+      sBgAccent: "from-amber-600/20 to-transparent",
+      desc: "Шанс на получение Аурума [S] увеличен! Geo Support / Tank: создаёт мощные щиты от Защиты, баффает Крит. урон и передаёт Атаку отряду!",
+      aRateUps: ["rix", "gotka", "echo"]
+    },
+    KRONA: {
+      title: "ВЕКТОР ХОЛОДА",
+      subtitle: "Застой Времени",
+      sId: "krona",
+      sName: "Крона",
+      sElement: "Cryo",
+      sThemeColor: "text-cyan-400 border-cyan-500/40 bg-cyan-950/40",
+      sBgAccent: "from-cyan-600/20 to-transparent",
+      desc: "Шанс на получение Кроны [S] увеличен! Cryo Control / Sub-DPS: замораживает и отбрасывает шкалу ходов (ATB) врагов, замедляя их скорость!",
+      aRateUps: ["rix", "gotka", "echo"]
     },
     STANDARD: {
       title: "ЭХО ПРЕДКОВ",
@@ -230,10 +251,6 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     setPulls(currentPulls);
     setRevealIndex(0);
     setPullStage('ANIMATING');
-
-    setTimeout(() => {
-       setPullStage(prev => prev === 'ANIMATING' ? 'REVEALING' : prev);
-    }, 4500); // Wait for meteor animation
   };
 
   const handleNextReveal = () => {
@@ -248,66 +265,57 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
      setPullStage('SUMMARY');
   };
 
-  const getBannerTabEmoji = (bKey: string): string => {
-    if (bKey === 'NEREUS') return '🪸';
-    if (bKey === 'IVA') return '🌿';
-    if (bKey === 'AELITA') return '🍃';
-    if (bKey === 'MAESTRO') return '🎻';
+  const renderBannerTabIcon = (bKey: string) => {
     switch (bKey) {
-      case 'AVELINE': return '🌸';
-      case 'KAIREN': return '❄️';
-      case 'VOLTA': return '⚡';
-      case 'SELINA': return '🌹';
-      case 'KRONA': return '❄️';
-      case 'ASHER': return '⚒️';
-      case 'CYRUS': return '🎯';
-      case 'RAVEN': return '🔪';
-      case 'INEFFA': return '🪞';
-      case 'ZEPHYR': return '⚡';
-      case 'AURUM': return '🛡️';
-      default: return '✨';
+      case 'VAIREN': return <Flower2 className="w-4 h-4 text-emerald-400" />;
+      case 'ZEPHYR': return <Zap className="w-4 h-4 text-purple-400" />;
+      case 'AURUM': return <Shield className="w-4 h-4 text-amber-400" />;
+      case 'KRONA': return <Snowflake className="w-4 h-4 text-cyan-400" />;
+      case 'AVELINE': return <Flower2 className="w-4 h-4 text-pink-400" />;
+      case 'KAIREN': return <Snowflake className="w-4 h-4 text-cyan-400" />;
+      case 'VOLTA': return <Zap className="w-4 h-4 text-violet-400" />;
+      case 'SELINA': return <Flower2 className="w-4 h-4 text-rose-400" />;
+      case 'ASHER': return <Hammer className="w-4 h-4 text-emerald-400" />;
+      case 'CYRUS': return <Crosshair className="w-4 h-4 text-red-400" />;
+      case 'RAVEN': return <Feather className="w-4 h-4 text-indigo-400" />;
+      case 'INEFFA': return <Layers className="w-4 h-4 text-red-400" />;
+      default: return <Sparkles className="w-4 h-4 text-yellow-400" />;
     }
   };
 
   const getBannerTabColor = (bKey: string, isActive: boolean): string => {
     if (!isActive) return 'text-white/50 hover:text-white border-transparent';
-    if (bKey === 'NEREUS') return 'bg-teal-600 text-white border-teal-500 shadow-[0_0_12px_rgba(20,184,166,0.4)]';
-    if (bKey === 'IVA') return 'bg-emerald-600 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
-    if (bKey === 'AELITA') return 'bg-emerald-700 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
-    if (bKey === 'MAESTRO') return 'bg-purple-600 text-white border-purple-500 shadow-[0_0_12px_rgba(147,51,234,0.4)]';
+    if (bKey === 'VAIREN') return 'bg-emerald-800 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
+    if (bKey === 'ZEPHYR') return 'bg-purple-800 text-white border-purple-600 shadow-[0_0_12px_rgba(168,85,247,0.4)]';
+    if (bKey === 'AURUM') return 'bg-amber-600 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]';
+    if (bKey === 'KRONA') return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
     switch (bKey) {
       case 'AVELINE': return 'bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
       case 'KAIREN': return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
       case 'VOLTA': return 'bg-violet-600 text-white border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]';
       case 'SELINA': return 'bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]';
-      case 'KRONA': return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
       case 'ASHER': return 'bg-emerald-600 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]';
       case 'CYRUS': return 'bg-red-600 text-white border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.4)]';
       case 'RAVEN': return 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.4)]';
       case 'INEFFA': return 'bg-red-700 text-white border-red-600 shadow-[0_0_12px_rgba(220,38,38,0.4)]';
-      case 'ZEPHYR': return 'bg-purple-800 text-white border-purple-600 shadow-[0_0_12px_rgba(168,85,247,0.4)]';
-      case 'AURUM': return 'bg-amber-600 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]';
       default: return 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.4)]';
     }
   };
 
   const getBannerTabName = (bKey: string): string => {
-    if (bKey === 'NEREUS') return 'Нереус';
-    if (bKey === 'IVA') return 'Ива';
-    if (bKey === 'AELITA') return 'Аэлита';
-    if (bKey === 'MAESTRO') return 'Маэстро';
+    if (bKey === 'VAIREN') return 'Вайрен';
+    if (bKey === 'ZEPHYR') return 'Зефир';
+    if (bKey === 'AURUM') return 'Аурум';
+    if (bKey === 'KRONA') return 'Крона';
     switch (bKey) {
       case 'AVELINE': return 'Авелин';
       case 'KAIREN': return 'Кайрен';
       case 'VOLTA': return 'Вольта';
       case 'SELINA': return 'Селина';
-      case 'KRONA': return 'Крона';
       case 'ASHER': return 'Ашер';
       case 'CYRUS': return 'Сайрус';
       case 'RAVEN': return 'Рейвен';
       case 'INEFFA': return 'Инеффа';
-      case 'ZEPHYR': return 'Зефир';
-      case 'AURUM': return 'Аурум';
       default: return bKey;
     }
   };
@@ -320,7 +328,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       
       {/* Top Bar for IDLE only */}
       {pullStage === 'IDLE' && (
-        <div className="flex items-center justify-between p-4 bg-black/40 backdrop-blur-md shrink-0 absolute top-0 left-0 right-0 z-50">
+        <div className="flex items-center justify-between p-4 bg-[#080910]/95 shrink-0 absolute top-0 left-0 right-0 z-50 border-b border-white/5">
           <div className="flex items-center gap-4">
              <button onClick={onBack} className="p-2 hover:bg-white/10 rounded transition">
                 <ArrowLeft className="w-6 h-6" />
@@ -329,7 +337,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                Молитвы
              </h1>
           </div>
-          <div className="flex items-center gap-2 bg-[#111111]/80 px-4 py-1.5 rounded-full border border-white/10">
+          <div className="flex items-center gap-2 bg-[#111111] px-4 py-1.5 rounded-full border border-white/10">
                 <Gem className="w-4 h-4 text-pink-400" />
                 <span className="font-mono font-bold">{profile.gems}</span>
           </div>
@@ -339,9 +347,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       {/* IDLE state */}
       {pullStage === 'IDLE' && (
         <div className="flex-1 flex flex-col items-center justify-start p-4 sm:p-8 relative overflow-y-auto mt-16 w-full pb-12">
-           <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-              <Sparkles className="w-96 h-96 text-purple-500 animate-pulse" />
-           </div>
+           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(168,85,247,0.12)_0%,_transparent_70%)] pointer-events-none"></div>
 
            <div className="z-10 w-full flex flex-col items-center">
               <div className="flex flex-nowrap justify-start md:justify-center overflow-x-auto max-w-full gap-3 mb-8 w-full px-4 custom-scrollbar pb-2">
@@ -355,10 +361,10 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                       key={bKey}
                       onClick={() => setActiveBanner(bKey as any)}
                       className={cn(
-                        "group relative h-16 sm:h-20 shrink-0 rounded-2xl overflow-hidden transition-all duration-500 border bg-[#0a0a0a]",
+                        "group relative h-16 sm:h-20 shrink-0 rounded-2xl overflow-hidden transition-all duration-300 border bg-[#0a0a0a]",
                         isActive 
                           ? "w-48 sm:w-56 border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]" 
-                          : "w-20 sm:w-24 border-white/5 opacity-60 hover:opacity-100 hover:border-white/20 hover:shadow-lg"
+                          : "w-20 sm:w-24 border-white/5 opacity-60 hover:opacity-100 hover:border-white/20"
                       )}
                     >
                       {splash && (
@@ -366,18 +372,14 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                            src={splash} 
                            alt={data.title} 
                            className={cn(
-                             "absolute inset-0 w-full h-full object-cover object-top transition-all duration-700",
-                             isActive ? "opacity-100 scale-100" : "opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-70 scale-110"
+                             "absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500",
+                             isActive ? "opacity-90 scale-100" : "opacity-35 grayscale group-hover:grayscale-0 group-hover:opacity-70 scale-105"
                            )} 
-                           style={{ 
-                             WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
-                             maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)'
-                           }}
                            referrerPolicy="no-referrer" 
                          />
                       )}
                       
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-transparent pointer-events-none"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent pointer-events-none"></div>
                       
                       <div className="absolute inset-0 flex flex-col justify-center items-start px-3 sm:px-4 z-10">
                         {isActive ? (
@@ -389,8 +391,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                           </div>
                         ) : (
                           <div className="flex flex-col items-center w-full gap-1">
-                             <span className="text-sm drop-shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
-                               {bKey === 'STANDARD' ? '✨' : getBannerTabEmoji(bKey as any)}
+                             <span className="opacity-80 group-hover:opacity-100 transition-opacity">
+                               {bKey === 'STANDARD' ? <Sparkles className="w-4 h-4 text-purple-400" /> : renderBannerTabIcon(bKey as any)}
                              </span>
                           </div>
                         )}
@@ -402,11 +404,11 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                {/* Genshin-styled Banner Card with S-star splash art background and A-star rate-ups */}
                <div className="relative w-full max-w-2xl px-1">
                   <div className="relative w-full h-[250px] sm:h-[280px] md:h-[320px] rounded-3xl overflow-hidden border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex bg-[#0a0a0a] mb-6 group">
-                     {/* Animated glow matching banner element */}
-                     <div className={`absolute inset-0 opacity-40 mix-blend-color-dodge pointer-events-none transition-all duration-700 bg-gradient-to-tr ${
-                        activeBanner === 'VOLTA' ? 'from-violet-500/25 via-transparent to-cyan-500/30' :
-                        activeBanner === 'SELINA' ? 'from-rose-500/15 via-transparent to-rose-500/30' :
-                        'from-indigo-500/15 via-transparent to-indigo-500/30'
+                     {/* Ambient glow matching banner element */}
+                     <div className={`absolute inset-0 opacity-25 pointer-events-none transition-opacity duration-500 bg-gradient-to-tr ${
+                        activeBanner === 'VOLTA' ? 'from-violet-500/30 to-cyan-500/20' :
+                        activeBanner === 'SELINA' ? 'from-rose-500/30 to-rose-500/20' :
+                        'from-indigo-500/30 to-purple-500/20'
                      }`}></div>
                      
                      {/* Background splash of the featured char */}
@@ -527,7 +529,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                </div>
 
               {/* PITY counters and 50/50 status */}
-              <div className="z-10 w-full max-w-lg mb-8 bg-black/60 border border-white/5 rounded-2xl p-4 text-xs sm:text-sm flex flex-col gap-2.5 shadow-xl backdrop-blur-sm">
+              <div className="z-10 w-full max-w-lg mb-8 bg-[#0c0d16]/90 border border-white/5 rounded-2xl p-4 text-xs sm:text-sm flex flex-col gap-2.5 shadow-xl">
                  <div className="flex justify-between items-center mb-1 pb-2 border-b border-white/5">
                     <span className="font-bold uppercase tracking-widest text-white/50 text-[10px]">Статистика Молитв</span>
                     <button onClick={() => setShowRatesModal(true)} className="flex items-center gap-1 text-white/40 hover:text-white transition-colors text-[10px] uppercase font-bold tracking-widest bg-white/5 px-2 py-1 rounded-full">
@@ -588,22 +590,21 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       {/* ANIMATING (Meteor) */}
       <AnimatePresence>
          {pullStage === 'ANIMATING' && (
-            <motion.div 
-               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{duration: 0.5}}
-               className="absolute inset-0 bg-[#0a0a0a] flex justify-center items-center overflow-hidden z-40 cursor-pointer"
-               onClick={skipToSummary}
-            >
-               <motion.div 
-                 initial={{ x: '100vw', y: '-100vh', scale: 0.5 }} 
-                 animate={{ x: '-50vw', y: '50vh', scale: 3 }} 
-                 transition={{ duration: 3.5, ease: "easeIn" }}
-                 className={`w-32 h-1 bg-gradient-to-r ${meteorColor} rotate-45 transform-gpu blur-[1px] shadow-[0_0_50px_rgba(255,255,255,1)] relative`}
-               >
-                  <div className={`absolute -left-8 top-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-r ${meteorColor} rounded-full blur-xl`}></div>
-                  <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full blur-sm`}></div>
-               </motion.div>
-               <div className="absolute top-4 right-4 text-white/50 text-xs font-bold uppercase flex items-center gap-1"><SkipForward className="w-3 h-3"/> Пропустить (Click)</div>
-            </motion.div>
+            <CosmicComet
+               theme={maxRarityInPulls === 'S' ? 'GOLD' : maxRarityInPulls === 'A' ? 'PURPLE' : 'BLUE'}
+               isMulti={pulls.length > 1}
+               subtitle={
+                 pulls.length > 1
+                   ? `Молитва × 10 • ${maxRarityInPulls === 'S' ? 'ЗВЁЗДНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
+                   : `Молитва • ${maxRarityInPulls === 'S' ? 'ЛЕГЕНДАРНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
+               }
+               onImpact={() => {
+                  setPullStage('REVEALING');
+               }}
+               onSkip={() => {
+                  setPullStage('REVEALING');
+               }}
+            />
          )}
       </AnimatePresence>
 
@@ -616,11 +617,14 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
               className="absolute inset-0 bg-[#0a0a0a] flex flex-col justify-start md:justify-center items-center z-40 cursor-pointer p-6 overflow-y-auto pt-16 pb-12"
               onClick={handleNextReveal}
            >
-              <div className="absolute top-4 right-4 text-white/50 text-xs font-bold uppercase flex items-center gap-1 z-50" onClick={(e) => { e.stopPropagation(); skipToSummary(); }}><SkipForward className="w-3 h-3"/> Skip All</div>
+              <div className="absolute top-4 right-4 text-white/50 text-xs font-bold uppercase flex items-center gap-1 z-50 hover:text-white" onClick={(e) => { e.stopPropagation(); skipToSummary(); }}>
+                 <SkipForward className="w-3.5 h-3.5"/> 
+                 <span>Пропустить всё</span>
+              </div>
               
               <div className="relative">
-                 {pulls[revealIndex].rarity === 'S' && <div className="absolute inset-0 bg-yellow-500 blur-[100px] opacity-30 rounded-full scale-150 animate-pulse"></div>}
-                 {pulls[revealIndex].rarity === 'A' && <div className="absolute inset-0 bg-purple-500 blur-[80px] opacity-30 rounded-full scale-150 animate-pulse"></div>}
+                 {pulls[revealIndex].rarity === 'S' && <div className="absolute -inset-10 bg-[radial-gradient(circle,_rgba(234,179,8,0.3)_0%,_transparent_65%)] pointer-events-none"></div>}
+                 {pulls[revealIndex].rarity === 'A' && <div className="absolute -inset-10 bg-[radial-gradient(circle,_rgba(168,85,247,0.3)_0%,_transparent_65%)] pointer-events-none"></div>}
                  
                  <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white mb-2 relative z-10 text-center drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
                     {pulls[revealIndex].charName}
@@ -649,33 +653,45 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-60 pointer-events-none"></div>
                  </motion.div>
               ) : (
-                 <div className="w-40 h-40 bg-[#111111] border-2 border-white/5 rounded-full flex items-center justify-center text-7xl select-none mb-6 relative z-10 shadow-[inner_0_4px_12px_rgba(0,0,0,0.6)]">
-                    {getCharEmoji(pulls[revealIndex].charId)}
+                 <div className="w-40 h-40 bg-[#111111] border-2 border-white/5 rounded-full flex items-center justify-center select-none mb-6 relative z-10 shadow-[inner_0_4px_12px_rgba(0,0,0,0.6)]">
+                    <User className="w-20 h-20 text-white/40" />
                  </div>
               )}
 
               {pulls[revealIndex].rarity === 'S' && pulls[revealIndex].won5050 !== undefined && pulls[revealIndex].won5050 !== null && (
-                 <div className={`px-4 py-2 rounded-2xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider mb-6 animate-pulse relative z-10 text-center ${
+                 <div className={`px-4 py-2 rounded-2xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider mb-6 animate-pulse relative z-10 text-center flex items-center justify-center gap-1.5 ${
                     pulls[revealIndex].won5050 
                        ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
                        : 'bg-rose-950/90 border-rose-500/50 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
                  }`}>
-                    {pulls[revealIndex].won5050 ? '🎉 Выигран 50/50!' : '😢 Проигран 50/50 (Гарант на след. S-героя)'}
+                    {pulls[revealIndex].won5050 ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Выигран 50/50!</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-rose-400" />
+                        <span>Проигран 50/50 (Гарант на след. S-героя)</span>
+                      </>
+                    )}
                  </div>
               )}
 
               {pulls[revealIndex].isNew ? (
-                 <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 text-yellow-300 font-bold px-6 py-2 rounded-full mt-4 flex items-center gap-2 uppercase tracking-widest text-sm animate-bounce">
-                    ✨ Новый
+                 <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 text-yellow-300 font-bold px-6 py-2 rounded-full mt-4 flex items-center gap-2 uppercase tracking-widest text-sm animate-bounce shadow-lg">
+                    <Sparkles className="w-4 h-4 text-yellow-300" />
+                    <span>Новый персонаж открыт!</span>
                  </div>
               ) : (
                  <div className="flex flex-col items-center gap-2 mt-4">
-                   <div className="bg-[#1a1a1a] border border-white/10 text-white/70 font-mono text-sm px-4 py-1 rounded">
-                      Дубликат: Созвездие {pulls[revealIndex].constellation}
+                   <div className="bg-[#1a1a1a] border border-white/10 text-white/80 font-mono text-sm px-4 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
+                      <Zap className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{pulls[revealIndex].refunded > 0 ? 'Макс. созвездие (C6) уже получено!' : `Дубликат: Созвездие C${pulls[revealIndex].constellation}`}</span>
                    </div>
                    {pulls[revealIndex].refunded > 0 && (
-                      <div className="bg-pink-900/50 border border-pink-500/50 text-pink-300 font-bold text-sm px-4 py-1 rounded flex items-center gap-1">
-                         Макс. Созвездие! Вернули: {pulls[revealIndex].refunded} <Gem className="w-3 h-3" />
+                      <div className="bg-pink-900/50 border border-pink-500/50 text-pink-300 font-bold text-sm px-4 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg">
+                         <span>Компенсация: +{pulls[revealIndex].refunded}</span> <Gem className="w-3.5 h-3.5 text-pink-400" />
                       </div>
                    )}
                  </div>
@@ -726,7 +742,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                            {getCharSplash(p.charId) ? (
                               <img src={getCharSplash(p.charId) || ""} className="w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
                            ) : (
-                              <span className="text-7xl">{getCharEmoji(p.charId)}</span>
+                              <User className="w-16 h-16 text-white/40" />
                            )}
                         </div>
 

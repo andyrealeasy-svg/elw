@@ -23,6 +23,11 @@ import {
   IneffaMirrorAura,
   GotkaPuppetAura,
   VolosatinyaHairAura,
+  VairenDarkFloraAura,
+  FenrisBeastModeAura,
+  KronaTimeAura,
+  AurumGoldAura,
+  ZephyrMirrorAura,
 } from './UnitCardAuras';
 import { EffectsOverlay } from '../EffectsOverlay';
 
@@ -102,6 +107,11 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
       <IneffaMirrorAura unit={unit} isDead={isDead} />
       <GotkaPuppetAura unit={unit} isDead={isDead} />
       <VolosatinyaHairAura unit={unit} isDead={isDead} />
+      <VairenDarkFloraAura unit={unit} isDead={isDead} />
+      <FenrisBeastModeAura unit={unit} isDead={isDead} />
+      <KronaTimeAura unit={unit} isDead={isDead} />
+      <AurumGoldAura unit={unit} isDead={isDead} />
+      <ZephyrMirrorAura unit={unit} isDead={isDead} />
 
       {/* Upper Splashart Wrapper */}
       <div className="relative w-full aspect-[1.15] sm:aspect-square rounded-t-[6px] sm:rounded-t-[10px] overflow-hidden bg-[#111111]/60 flex-shrink-0">
@@ -171,6 +181,27 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
             {(unit.buffs.kernQBonusTurns ?? 0) > 0 && <div className="text-[7px] bg-orange-950 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-500/50" title="Усиление Q (+15% АТК)">💥{unit.buffs.kernQBonusTurns}</div>}
             {unit.buffs.kernCritOverloadActive && <div className="text-[7px] bg-rose-950 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-400 animate-pulse" title="Критическое перенапряжение (C6)">🌋C6</div>}
             {(unit.buffs.kernC2DefStacks ?? 0) > 0 && <div className="text-[7px] bg-stone-800 text-amber-300 font-bold rounded-sm px-0.5 border border-amber-400/40" title="Каменная кровь (C2)">🛡️+{unit.buffs.kernC2DefStacks * 10}%</div>}
+            {unit.buffs.vairenDarkSeeds?.length > 0 && <div className="text-[7px] bg-emerald-950 text-emerald-300 font-bold rounded-sm px-0.5 border border-emerald-500/50" title="Семена мрака">🌱{unit.buffs.vairenDarkSeeds.length}</div>}
+            {unit.buffs.vairenDarkFlowers?.length > 0 && <div className="text-[7px] bg-emerald-900 text-emerald-100 font-bold rounded-sm px-0.5 border border-emerald-400/60" title="Цветы мрака">🥀{unit.buffs.vairenDarkFlowers.length}</div>}
+            {(unit.buffs.vairenForestHeartStacks ?? 0) > 0 && <div className="text-[7px] bg-green-950 text-green-300 font-bold rounded-sm px-0.5 border border-green-400/50" title="Сердце леса (+10% Dendro DMG на слот 1)">💚+{unit.buffs.vairenForestHeartStacks * 10}%</div>}
+            {(unit.buffs.vairenWildBloomStacks ?? 0) > 0 && <div className="text-[7px] bg-teal-950 text-teal-300 font-bold rounded-sm px-0.5 border border-teal-400/50" title="Дикое цветение (C1)">🌾{unit.buffs.vairenWildBloomStacks}</div>}
+            {(unit.buffs.vairenEternalBloomStacks ?? 0) > 0 && <div className="text-[7px] bg-emerald-800 text-emerald-200 font-bold rounded-sm px-0.5 border border-emerald-300 animate-pulse" title="Вечное цветение (C6)">🌸C6:{unit.buffs.vairenEternalBloomStacks}/3</div>}
+            {unit.id === 'fenris' && (
+              <div 
+                className={cn(
+                  "text-[7px] font-black rounded-sm px-0.5 border shadow-sm",
+                  unit.buffs.beastMode === 'Protective' 
+                    ? "bg-emerald-950 text-emerald-300 border-emerald-500/70" 
+                    : "bg-red-950 text-red-300 border-red-500/70 animate-pulse"
+                )}
+                title={unit.buffs.beastMode === 'Protective' ? "Режим Зверя: Защита" : "Режим Зверя: Атака"}
+              >
+                {unit.buffs.beastMode === 'Protective' ? '🛡️ЗАЩ' : '🔥АТК'}
+              </div>
+            )}
+            {unit.id === 'krona' && <div className="text-[7px] bg-cyan-950 text-cyan-200 font-bold rounded-sm px-0.5 border border-cyan-400/60" title="Хроно-вектор">⏳</div>}
+            {unit.id === 'aurum' && <div className="text-[7px] bg-amber-950 text-amber-200 font-bold rounded-sm px-0.5 border border-yellow-500/60" title="Осколки роскоши">🪙</div>}
+            {unit.id === 'zephyr' && <div className="text-[7px] bg-purple-950 text-purple-200 font-bold rounded-sm px-0.5 border border-purple-400/60" title="Зеркальная призма">🪞</div>}
           </div>
         </div>
       </div>

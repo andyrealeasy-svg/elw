@@ -90,6 +90,17 @@ export interface Combatant {
     kernC2DefStacks?: number;
     kernC2DefTurns?: number;
     kernNormalAttackCount?: number;
+    // Specific to Vairen (S-tier Dendro Sub-DPS / Applicator)
+    vairenDarkSeeds?: Array<{ id: string; turns: number; enemyUid?: string; isC6Reseed?: boolean; isCycleReseed?: boolean }>;
+    vairenDarkFlowers?: Array<{ id: string; turns: number; rxnCount: number; lastRxn: string; isC6Ready?: boolean; baseDamageMult?: number }>;
+    vairenWildBloomStacks?: number;
+    vairenForestHeartStacks?: number;
+    vairenForestHeartTurns?: number;
+    vairenC3HealCountThisTurn?: number;
+    vairenC4NextBloomBonus?: boolean;
+    vairenDarkFruitStacks?: number;
+    vairenEternalBloomStacks?: number;
+    vairenQUsedLastTurn?: boolean;
     [key: string]: any;
   };
 }
@@ -105,7 +116,7 @@ export interface BattleState {
   damageDealt: Record<string, number>; // uid -> total damage
 }
 
-export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string };
+export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | 'DISTORTION' | { type: 'DISTORTION_BATTLE', stage: number, distortionBuffIds: string[], teamSlots: { charId: string; usePlayerBuild: boolean }[] } | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string };
 
 export type ArtifactSlot = "flower" | "plume" | "sands" | "goblet" | "circlet";
 export type StatType = "hp" | "atk" | "def" | "spd" | "critRate" | "critDamage";
@@ -212,7 +223,8 @@ export interface PlayerProfile {
   hasGoldenPass: boolean;
   bpResetTime?: number;
   bossRushSeason2Claimed?: boolean; // Legacy
-  bossRushSeason3Claimed?: boolean; // Rewards for Boss Rush Season 3 (Update 1.3)
+  bossRushSeason3Claimed?: boolean; // Legacy Season 3 (Update 1.3)
+  bossRushSeason4Claimed?: boolean; // Rewards for Boss Rush Season 4 (Update 1.4)
   lunarAbyssClaimed: number[]; // floors 9-12
   lunarAbyssResetTime: number; 
   achievements: Record<string, boolean>; // id -> claimed
@@ -221,6 +233,14 @@ export interface PlayerProfile {
   gachaPityS?: number;
   gachaPityA?: number;
   gachaGuaranteed?: boolean;
+  distortionProgress?: {
+    level: number;
+    currentExp: number;
+    claimedLevels: number[];
+    weeklyExpGained: number;
+    weeklyFullClearsClaimed: number;
+    lastWeekId: string;
+  };
   storyProgress?: {
     unlockedChapters: string[];
     completedStages: string[]; // IDs

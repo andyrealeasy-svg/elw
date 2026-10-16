@@ -81,10 +81,7 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
   const currentBlessing = blessings[Math.floor(resetTime / 3600000) % blessings.length];
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }}
+    <div 
       className="fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col font-sans text-white overflow-hidden"
     >
       {/* Background Decor */}
@@ -270,39 +267,99 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
                 </div>
 
                 <div className="space-y-6">
-                  <h4 className="text-[10px] text-white/40 font-black uppercase tracking-widest flex items-center gap-2">
-                    <Trophy className="w-3 h-3" /> {selectedFloor.isLunar ? "Награда за цикл" : "Награда за прохождение"}
-                  </h4>
-                  <div className="bg-indigo-600/10 border-2 border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden group hover:border-indigo-500/40 transition-all">
-                    <div className="absolute top-0 right-0 w-48 h-full bg-indigo-500/5 rotate-12 blur-3xl group-hover:bg-indigo-500/10 transition-all pointer-events-none" />
-                    <div className="relative z-10 flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-3xl bg-indigo-950 border border-white/5 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">
-                        {selectedFloor.reward.type === 'crystals' ? '💎' : selectedFloor.reward.type === 'artifacts' ? '🎭' : '⭐️'}
-                      </div>
-                      <div>
-                        <div className="text-2xl font-black tabular-nums tracking-tight">+{selectedFloor.reward.amount} {selectedFloor.reward.type === 'crystals' ? 'Кристаллов' : selectedFloor.reward.type === 'exp' ? 'EXP' : 'Артефактов'}</div>
-                        <div className="text-[10px] text-white/30 uppercase font-black tracking-widest">{selectedFloor.isLunar ? "Обновляется каждый час" : "Единоразовый бонус"}</div>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] text-white/40 font-black uppercase tracking-widest flex items-center gap-2">
+                      <Trophy className="w-3 h-3" /> {selectedFloor.isLunar ? "Награда за цикл" : "Награда за прохождение"}
+                    </h4>
+                    {(selectedFloor.id <= 8 ? selectedFloor.id <= clearedFloor : lunarClaimed.includes(selectedFloor.id)) && (
+                      <span className="text-[9px] font-black uppercase text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        ✓ Награда собрана
+                      </span>
+                    )}
                   </div>
+
+                  {(() => {
+                    const isFloorCleared = selectedFloor.id <= 8 
+                      ? selectedFloor.id <= clearedFloor 
+                      : lunarClaimed.includes(selectedFloor.id);
+
+                    return (
+                      <div className={cn(
+                        "border-2 p-6 rounded-3xl relative overflow-hidden group transition-all",
+                        isFloorCleared 
+                          ? "bg-white/[0.03] border-white/10 opacity-70" 
+                          : "bg-indigo-600/10 border-indigo-500/20 hover:border-indigo-500/40"
+                      )}>
+                        <div className="absolute top-0 right-0 w-48 h-full bg-indigo-500/5 rotate-12 blur-3xl group-hover:bg-indigo-500/10 transition-all pointer-events-none" />
+                        <div className="relative z-10 flex items-center gap-6">
+                          <div className={cn(
+                            "w-16 h-16 rounded-3xl border flex items-center justify-center text-4xl shadow-2xl transition-transform",
+                            isFloorCleared 
+                              ? "bg-white/5 border-white/10 grayscale" 
+                              : "bg-indigo-950 border-white/5 group-hover:scale-110"
+                          )}>
+                            {selectedFloor.reward.type === 'crystals' ? '💎' : selectedFloor.reward.type === 'artifacts' ? '🎭' : '⭐️'}
+                          </div>
+                          <div>
+                            <div className={cn(
+                              "text-2xl font-black tabular-nums tracking-tight",
+                              isFloorCleared && "text-white/40 line-through"
+                            )}>
+                              +{selectedFloor.reward.amount} {selectedFloor.reward.type === 'crystals' ? 'Кристаллов' : selectedFloor.reward.type === 'exp' ? 'EXP' : 'Артефактов'}
+                            </div>
+                            <div className="text-[10px] text-white/30 uppercase font-black tracking-widest mt-0.5">
+                              {isFloorCleared
+                                ? (selectedFloor.isLunar ? "Собрано в текущем цикле (до четверга)" : "Уже получено за первое прохождение")
+                                : (selectedFloor.isLunar ? "Обновляется каждый четверг" : "Единоразовый бонус")}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Fixed Bottom Actions */}
               <div className="p-6 lg:p-10 border-t border-white/5 bg-[#111111]/95 backdrop-blur-2xl fixed lg:relative bottom-0 inset-x-0 z-50">
-                <button 
-                  onClick={() => handleEnterFloor(selectedFloor)}
-                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black uppercase tracking-[0.2em] rounded-3xl transition-all shadow-[0_20px_50px_-10px_rgba(79,70,229,0.5)] active:scale-[0.98] flex items-center justify-center gap-4 relative overflow-hidden group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <Sword className="w-6 h-6 group-hover:rotate-12 transition-transform" /> 
-                  <span className="text-sm border-b-2 border-white/20 group-hover:border-white transition-colors">Начать зачистку</span>
-                </button>
-                <div className="mt-4 flex items-center justify-center gap-4 text-[9px] text-white/20 font-black uppercase tracking-widest">
-                   <div className="flex items-center gap-1"><Zap className="w-3 h-3" /> ATB COST: 0</div>
-                   <div className="w-1 h-1 rounded-full bg-white/10" />
-                   <div className="flex items-center gap-1"><Shield className="w-3 h-3" /> NO LOSS PENALTY</div>
-                </div>
+                {(() => {
+                  const isFloorCleared = selectedFloor.id <= 8 
+                    ? selectedFloor.id <= clearedFloor 
+                    : lunarClaimed.includes(selectedFloor.id);
+
+                  return (
+                    <>
+                      <button 
+                        onClick={() => handleEnterFloor(selectedFloor)}
+                        className={cn(
+                          "w-full py-5 font-black uppercase tracking-[0.2em] rounded-3xl transition-all shadow-[0_20px_50px_-10px_rgba(79,70,229,0.5)] active:scale-[0.98] flex items-center justify-center gap-4 relative overflow-hidden group",
+                          isFloorCleared
+                            ? "bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-500/30 text-white/80"
+                            : "bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white"
+                        )}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        <Sword className="w-6 h-6 group-hover:rotate-12 transition-transform" /> 
+                        <span className="text-sm border-b-2 border-white/20 group-hover:border-white transition-colors">
+                          {isFloorCleared ? "Повторный бой (без наград)" : "Начать зачистку"}
+                        </span>
+                      </button>
+                      <div className="mt-4 flex items-center justify-center gap-4 text-[9px] text-white/20 font-black uppercase tracking-widest">
+                         {isFloorCleared ? (
+                           <span className="text-amber-400/80 font-bold tracking-wider">
+                             НАГРАДЫ УЖЕ СОБРАНЫ В ТЕКУЩЕМ ПЕРИОДЕ
+                           </span>
+                         ) : (
+                           <>
+                             <div className="flex items-center gap-1"><Zap className="w-3 h-3" /> ATB COST: 0</div>
+                             <div className="w-1 h-1 rounded-full bg-white/10" />
+                             <div className="flex items-center gap-1"><Shield className="w-3 h-3" /> NO LOSS PENALTY</div>
+                           </>
+                         )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </motion.div>
           )}
@@ -323,6 +380,6 @@ export const AbyssMenu: React.FC<AbyssMenuProps> = ({ onBack, onEnterFloor, onOp
           <DivingTransition onComplete={() => targetFloor && onEnterFloor(targetFloor)} />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };

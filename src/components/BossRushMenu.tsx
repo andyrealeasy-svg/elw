@@ -13,34 +13,34 @@ interface BossRushMenuProps {
 
 const BOSSES = [
   { 
-    id: 'matrix_inquisitor', 
-    name: 'Матричный Инквизитор', 
-    level: 82, 
-    hpText: '500k HP', 
-    element: 'Physical', 
-    desc: 'Обладает колоссальной броней (1600 ЗАЩ) и фазовым щитом матрицы. Уязвим к чистому пробитию защиты, Сверхпроводимости и меткам Изоляции (под отряд Сайрус + Рейвен + Маэстро).', 
-    icon: Sword, 
-    color: 'text-purple-400' 
-  },
-  { 
-    id: 'primal_bramble', 
-    name: 'Первобытный Терновник', 
-    level: 88, 
-    hpText: '750k HP', 
-    element: 'Dendro', 
-    desc: 'Укрыт барьером древесной коры (поглощает 80% обычного урона). Разрушается детонацией стаков [Шипы] и эффектами Дендро-флоры (под отряд Аэлита + Ива).', 
-    icon: Flame, 
-    color: 'text-emerald-400' 
-  },
-  { 
-    id: 'magma_leviathan', 
-    name: 'Магматический Левиафан', 
-    level: 95, 
-    hpText: '1.1M HP', 
-    element: 'Pyro', 
-    desc: 'Защищен кипящей магматической лавой. Требует непрерывной Заморозки и реакций Океана для сбития защиты в ноль и колоссального урона от ХП (под отряд Кайрен + Нереус + Авелин).', 
-    icon: Mountain, 
+    id: 'tachyon_sentinel', 
+    name: 'Тахионный Часовой', 
+    level: 85, 
+    hpText: '620k HP', 
+    element: 'Cryo', 
+    desc: 'Обладает ускоренным хроно-приводом и смертоносным таймером. Уязвим к отбрасыванию шкалы ATB, Крио-замедлению и контролю времени (под Крону).', 
+    icon: Zap, 
     color: 'text-cyan-400' 
+  },
+  { 
+    id: 'prism_colossus', 
+    name: 'Призматический Титан', 
+    level: 92, 
+    hpText: '880k HP', 
+    element: 'Pyro', 
+    desc: 'Защищен зеркальным барьером и сотрясает поле боя. Разрушается реакциями Отражения, крепкими Гео-щитами и электрической перегрузкой (под отряд Инеффа + Зефир + Аурум + Рикс).', 
+    icon: Flame, 
+    color: 'text-amber-400' 
+  },
+  { 
+    id: 'abyssal_primordial', 
+    name: 'Владыка Топи и Прилива', 
+    level: 98, 
+    hpText: '1.25M HP', 
+    element: 'Hydro', 
+    desc: 'Окутан темной тиной бездны. Требует непрерывных цепных детонаций Бутонизации, расцвета Тёмных Цветов и мощи Океана (под связку Вайрен + Нереус).', 
+    icon: Mountain, 
+    color: 'text-teal-400' 
   }
 ];
 
@@ -88,11 +88,11 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-wider flex items-center gap-2 text-white">
-                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 3
+                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 4
               </h1>
             </div>
             <p className="text-xs text-white/50 font-medium">
-              Соберите 3 специализированных отряда для 3 новых боссов (Обновление 1.3)
+              Соберите 3 специализированных отряда для 3 новых боссов (Обновление 1.4)
             </p>
           </div>
         </div>
@@ -109,20 +109,20 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
       <div className="bg-[#111111]/80 backdrop-blur-sm border-b border-white/5 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between z-10 shrink-0 gap-3">
          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <span className="text-xs sm:text-sm font-bold text-white/80 uppercase tracking-wider">Награды за сезон:</span>
-            {profile.bossRushSeason3Claimed ? (
+            {profile.bossRushSeason4Claimed ? (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                    ✓ Получено
                  </span>
-                 <span className="text-[10px] sm:text-xs text-white/40">Награды за Сезон 3 уже собраны. Базовый опыт и золото.</span>
+                 <span className="text-[10px] sm:text-xs text-white/40">Награды за Сезон 4 уже собраны. Базовый опыт и золото.</span>
                </div>
             ) : (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20 flex items-center gap-1.5">
-                   💎 1200 Гемов
+                   💎 1500 Гемов
                  </span>
-                 <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20 flex items-center gap-1.5">
-                   🛡️ 10x 5★ (Коралловый Прилив / Шёпот Терний)
+                 <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1.5">
+                   🛡️ 10x 5★ (Заросли Тёмного Древа / Зов Дикой Охоты)
                  </span>
                </div>
             )}

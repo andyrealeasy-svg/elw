@@ -70,6 +70,7 @@ export const SPLASH_IMAGES: Record<string, string> = {
   nereus: 'https://i.postimg.cc/1XLqJv4r/file-000000007c9482118f05712d7221d5e4.png',
   iva: 'https://i.postimg.cc/VND4DcwG/file-00000000e2a081f4b66d7d24dad29fa7.png',
   kern: 'https://i.postimg.cc/SQg63pnW/file-0000000024e081f49270fd65155db6cf.png',
+  vairen: 'https://i.postimg.cc/KzNZyM0Q/file-00000000074481f4afd6647193b4f595.png',
   vkusno_collab: 'https://i.postimg.cc/HxPRwDs2/file-00000000bdd081f48ea261edb91ea559.png',
 };
 

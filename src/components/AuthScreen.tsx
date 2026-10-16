@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Lock, ArrowRight, Loader2, Play, Cloud, ShieldCheck } from 'lucide-react';
+import { User, Lock, ArrowRight, Loader2, Play, Cloud, ShieldCheck, KeyRound, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { getBestLegacySave } from '../App';
+import { parseTransferCode, usernameToUUID } from '../lib/transferCode';
+import { PlayerProfile } from '../types';
 
 interface Props {
-  onLogin: (username: string, userId: string) => void;
+  onLogin: (username: string, userId: string, initialProfile?: PlayerProfile) => void;
 }
 
 export default function AuthScreen({ onLogin }: Props) {
   const [stage, setStage] = useState<'LOADING' | 'SPLASH' | 'LOGIN'>('LOADING');
-  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER' | 'TRANSFER'>('LOGIN');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [transferCodeInput, setTransferCodeInput] = useState('');
+  const [transferCodePreview, setTransferCodePreview] = useState<PlayerProfile | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sessionData, setSessionData] = useState<{username: string, id: string} | null>(null);
+  const [sessionData, setSessionData] = useState<{ username: string; id: string } | null>(null);
   const [localUserAvailable, setLocalUserAvailable] = useState<string | null>(null);
   const [detectedLegacyProgress, setDetectedLegacyProgress] = useState<{ count: number; source: string } | null>(null);
 
@@ -30,28 +34,29 @@ export default function AuthScreen({ onLogin }: Props) {
       setDetectedLegacyProgress({ count: charCount, source: legacy.source });
     }
 
-    if (savedUser) {
-      setUsername(savedUser);
-      setLocalUserAvailable(savedUser);
+    if (savedUser && savedUser.trim()) {
+      const clean = savedUser.trim();
+      setUsername(clean);
+      setLocalUserAvailable(clean);
     } else if (legacy && legacy.score > 220) {
       setLocalUserAvailable('Путешественник');
     }
 
-    // Check session in the background
+    // Check active Supabase session in the background
     const checkSession = async () => {
-       try {
-         const { data: { session } } = await supabase.auth.getSession();
-         if (session && session.user) {
-            const savedUsername = localStorage.getItem('ed_user') || 'Игрок';
-            setSessionData({ username: savedUsername, id: session.user.id });
-         }
-       } catch (e) {
-         console.warn('Supabase session check error:', e);
-       }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          const savedUsername = localStorage.getItem('ed_user') || 'Игрок';
+          setSessionData({ username: savedUsername, id: session.user.id });
+        }
+      } catch (e) {
+        console.warn('Supabase session check error:', e);
+      }
     };
     checkSession();
-    
-    // Simulate loading
+
+    // Simulate loading progress
     const interval = setInterval(() => {
       setLoadingProgress(p => {
         if (p >= 100) {
@@ -59,12 +64,22 @@ export default function AuthScreen({ onLogin }: Props) {
           setStage('SPLASH');
           return 100;
         }
-        return p + Math.floor(Math.random() * 10) + 5;
+        return p + Math.floor(Math.random() * 12) + 6;
       });
-    }, 100);
+    }, 70);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Live validate Transfer Code when pasted
+  useEffect(() => {
+    if (transferCodeInput.trim()) {
+      const parsed = parseTransferCode(transferCodeInput.trim());
+      setTransferCodePreview(parsed);
+    } else {
+      setTransferCodePreview(null);
+    }
+  }, [transferCodeInput]);
 
   const handleSwitchAccount = async () => {
     try {
@@ -80,61 +95,130 @@ export default function AuthScreen({ onLogin }: Props) {
   };
 
   const handleEnterGame = () => {
-     if (sessionData) {
-        onLogin(sessionData.username, sessionData.id);
-     } else if (localUserAvailable) {
-        onLogin(localUserAvailable, 'local_user');
-     } else {
-        handleSwitchAccount();
-     }
+    if (sessionData) {
+      onLogin(sessionData.username, sessionData.id);
+    } else if (localUserAvailable) {
+      const uid = usernameToUUID(localUserAvailable);
+      onLogin(localUserAvailable, uid);
+    } else {
+      handleSwitchAccount();
+    }
   };
 
   const handleGuestLogin = () => {
     const nick = username.trim() || localUserAvailable || 'Игрок';
     localStorage.setItem('ed_user', nick);
-    onLogin(nick, 'local_user');
+    const uid = usernameToUUID(nick);
+    onLogin(nick, uid);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    if (!username.trim() || !password.trim()) return;
+  // Deterministic candidate email generator for login matching
+  const getCandidateEmails = (input: string) => {
+    const clean = input.trim();
+    const list: string[] = [];
 
-    setIsSubmitting(true);
-    
-    // Convert any Unicode/Cyrillic username to safe deterministic email string
-    const safeEmailSlug = Array.from(username.toLowerCase())
+    // If input is an email, prioritize directly
+    if (clean.includes('@')) {
+      list.push(clean.toLowerCase());
+    }
+
+    // Deterministic slug (converts Unicode/Cyrillic safe chars)
+    const safeSlug = Array.from(clean.toLowerCase())
       .map(ch => {
         const code = ch.charCodeAt(0);
         if ((code >= 48 && code <= 57) || (code >= 97 && code <= 122)) return ch;
         return `_${code.toString(16)}`;
       })
       .join('');
-    const email = `usr_${safeEmailSlug || 'guest'}@aegis.game`;
+
+    list.push(`usr_${safeSlug || 'guest'}@aegis.game`);
+
+    if (!clean.includes('@')) {
+      list.push(`${clean.toLowerCase()}@aegis.game`);
+    }
+
+    return Array.from(new Set(list));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    // Mode: TRANSFER CODE
+    if (authMode === 'TRANSFER') {
+      if (!transferCodePreview) {
+        setAuthError('Неверный код переноса. Убедитесь, что скопировали весь код, начинающийся с DD-');
+        return;
+      }
+      const nick = username.trim() || 'Путешественник';
+      localStorage.setItem('ed_user', nick);
+      const uid = usernameToUUID(nick);
+      onLogin(nick, uid, transferCodePreview);
+      return;
+    }
+
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanUsername) {
+      setAuthError('Пожалуйста, введите логин.');
+      return;
+    }
+    if (!cleanPassword || cleanPassword.length < 6) {
+      setAuthError('Пароль должен содержать не менее 6 символов.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const candidateEmails = getCandidateEmails(cleanUsername);
 
     try {
       if (authMode === 'LOGIN') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+        let loggedInUser = null;
+        let lastError: any = null;
 
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            throw new Error('Неверный логин или пароль. Если у вас ещё нет аккаунта, переключитесь на «Регистрация» выше.');
+        // Try candidate email formats in order
+        for (const email of candidateEmails) {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password: cleanPassword
+          });
+
+          if (!error && data?.user) {
+            loggedInUser = data.user;
+            break;
+          } else {
+            lastError = error;
           }
-          throw error;
         }
 
-        if (data.user) {
-          localStorage.setItem('ed_user', username);
-          onLogin(username, data.user.id);
+        if (!loggedInUser) {
+          if (lastError?.message?.includes('Invalid login credentials')) {
+            throw new Error('Неверный логин или пароль. Проверьте правильность ввода или переключитесь на «Регистрация» выше.');
+          }
+          throw lastError || new Error('Не удалось войти в аккаунт.');
         }
+
+        localStorage.setItem('ed_user', cleanUsername);
+        onLogin(cleanUsername, loggedInUser.id);
       } else {
         // REGISTER MODE
+        const primaryEmail = candidateEmails[0];
+
+        // Check if username already exists in profiles table
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .ilike('username', cleanUsername)
+          .maybeSingle();
+
+        if (existingProfile) {
+          throw new Error(`Пользователь с никнеймом «${cleanUsername}» уже существует в БД. Если это ваш аккаунт, переключитесь на «Вход».`);
+        }
+
         const { data, error } = await supabase.auth.signUp({
-          email,
-          password
+          email: primaryEmail,
+          password: cleanPassword
         });
 
         if (error) {
@@ -145,13 +229,13 @@ export default function AuthScreen({ onLogin }: Props) {
         }
 
         if (data.user) {
-          localStorage.setItem('ed_user', username);
-          onLogin(username, data.user.id);
+          localStorage.setItem('ed_user', cleanUsername);
+          onLogin(cleanUsername, data.user.id);
         }
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setAuthError(err.message || 'Ошибка авторизации. Вы можете войти локально кнопкой ниже.');
+      setAuthError(err.message || 'Ошибка авторизации. Попробуйте снова.');
     } finally {
       setIsSubmitting(false);
     }
@@ -197,42 +281,33 @@ export default function AuthScreen({ onLogin }: Props) {
              key="splash"
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
-             exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-             transition={{ duration: 0.8 }}
+             exit={{ opacity: 0, scale: 1.05 }}
+             transition={{ duration: 0.4 }}
              className="relative z-10 flex flex-col items-center justify-center w-full p-6 h-full"
            >
               <motion.img 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 1 }}
+                transition={{ delay: 0.1, duration: 0.8 }}
                 src="https://i.postimg.cc/x1S97SKX/file-0000000049e8820a8fec80dc6caf5b59.png" 
                 alt="Logo" 
-                className="w-72 sm:w-96 drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-12" 
+                className="w-72 sm:w-96 drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-8" 
               />
               
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3 w-full max-w-xs">
                 {(sessionData?.username || localUserAvailable) && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="flex flex-col items-center gap-1 mb-1"
+                    transition={{ delay: 0.2 }}
+                    className="flex flex-col items-center gap-1 mb-2"
                   >
                     <div className="text-xs font-mono text-indigo-300/80">
-                      Аккаунт: <span className="text-white font-bold">{sessionData?.username || localUserAvailable}</span>
+                      Игровой аккаунт: <span className="text-white font-bold">{sessionData?.username || localUserAvailable}</span>
                     </div>
-                    <div className="text-[10px] font-mono flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
-                      {sessionData ? (
-                        <>
-                          <Cloud className="w-3 h-3 text-emerald-400" />
-                          <span className="text-emerald-300">Синхронизация с Supabase Cloud</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          <span className="text-amber-300">Локальный профиль</span>
-                        </>
-                      )}
+                    <div className="text-[10px] font-mono flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                      <Cloud className="w-3 h-3 text-indigo-400" />
+                      <span>Синхронизация с Supabase БД</span>
                     </div>
                   </motion.div>
                 )}
@@ -248,26 +323,26 @@ export default function AuthScreen({ onLogin }: Props) {
                 )}
 
                 <motion.button
-                   initial={{ opacity: 0, y: 20 }}
+                   initial={{ opacity: 0, y: 15 }}
                    animate={{ opacity: 1, y: 0 }}
-                   transition={{ delay: 0.6, duration: 0.8 }}
+                   transition={{ delay: 0.3 }}
                    onClick={handleEnterGame}
-                   className="group relative px-12 py-4 bg-transparent overflow-hidden rounded-full cursor-pointer"
+                   className="w-full group relative py-3.5 bg-white/5 border border-indigo-500/30 hover:border-indigo-400/50 hover:bg-indigo-500/10 rounded-full cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
-                   <div className="absolute inset-0 bg-white/5 border border-indigo-500/30 rounded-full backdrop-blur-sm transition-all group-hover:bg-indigo-500/10 group-hover:border-indigo-400/50" />
-                   <div className="relative flex items-center gap-3 text-indigo-100 font-black tracking-[0.2em] uppercase text-sm">
-                      <Play className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" /> Вход в игру
-                   </div>
+                   <Play className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+                   <span className="text-indigo-100 font-bold tracking-[0.15em] uppercase text-xs">
+                     Вход в игру
+                   </span>
                 </motion.button>
 
                 <motion.button
                    initial={{ opacity: 0 }}
                    animate={{ opacity: 1 }}
-                   transition={{ delay: 0.8 }}
+                   transition={{ delay: 0.5 }}
                    onClick={handleSwitchAccount}
-                   className="text-xs text-indigo-300/60 hover:text-indigo-200 transition-colors underline decoration-indigo-500/30 font-mono tracking-wider cursor-pointer"
+                   className="text-xs text-indigo-300/70 hover:text-indigo-200 transition-colors underline decoration-indigo-500/30 font-mono tracking-wider cursor-pointer mt-1"
                 >
-                   Сменить аккаунт / Ввести логин
+                   Сменить аккаунт / Ввести пароль
                 </motion.button>
               </div>
            </motion.div>
@@ -279,23 +354,23 @@ export default function AuthScreen({ onLogin }: Props) {
              initial={{ opacity: 0, scale: 0.95 }}
              animate={{ opacity: 1, scale: 1 }}
              exit={{ opacity: 0, scale: 1.05 }}
-             className="relative z-10 w-full max-w-sm mx-4 p-7 bg-[#0a0a0a]/90 backdrop-blur-xl border border-indigo-500/20 rounded-3xl shadow-2xl shadow-indigo-900/20"
+             className="relative z-10 w-full max-w-sm mx-4 p-6 bg-[#0a0a0a]/95 backdrop-blur-xl border border-indigo-500/20 rounded-3xl shadow-2xl shadow-indigo-900/30"
            >
-              <div className="flex flex-col items-center mb-6">
-                <img src="https://i.postimg.cc/x1S97SKX/file-0000000049e8820a8fec80dc6caf5b59.png" alt="Logo" className="w-40 drop-shadow-lg mb-4" />
-                <div className="flex items-center gap-2 text-indigo-300 font-mono text-[11px] uppercase tracking-widest">
-                  <Cloud className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Облако Supabase</span>
+              <div className="flex flex-col items-center mb-5">
+                <img src="https://i.postimg.cc/x1S97SKX/file-0000000049e8820a8fec80dc6caf5b59.png" alt="Logo" className="w-36 drop-shadow-lg mb-3" />
+                <div className="flex items-center gap-2 text-indigo-300 font-mono text-[10px] uppercase tracking-widest">
+                  <Cloud className="w-3 h-3 text-indigo-400" />
+                  <span>Облако Supabase • Вход в аккаунт</span>
                 </div>
               </div>
 
-              {/* Tabs: Login / Register */}
-              <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-5 font-mono text-xs">
+              {/* Tabs: Login / Register / Transfer Code */}
+              <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-4 font-mono text-xs">
                 <button
                   type="button"
                   onClick={() => { setAuthMode('LOGIN'); setAuthError(null); }}
                   className={cn(
-                    "flex-1 py-2 rounded-xl font-bold transition-all",
+                    "flex-1 py-1.5 rounded-xl font-bold transition-all text-xs",
                     authMode === 'LOGIN' 
                       ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
                       : "text-white/50 hover:text-white/80"
@@ -307,7 +382,7 @@ export default function AuthScreen({ onLogin }: Props) {
                   type="button"
                   onClick={() => { setAuthMode('REGISTER'); setAuthError(null); }}
                   className={cn(
-                    "flex-1 py-2 rounded-xl font-bold transition-all",
+                    "flex-1 py-1.5 rounded-xl font-bold transition-all text-xs",
                     authMode === 'REGISTER' 
                       ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
                       : "text-white/50 hover:text-white/80"
@@ -315,76 +390,152 @@ export default function AuthScreen({ onLogin }: Props) {
                 >
                   Регистрация
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('TRANSFER'); setAuthError(null); }}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1",
+                    authMode === 'TRANSFER' 
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
+                      : "text-white/50 hover:text-white/80"
+                  )}
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Код</span>
+                </button>
               </div>
 
               {detectedLegacyProgress && (
-                <div className="mb-4 text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 font-mono flex items-start gap-2">
+                <div className="mb-4 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 font-mono flex items-start gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    Обнаружен локальный прогресс ({detectedLegacyProgress.count} перс.). Он сохранится в ваш аккаунт при входе!
+                    Обнаружен локальный прогресс ({detectedLegacyProgress.count} перс.). Он сохранится в ваш аккаунт!
                   </div>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                 <div className="space-y-1">
-                   <label className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/60 ml-1">Логин (Никнейм)</label>
-                   <div className="relative">
-                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/40" />
-                     <input 
-                       type="text" 
-                       value={username}
-                       onChange={(e) => setUsername(e.target.value)}
-                       placeholder="Введите логин..."
-                       required
-                       className="w-full bg-white/5 border border-indigo-500/20 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-all font-mono"
-                     />
-                   </div>
-                 </div>
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                 {authMode !== 'TRANSFER' ? (
+                   <>
+                     <div className="space-y-1">
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/70 ml-1">
+                         Логин (Никнейм)
+                       </label>
+                       <div className="relative">
+                         <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/40" />
+                         <input 
+                           type="text" 
+                           value={username}
+                           onChange={(e) => setUsername(e.target.value)}
+                           placeholder="Введите никнейм..."
+                           required
+                           autoCapitalize="none"
+                           autoCorrect="off"
+                           spellCheck={false}
+                           className="w-full bg-white/5 border border-indigo-500/20 rounded-2xl py-2.5 pl-10 pr-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-all font-mono"
+                         />
+                       </div>
+                     </div>
 
-                 <div className="space-y-1">
-                   <label className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/60 ml-1">Пароль</label>
-                   <div className="relative">
-                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/40" />
-                     <input 
-                       type="password" 
-                       value={password}
-                       onChange={(e) => setPassword(e.target.value)}
-                       placeholder="От 6 символов..."
-                       required
-                       minLength={6}
-                       className="w-full bg-white/5 border border-indigo-500/20 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-all font-mono"
-                     />
+                     <div className="space-y-1">
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/70 ml-1">
+                         Пароль
+                       </label>
+                       <div className="relative">
+                         <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/40" />
+                         <input 
+                           type="password" 
+                           value={password}
+                           onChange={(e) => setPassword(e.target.value)}
+                           placeholder="От 6 символов..."
+                           required
+                           minLength={6}
+                           autoCapitalize="none"
+                           autoCorrect="off"
+                           spellCheck={false}
+                           className="w-full bg-white/5 border border-indigo-500/20 rounded-2xl py-2.5 pl-10 pr-3 text-xs text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-all font-mono"
+                         />
+                       </div>
+                     </div>
+                   </>
+                 ) : (
+                   /* TRANSFER CODE TAB */
+                   <div className="space-y-3">
+                     <div className="space-y-1">
+                       <label className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/70 ml-1 flex items-center gap-1">
+                         <KeyRound className="w-3 h-3 text-indigo-400" />
+                         <span>Код переноса с другого устройства</span>
+                       </label>
+                       <textarea 
+                         value={transferCodeInput}
+                         onChange={(e) => setTransferCodeInput(e.target.value)}
+                         placeholder="Вставьте код (DD-...)"
+                         rows={3}
+                         required
+                         autoCapitalize="none"
+                         autoCorrect="off"
+                         spellCheck={false}
+                         className="w-full bg-white/5 border border-indigo-500/20 rounded-2xl p-2.5 text-[11px] text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-all font-mono resize-none leading-relaxed"
+                       />
+                     </div>
+
+                     {transferCodePreview && (
+                       <div className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5 font-mono">
+                         <div className="font-bold flex items-center gap-1 mb-1">
+                           <Check className="w-3.5 h-3.5 text-emerald-400" />
+                           <span>Сохранение распознано!</span>
+                         </div>
+                         <div className="grid grid-cols-2 gap-1 text-white/70">
+                           <div>Героев: <span className="text-white font-bold">{Object.keys(transferCodePreview.roster || {}).length}</span></div>
+                           <div>Кристаллов: <span className="text-indigo-300 font-bold">{transferCodePreview.gems} 💎</span></div>
+                           <div>Золота: <span className="text-amber-300 font-bold">{transferCodePreview.gold.toLocaleString()} 🪙</span></div>
+                           <div>Бездна: <span className="text-white font-bold">{transferCodePreview.clearedAbyssFloor || 0} эт.</span></div>
+                         </div>
+                       </div>
+                     )}
+
+                     <div className="text-[10px] text-white/40 font-mono leading-tight">
+                       💡 Вы можете получить этот код на старом устройстве в профиле (иконка в левом верхнем углу хаба → «Скопировать код»).
+                     </div>
                    </div>
-                 </div>
+                 )}
                  
                  {authError && (
-                    <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3 font-mono leading-relaxed">
+                    <div className="text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5 font-mono leading-relaxed">
                       {authError}
                     </div>
                  )}
 
                  <button 
                    type="submit"
-                   disabled={isSubmitting}
-                   className="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/50 disabled:text-white/40 text-white font-bold uppercase tracking-wider py-3.5 rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] cursor-pointer"
+                   disabled={isSubmitting || (authMode === 'TRANSFER' && !transferCodePreview)}
+                   className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-900/40 disabled:text-white/30 text-white font-bold uppercase tracking-wider py-3 rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(79,70,229,0.3)] cursor-pointer"
                  >
                    {isSubmitting ? (
                      <><Loader2 className="w-4 h-4 animate-spin" /> Обработка...</>
                    ) : authMode === 'LOGIN' ? (
                      <>Войти в аккаунт <ArrowRight className="w-4 h-4" /></>
-                   ) : (
+                   ) : authMode === 'REGISTER' ? (
                      <>Создать аккаунт в Облаке <ArrowRight className="w-4 h-4" /></>
+                   ) : (
+                     <>Восстановить прогресс <ArrowRight className="w-4 h-4" /></>
                    )}
                  </button>
 
-                 <div className="pt-2 border-t border-white/5">
+                 <div className="pt-2 border-t border-white/5 flex gap-2">
                    <button 
                      type="button"
                      onClick={handleGuestLogin}
-                     className="w-full bg-white/5 hover:bg-white/10 text-indigo-200/80 hover:text-indigo-100 font-medium py-2.5 rounded-2xl text-[11px] transition-all border border-white/10 active:scale-95 flex items-center justify-center gap-2 cursor-pointer font-mono"
+                     className="flex-1 bg-white/5 hover:bg-white/10 text-indigo-200/80 hover:text-indigo-100 font-medium py-2 rounded-2xl text-[10px] transition-all border border-white/10 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer font-mono"
                    >
-                     🚀 Войти как Гость (Локально)
+                     🚀 Войти как Гость
+                   </button>
+                   <button 
+                     type="button"
+                     onClick={() => setStage('SPLASH')}
+                     className="px-3 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white font-medium py-2 rounded-2xl text-[10px] transition-all border border-white/10 active:scale-95 flex items-center justify-center cursor-pointer font-mono"
+                   >
+                     Назад
                    </button>
                  </div>
               </form>

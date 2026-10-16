@@ -11,7 +11,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "1. Начало пути",
       description: "Обычная дорога становится первым признаком того, что мир ведёт себя неправильно.",
       type: 'DIALOGUE',
-      level: 10,
+      level: 1,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Если карта не врёт, до следующего поселения осталось около часа." },
         { speaker: "Копро", charId: "kopro", text: "Ты это уже говорил." },
@@ -41,7 +41,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "2. Знак на дереве",
       description: "На дереве найден знак, который Копро уже видел. Решить последовательность символов и открыть проход.",
       type: 'RIDDLE',
-      level: 10,
+      level: 1,
       riddle: {
         question: "Четыре камня показывают: круг → треугольник → круг → ?. Какая форма должна продолжить зашифрованный цикл?",
         options: ["Квадрат", "Треугольник", "Круг", "Звезда"],
@@ -56,7 +56,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Обычная встреча с врагами заканчивается совсем не обычно. Победить всех противников.",
       type: 'BATTLE',
       enemyBlueprintIds: ['gaia', 'blaze'],
-      level: 12,
+      level: 1,
       reward: { gems: 60, gold: 8000, exp: 3000 }
     },
     {
@@ -64,7 +64,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "4. След, которого нет",
       description: "Исчезновение врага оставляет больше вопросов, чем ответов. Осмотреть место исчезновения.",
       type: 'DIALOGUE',
-      level: 12,
+      level: 1,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Вот здесь он стоял." },
         { speaker: "Мо Янь", charId: "moyan", text: "Здесь ничего нет." },
@@ -87,7 +87,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "5. Незнакомец",
       description: "Таинственный Ашер предупреждает вас не идти дальше. Завершить разговор с Ашером.",
       type: 'DIALOGUE',
-      level: 13,
+      level: 2,
       dialogue: [
         { speaker: "Ашер", charId: "asher", text: "Вы заблудились?" },
         { speaker: "Мо Янь", charId: "moyan", text: "Нет. А что?" },
@@ -117,7 +117,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Неизвестные существа появляются после встречи с Ашером. Победить противников.",
       type: 'BATTLE',
       enemyBlueprintIds: ['blaze', 'viper'],
-      level: 14,
+      level: 2,
       reward: { gems: 70, gold: 10000, exp: 4000 }
     },
     {
@@ -125,7 +125,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "7. Граница",
       description: "Древняя дверь показывает каждому свою версию надписи. Решить загадку двери.",
       type: 'RIDDLE',
-      level: 14,
+      level: 2,
       riddle: {
         question: "На двери четыре символа и фрагменты древнего завета. Выберите правильный порядок активации рун:",
         options: [
@@ -144,7 +144,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "8. Сбой",
       description: "Вы оказываетесь в другом месте, не сделав ни шага. Завершить сцену сбоя.",
       type: 'DIALOGUE',
-      level: 15,
+      level: 3,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Копро." },
         { speaker: "Копро", charId: "kopro", text: "Да." },
@@ -171,7 +171,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "9. Нейрон",
       description: "Странный незнакомец знает о вас больше, чем должен. Завершить первую встречу с Нейроном.",
       type: 'DIALOGUE',
-      level: 15,
+      level: 3,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Мы знакомы?" },
         { speaker: "Нейрон", charId: "neuron", text: "Нет." },
@@ -205,7 +205,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Нейрон предсказывает появление врагов. Победить противников.",
       type: 'BATTLE',
       enemyBlueprintIds: ['glacier', 'blaze', 'viper'],
-      level: 16,
+      level: 3,
       reward: { gems: 90, gold: 12000, exp: 6000 }
     },
     {
@@ -213,7 +213,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "11. Старая станция",
       description: "Копро узнаёт место, в котором никогда не был. Осмотреть станцию.",
       type: 'DIALOGUE',
-      level: 17,
+      level: 4,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Странно." },
         { speaker: "Мо Янь", charId: "moyan", text: "Что теперь?" },
@@ -238,7 +238,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "12. Дом",
       description: "В старом доме находится невозможная фотография. Решить загадку расположения предметов.",
       type: 'RIDDLE',
-      level: 17,
+      level: 4,
       riddle: {
         question: "Расположите найденные артефакты в временном порядке хронологии, чтобы открыть потайной ящик:",
         options: [
@@ -257,7 +257,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "13. Не открывай",
       description: "Сельва знает, что означает найденная фотография. Поговорить с Сельвой.",
       type: 'DIALOGUE',
-      level: 18,
+      level: 4,
       dialogue: [
         { speaker: "Сельва", charId: "selva", text: "Закройте ящик." },
         { speaker: "Мо Янь", charId: "moyan", text: "Почему?" },
@@ -288,7 +288,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "14. Сельва",
       description: "Впервые звучит история о предыдущих версиях мира. Узнать о трёх предыдущих перезапусках.",
       type: 'DIALOGUE',
-      level: 18,
+      level: 5,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Сколько раз это уже случалось?" },
         { speaker: "Сельва", charId: "selva", text: "Трижды." },
@@ -325,7 +325,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Сам мир начинает сопротивляться вашему присутствию. Защитить Сельву и пережить стирание.",
       type: 'BATTLE',
       enemyBlueprintIds: ['blaze', 'gaia', 'aegis'],
-      level: 19,
+      level: 5,
       reward: { gems: 120, gold: 18000, exp: 8000 }
     },
     {
@@ -333,7 +333,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "16. Человек, которого нет",
       description: "Вы находите имя того, кого никогда не существовало. Завершить разговор.",
       type: 'DIALOGUE',
-      level: 20,
+      level: 5,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Здесь написано имя." },
         { speaker: "Мо Янь", charId: "moyan", text: "Кто это?" },
@@ -363,7 +363,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Ашер больше не предупреждает вас — он нападает. Выдержать бой.",
       type: 'BATTLE',
       enemyBlueprintIds: ['blaze', 'asher'],
-      level: 21,
+      level: 6,
       reward: { gems: 130, gold: 20000, exp: 9000 }
     },
     {
@@ -373,7 +373,7 @@ export const CHAPTER_1: StoryChapter = {
       type: 'BATTLE',
       isBoss: true,
       enemyBlueprintIds: ['blaze', 'asher', 'aegis'],
-      level: 22,
+      level: 6,
       reward: { gems: 200, gold: 30000, exp: 12000 }
     },
     {
@@ -381,7 +381,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "19. Правда Ашера",
       description: "Ашер раскрывает, кем были предыдущие версии героев. Узнать правду.",
       type: 'DIALOGUE',
-      level: 22,
+      level: 6,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Ты проиграл." },
         { speaker: "Ашер", charId: "asher", text: "Да." },
@@ -422,7 +422,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Дорога к центру превращается в борьбу с самой реальностью. Пробиться к центру.",
       type: 'BATTLE',
       enemyBlueprintIds: ['viper', 'glacier', 'blaze'],
-      level: 23,
+      level: 7,
       reward: { gems: 150, gold: 22000, exp: 10000 }
     },
     {
@@ -430,7 +430,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "21. Комната",
       description: "Устройство требует отсутствующий пятый элемент. Решить загадку устройства.",
       type: 'RIDDLE',
-      level: 24,
+      level: 7,
       riddle: {
         question: "Четыре символа соответствуют персонажам. Введите порядок их появления в этой версии бытия:",
         options: [
@@ -449,7 +449,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "22. Пятый",
       description: "Нейрон впервые обращается не к героям, а к наблюдателю. Завершить мета-сцену.",
       type: 'DIALOGUE',
-      level: 24,
+      level: 7,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Что значит «пятый наблюдатель»?" },
         { speaker: "Нейрон", charId: "neuron", text: "Это значит, что здесь не хватает одного человека." },
@@ -482,7 +482,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Разные версии мира начинают существовать одновременно. Пережить разлом.",
       type: 'BATTLE',
       enemyBlueprintIds: ['blaze', 'glacier', 'gaia', 'viper'],
-      level: 25,
+      level: 7,
       reward: { gems: 180, gold: 25000, exp: 12000 }
     },
     {
@@ -490,7 +490,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "24. Последняя версия",
       description: "Все главные герои узнают цену перезапуска. Понять, что именно пытается исправить мир.",
       type: 'DIALOGUE',
-      level: 25,
+      level: 8,
       dialogue: [
         { speaker: "Ашер", charId: "asher", text: "Я предупреждал вас." },
         { speaker: "Копро", charId: "kopro", text: "А мы не послушали." },
@@ -530,7 +530,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Герои пробиваются к источнику аномалии. Победить стражей нулевой точки.",
       type: 'BATTLE',
       enemyBlueprintIds: ['blaze', 'aegis', 'neuron'],
-      level: 26,
+      level: 8,
       reward: { gems: 200, gold: 30000, exp: 15000 }
     },
     {
@@ -538,7 +538,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "26. Последний выбор",
       description: "Решение сохранить текущую версию мира становится необратимым. Принять каноническое решение.",
       type: 'DIALOGUE',
-      level: 26,
+      level: 8,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Сейчас можно остановиться." },
         { speaker: "Мо Янь", charId: "moyan", text: "Что произойдёт?" },
@@ -571,7 +571,7 @@ export const CHAPTER_1: StoryChapter = {
       type: 'BATTLE',
       isBoss: true,
       enemyBlueprintIds: ['neuron', 'blaze', 'selva'],
-      level: 28,
+      level: 9,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Мы сделали это?" },
         { speaker: "Копро", charId: "kopro", text: "Кажется." },
@@ -604,7 +604,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "28. После сохранения",
       description: "После финала 27 действия герои замечают, что сохранённый мир начал удерживать детали из несовместимых версий.",
       type: 'DIALOGUE',
-      level: 29,
+      level: 9,
       dialogue: [
         { speaker: "Мо Янь", charId: "moyan", text: "Здесь слишком тихо. И я не про обычную тишину после боя — раньше после таких вещей мир хотя бы пытался сделать вид, что всё вернулось на свои места." },
         { speaker: "Копро", charId: "kopro", text: "Согласен. Обычно появляется хотя бы новая трещина, исчезает дорога или Нейрон говорит что-нибудь настолько загадочное, что потом приходится обсуждать это полчаса." },
@@ -624,7 +624,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "29. Трещины, которые остались",
       description: "Сохранённые фрагменты реальности впервые начинают вести себя агрессивно.",
       type: 'BATTLE',
-      level: 29,
+      level: 9,
       enemyBlueprintIds: ['glacier', 'pulse'],
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Мне совершенно не нравится тот факт, что теперь даже побеждённые противники могут решить, что у них есть право на вторую попытку." },
@@ -641,7 +641,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "30. Сад без прошлого",
       description: "Нейрон сообщает об искажении, которое не разрушается, а будто ждёт чьего-то появления.",
       type: 'DIALOGUE',
-      level: 30,
+      level: 10,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Есть ещё одно место." },
         { speaker: "Копро", charId: "kopro", text: "Ты специально говоришь это только после того, как мы закончили с предыдущей проблемой?" },
@@ -660,7 +660,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "31. Память дороги",
       description: "Дорога к саду меняется в зависимости от того, какие воспоминания герои признают настоящими.",
       type: 'RIDDLE',
-      level: 30,
+      level: 10,
       riddle: {
         question: "Вы видите каменную, лесную и затопленную версии одной дороги. Какую версию выбрать, чтобы собрать единый маршрут?",
         options: ["Только каменную", "Общие ориентиры из всех версий", "Самую новую версию", "Остаться на месте"],
@@ -681,7 +681,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "32. Авелин",
       description: "В центре сада герои встречают девушку, которая словно ждала не их самих, а момента, когда к ней вообще станет возможно прийти.",
       type: 'DIALOGUE',
-      level: 30,
+      level: 10,
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Вы всё-таки пришли." },
         { speaker: "Копро", charId: "kopro", text: "Вот это прозвучало так, будто мы опоздали на очень важную встречу." },
@@ -701,7 +701,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "33. Сад помнит",
       description: "Сельва замечает, что растения реагируют на Авелин так, будто узнают её.",
       type: 'DIALOGUE',
-      level: 31,
+      level: 11,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Это сейчас произошло само?" },
         { speaker: "Авелин", charId: "aveline", text: "Я ничего не делала." },
@@ -720,7 +720,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "34. Те, кто помнит её",
       description: "Неизвестные сущности атакуют сад и обращаются к Авелин так, будто знают её прошлое.",
       type: 'BATTLE',
-      level: 31,
+      level: 11,
       enemyBlueprintIds: ['echo', 'void_prism'],
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Они говорили так, будто обращались не ко мне." },
@@ -738,7 +738,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "35. Нейрон впервые сомневается",
       description: "Нейрон видит Авелин и признаёт, что не ожидал её существования.",
       type: 'DIALOGUE',
-      level: 31,
+      level: 11,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Я не думал, что ты действительно существуешь." },
         { speaker: "Авелин", charId: "aveline", text: "Очень приятно познакомиться." },
@@ -758,7 +758,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "36. Святилище без имени",
       description: "В глубине сада герои находят запечатанное святилище, которое реагирует на Авелин.",
       type: 'RIDDLE',
-      level: 32,
+      level: 12,
       riddle: {
         question: "Как открыть внутреннюю часть сада, если механизмы реагируют на Авелин?",
         options: ["Сломать их", "Пройти мимо с Авелин", "Использовать магию Мо Яня", "Ждать"],
@@ -782,7 +782,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "37. Первая надпись",
       description: "Внутри святилища обнаруживается повреждённое изображение и текст, почти раскрывающий прошлое Авелин.",
       type: 'DIALOGUE',
-      level: 32,
+      level: 12,
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Я знаю эту позу." },
         { speaker: "Копро", charId: "kopro", text: "Ты была здесь?" },
@@ -805,7 +805,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "38. Кайрен",
       description: "Сад внезапно покрывается инеем. Так происходит первое появление Кайрена.",
       type: 'DIALOGUE',
-      level: 32,
+      level: 12,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Я очень надеюсь, что это не новая стадия сада." },
         { speaker: "Кайрен", charId: "kairen", text: "Я тоже." },
@@ -825,7 +825,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "39. Лёд и лепестки",
       description: "Появление Кайрена вызывает новую волну нестабильных существ, пытающихся разделить сад на две несовместимые версии.",
       type: 'BATTLE',
-      level: 33,
+      level: 13,
       enemyBlueprintIds: ['glacier', 'void_prism'],
       dialogue: [
         { speaker: "Кайрен", charId: "kairen", text: "Они появились сразу после того, как я вошёл." },
@@ -844,7 +844,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "40. Две памяти",
       description: "Авелин и Кайрен понимают, что помнят одно и то же место совершенно по-разному.",
       type: 'DIALOGUE',
-      level: 33,
+      level: 13,
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Здесь была площадь." },
         { speaker: "Кайрен", charId: "kairen", text: "Здесь был мост." },
@@ -869,7 +869,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "41. Те, кого не помнят",
       description: "Сельва подтверждает, что не помнит Авелин и Кайрена ни в одной из известных ей версий.",
       type: 'DIALOGUE',
-      level: 34,
+      level: 13,
       dialogue: [
         { speaker: "Сельва", charId: "selva", text: "Я помню много вариантов этого мира. Больше, чем хотела бы помнить. Но вас двоих среди них не было." },
         { speaker: "Копро", charId: "kopro", text: "Значит, Нейрон был прав." },
@@ -888,7 +888,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "42. Город двух историй",
       description: "Герои проходят через пространство, где две версии города существуют одновременно.",
       type: 'RIDDLE',
-      level: 34,
+      level: 13,
       riddle: {
         question: "Как пройти через город, в котором существуют и цветущая, и разрушенная версии одновременно?",
         options: ["Только через цветущую", "Только через разрушенную", "Переключаться между ними", "Обойти город"],
@@ -910,7 +910,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "43. Стражи несовместимости",
       description: "На пути появляются сущности, охраняющие границу между двумя историями.",
       type: 'BATTLE',
-      level: 35,
+      level: 14,
       enemyBlueprintIds: ['glacier', 'blaze'],
       dialogue: [
         { speaker: "Кайрен", charId: "kairen", text: "Они защищали не территорию." },
@@ -927,7 +927,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "44. Отметка снаружи",
       description: "Нейрон находит знак, который связан не с миром, а с тем, что наблюдает за ним.",
       type: 'DIALOGUE',
-      level: 35,
+      level: 14,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Эта отметка была здесь раньше." },
         { speaker: "Мо Янь", charId: "moyan", text: "В какой версии?" },
@@ -949,7 +949,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "45. Голос первого цветения",
       description: "Авелин слышит неизвестный голос, который почти раскрывает её прошлое, но сама решает остановить контакт.",
       type: 'DIALOGUE',
-      level: 36,
+      level: 14,
       dialogue: [
         { speaker: "Голос", charId: "neuron", text: "Ты снова пришла туда, где всё начиналось." },
         { speaker: "Голос", charId: "neuron", text: "Ты всегда возвращала то, что мир оставлял умирать." },
@@ -969,7 +969,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Две версии пространства окончательно сталкиваются и создают воплощение несовместимости.",
       type: 'BATTLE',
       isBoss: true,
-      level: 36,
+      level: 15,
       enemyBlueprintIds: ['boss_magister_rush'],
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Мы его уничтожили?" },
@@ -987,7 +987,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "47. Право остаться",
       description: "Ашер возвращается и задаёт вопрос, который становится центральным для новой версии мира: кто имеет право существовать?",
       type: 'DIALOGUE',
-      level: 37,
+      level: 15,
       dialogue: [
         { speaker: "Ашер", charId: "asher", text: "Если мир больше не выбирает одну версию, рано или поздно появятся те, кого прежний мир не допустил." },
         { speaker: "Мо Янь", charId: "moyan", text: "И что ты предлагаешь? Снова начать выбирать, кому можно существовать?" },
@@ -1006,7 +1006,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "48. Попытка стирания",
       description: "Новые сущности пытаются удалить Авелин и Кайрена как противоречия сохранённого мира.",
       type: 'BATTLE',
-      level: 37,
+      level: 15,
       enemyBlueprintIds: ['void_prism', 'glacier'],
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Теперь это уже официально. Мир буквально пытался удалить вас во время разговора." },
@@ -1022,7 +1022,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "49. Легенда без имени",
       description: "Сельва находит древнюю легенду о той, кто возвращает миру возможность расти.",
       type: 'DIALOGUE',
-      level: 38,
+      level: 16,
       dialogue: [
         { speaker: "Сельва", charId: "selva", text: "В старых записях есть не имя и не биография. Только образ." },
         { speaker: "Авелин", charId: "aveline", text: "Какой?" },
@@ -1043,7 +1043,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "50. Непрожитый день",
       description: "Герои достигают места, где сохранилась целая история, хотя она была стёрта до того, как кто-либо успел её прожить.",
       type: 'RIDDLE',
-      level: 38,
+      level: 16,
       riddle: {
         question: "Вы нашли следы шагов, незаконченные разговоры и нетронутые предметы. Чем является это место?",
         options: ["Обычным заброшенным городом", "Днем, который стерли до того, как его прожили", "Иллюзией", "Ловушкой"],
@@ -1065,7 +1065,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "51. Граница в обе стороны",
       description: "Нейрон объясняет, что после сохранения мира граница между историями и наблюдателем перестала быть односторонней.",
       type: 'DIALOGUE',
-      level: 39,
+      level: 16,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Раньше граница работала в одну сторону. Мы видели только то, что происходило внутри мира. А он видел нас." },
         { speaker: "Копро", charId: "kopro", text: "И теперь?" },
@@ -1085,7 +1085,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "52. Она приходит сама",
       description: "Граница начинает двигаться к героям сама. На этот раз неизвестное не требует, чтобы они шли к нему — оно уже приходит.",
       type: 'DIALOGUE',
-      level: 40,
+      level: 17,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Есть ещё одна проблема." },
         { speaker: "Копро", charId: "kopro", text: "Конечно есть." },
@@ -1111,7 +1111,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "53. Отклик с той стороны",
       description: "После событий 52 действия неизвестное впервые отвечает на присутствие героев. Понять, что пересекает границу и почему оно реагирует на Авелин.",
       type: 'DIALOGUE',
-      level: 40,
+      level: 17,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Это не разлом и не остаток прежней версии. Разлом соединяет две точки внутри истории. Сейчас что-то за пределами истории пытается создать точку внутри неё." },
         { speaker: "Мо Янь", charId: "moyan", text: "То есть оно не входит силой. Сначала оно проверяет, может ли мир вообще принять его присутствие." },
@@ -1128,7 +1128,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "54. Порог",
       description: "Пространство одновременно существует внутри мира и за его пределами. Стабилизировать Порог, не закрывая и не раскрывая его полностью.",
       type: 'RIDDLE',
-      level: 40,
+      level: 17,
       riddle: {
         question: "Как стабилизировать Порог между лесом и пространством без неба и расстояния, не закрывая и не раскрывая его полностью?",
         options: [
@@ -1153,7 +1153,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "55. Лист, которого не было",
       description: "Растительный фрагмент не принадлежит ни одной известной версии мира. Определить, почему он реагирует на Авелин и окружающую природу.",
       type: 'RIDDLE',
-      level: 40,
+      level: 18,
       riddle: {
         question: "Чем является прозрачный фрагмент с необычным листом, не засыхающим, не горящим и не замерзающим?",
         options: [
@@ -1178,7 +1178,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "56. Ива",
       description: "Герои встречают Иву, которая уже исследовала появление незавершённых форм жизни. Узнать, что Ива знает о растительных следах.",
       type: 'DIALOGUE',
-      level: 41,
+      level: 18,
       dialogue: [
         { speaker: "Ива", charId: "iva", text: "Я искала именно этот след. Растения начали появляться там, где не было ни семян, ни почвы. Некоторые повторяют формы растений, которых я никогда не видела. Сначала я считала это мутацией, но теперь понимаю, что причина глубже." },
         { speaker: "Авелин", charId: "aveline", text: "Ты знаешь, откуда они берутся?" },
@@ -1196,7 +1196,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "57. Дерево до семени",
       description: "Из незавершённых форм жизни рождаются существа, защищающие новый росток. Защитить ростки и не позволить им стать источником нестабильности.",
       type: 'BATTLE',
-      level: 41,
+      level: 18,
       enemyBlueprintIds: ['gaia', 'blaze', 'glitch_void'],
       dialogue: [
         { speaker: "Ива", charId: "iva", text: "Не уничтожайте все ростки. Они не враги. Они пытаются завершить собственное появление, а существа вокруг воспринимают их как угрозу." },
@@ -1213,7 +1213,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "58. Течение без реки",
       description: "Через лес начинает двигаться вода, хотя реки рядом нет. Проследить источник течения.",
       type: 'DIALOGUE',
-      level: 41,
+      level: 19,
       dialogue: [
         { speaker: "Кайрен", charId: "kairen", text: "Поток идёт против уклона. Вода ведёт себя так, будто направление определяется не гравитацией, а памятью." },
         { speaker: "Ива", charId: "iva", text: "Растения вдоль него раскрываются раньше, чем вода подходит. Они будто заранее знают, что течение должно появиться." },
@@ -1228,7 +1228,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "59. Нереус",
       description: "Герои встречают Нереуса, связанного с водой и цветами, существующими сразу в нескольких состояниях. Понять, кто такой Нереус и почему вода привела его к Порогу.",
       type: 'DIALOGUE',
-      level: 42,
+      level: 19,
       dialogue: [
         { speaker: "Нереус", charId: "nereus", text: "Я искал место, где вода перестала помнить, откуда течёт. Я не ожидал найти здесь столько чужих историй." },
         { speaker: "Мо Янь", charId: "moyan", text: "Ты пришёл из другой версии мира?" },
@@ -1249,7 +1249,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "60. Сад прилива",
       description: "Временный сад возникает там, где вода соприкасается с незавершёнными растениями. Провести воду через сад и стабилизировать пространство.",
       type: 'RIDDLE',
-      level: 42,
+      level: 19,
       riddle: {
         question: "Как провести воду через Сад прилива, не уничтожив ни одну из существующих историй?",
         options: [
@@ -1275,7 +1275,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "61. Камень, который держит",
       description: "Кайрен замечает, что плита удерживает несколько состояний пространства одновременно. Исследовать назначение знака.",
       type: 'DIALOGUE',
-      level: 42,
+      level: 19,
       dialogue: [
         { speaker: "Кайрен", charId: "kairen", text: "Это не просто камень. Он фиксирует границу так же, как я фиксирую разрывы, но принцип другой." },
         { speaker: "Мо Янь", charId: "moyan", text: "Какой?" },
@@ -1294,7 +1294,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "62. Керн",
       description: "Из-под плиты появляется Керн, оказавшийся в замкнутом фрагменте пространства. Освободить Керна и выяснить, почему он оказался под границей.",
       type: 'DIALOGUE',
-      level: 43,
+      level: 20,
       dialogue: [
         { speaker: "Керн", charId: "kern", text: "Наконец-то. Я уже начал подозревать, что эта дверь решила оставить меня внутри навсегда." },
         { speaker: "Копро", charId: "kopro", text: "А я начал подозревать, что сегодня нам просто не дадут спокойно пройти мимо очередного невозможного человека." },
@@ -1313,7 +1313,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "63. Предел тяжести",
       description: "Освобождение Керна нарушает защиту узла, и пространство начинает обрушиваться. Вывести группу до полного схлопывания.",
       type: 'BATTLE',
-      level: 43,
+      level: 20,
       enemyBlueprintIds: ['ice_monolith', 'superconducting_colossus'],
       dialogue: [
         { speaker: "Керн", charId: "kern", text: "Не стойте под камнями. Хотя, судя по происходящему, сейчас это правило звучит слишком оптимистично." },
@@ -1329,7 +1329,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "64. Три ответа",
       description: "Символ реагирует на Дендро, Гидро и Гео, связывая троих новых героев с одной системой. Понять назначение трёх реакций.",
       type: 'DIALOGUE',
-      level: 43,
+      level: 20,
       dialogue: [
         { speaker: "Нереус", charId: "nereus", text: "Когда вода касается знака, он не открывается. Он вспоминает форму." },
         { speaker: "Ива", charId: "iva", text: "Дендро делает то же самое с живой частью. Ростки появляются вокруг символа, будто система восстанавливает утраченную структуру." },
@@ -1347,7 +1347,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "65. Память о будущем",
       description: "Герои находят пространство, где записано событие, которое ещё не произошло. Понять, что именно внешняя сторона пытается предопределить.",
       type: 'RIDDLE',
-      level: 44,
+      level: 21,
       riddle: {
         question: "Почему среди изображений будущих сцен последний рисунок остался абсолютно пустым?",
         options: [
@@ -1376,7 +1376,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "66. Тот, кто смотрит",
       description: "Нейрон раскрывает больше о природе наблюдателя, но отказывается давать ему окончательное имя. Получить информацию о внешней стороне.",
       type: 'DIALOGUE',
-      level: 44,
+      level: 21,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Я должен сказать то, чего раньше не говорил. Я не уверен, что «наблюдатель» — это существо." },
         { speaker: "Копро", charId: "kopro", text: "Это, конечно, сильно упрощает ситуацию." },
@@ -1395,7 +1395,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "67. Голос без слов",
       description: "Авелин сталкивается с воздействием внешней стороны, которое выглядит как множество готовых решений её судьбы. Не позволить внешнему воздействию определить её решение.",
       type: 'DIALOGUE',
-      level: 44,
+      level: 21,
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Я ничего не слышу. И именно поэтому мне страшнее, чем тогда, в саду." },
         { speaker: "Ива", charId: "iva", text: "Что ты чувствуешь?" },
@@ -1412,7 +1412,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "68. Ответ",
       description: "После отказа Авелин внешняя сторона создаёт воплощения нескольких возможных версий героев. Не позволить копиям слиться в одну окончательную форму.",
       type: 'BATTLE',
-      level: 45,
+      level: 22,
       enemyBlueprintIds: ['glitch_slime', 'glitch_robot', 'void_prism'],
       dialogue: [
         { speaker: "Ива", charId: "iva", text: "Они не настоящие. Но это не значит, что их можно просто уничтожить." },
@@ -1428,7 +1428,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "69. Место, которого нет",
       description: "Герои приходят к координатам, где нет локации, но сохранилась её память. Создать проход в отсутствующее место.",
       type: 'RIDDLE',
-      level: 45,
+      level: 22,
       riddle: {
         question: "Из каких трёх основ собирается проход в отсутствующее место?",
         options: [
@@ -1459,7 +1459,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "70. Комната по ту сторону",
       description: "Герои входят в пространство, из которого когда-то наблюдался мир. Исследовать внешнее пространство.",
       type: 'DIALOGUE',
-      level: 45,
+      level: 22,
       dialogue: [
         { speaker: "Нейрон", charId: "neuron", text: "Теперь я понимаю. Это не место, из которого он наблюдал. Это место, которое существовало только как возможность наблюдения." },
         { speaker: "Копро", charId: "kopro", text: "То есть у нас буквально нет нормальной комнаты, потому что она никогда не должна была быть частью истории." },
@@ -1477,7 +1477,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "71. Первый контакт",
       description: "Внешняя сторона впервые обращается к героям напрямую. Выслушать сообщение и понять намерение.",
       type: 'DIALOGUE',
-      level: 46,
+      level: 23,
       dialogue: [
         { speaker: "Неизвестный голос", charId: "neuron", text: "Вы называете меня наблюдателем, потому что вам необходимо дать имя тому, чего вы не понимаете. Но я не наблюдал вас из любопытства. Я удерживал варианты, которые вы сами не могли увидеть." },
         { speaker: "Мо Янь", charId: "moyan", text: "Если ты удерживал их, почему они исчезали?" },
@@ -1498,7 +1498,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "72. Правило возвращается",
       description: "Внешняя сторона запускает старый механизм выбора единственной версии мира. Остановить восстановление прежнего правила.",
       type: 'BATTLE',
-      level: 46,
+      level: 23,
       enemyBlueprintIds: ['void_prism', 'shadow_drone', 'glitch_robot'],
       dialogue: [
         { speaker: "Ива", charId: "iva", text: "Механизм не пытается уничтожить нас напрямую. Он возвращает мир к состоянию, в котором лишние варианты исчезают сами." },
@@ -1515,7 +1515,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "73. Сад без границы",
       description: "Авелин создаёт пространство, в котором несколько несовместимых форм могут сосуществовать. Удержать новый сад до завершения стабилизации.",
       type: 'DIALOGUE',
-      level: 46,
+      level: 23,
       dialogue: [
         { speaker: "Авелин", charId: "aveline", text: "Я наконец поняла, что пытался сказать голос. Он считал, что мне нужно вернуть прошлое, чтобы исправить мир." },
         { speaker: "Ива", charId: "iva", text: "А ты поняла иначе." },
@@ -1533,7 +1533,7 @@ export const CHAPTER_1: StoryChapter = {
       description: "Внешний механизм делает последнюю попытку собрать одну окончательную версию мира. Разрушить ядро механизма, сохранив новую промежуточную зону.",
       type: 'BATTLE',
       isBoss: true,
-      level: 47,
+      level: 24,
       enemyBlueprintIds: ['superconducting_colossus', 'void_prism', 'frost_giant'],
       dialogue: [
         { speaker: "Неизвестный голос", charId: "neuron", text: "Вы называете это свободой выбора, но не понимаете последствий. Без единой истории мир перестанет быть целым." },
@@ -1551,7 +1551,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "75. После разлома",
       description: "Герои возвращаются в мир и обнаруживают, что победа не закрыла границу. Оценить последствия разрушения внешнего узла.",
       type: 'DIALOGUE',
-      level: 47,
+      level: 24,
       dialogue: [
         { speaker: "Копро", charId: "kopro", text: "Пожалуйста, скажите, что всё закончилось. Хотя бы на сегодня." },
         { speaker: "Нейрон", charId: "neuron", text: "Нет." },
@@ -1574,7 +1574,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "76. Тот, кто идёт",
       description: "Из прозрачной границы выходит неполная сущность, собранная из фрагментов разных мест. Не дать сущности завершить материализацию и одновременно не повторить старую ошибку стирания.",
       type: 'BATTLE',
-      level: 48,
+      level: 24,
       enemyBlueprintIds: ['glitch_void', 'frost_giant', 'shadow_drone'],
       dialogue: [
         { speaker: "Кайрен", charId: "kairen", text: "Она не похожа на того, кто наблюдал за нами. Скорее, это то, что наблюдатель пытался оставить здесь." },
@@ -1594,7 +1594,7 @@ export const CHAPTER_1: StoryChapter = {
       name: "77. Новая сторона",
       description: "Финал 1.3. Граница перестаёт быть простой стеной между двумя сторонами и становится новым фундаментом мира. Открывается новая сторона и следующая история.",
       type: 'DIALOGUE',
-      level: 48,
+      level: 25,
       dialogue: [
         { speaker: "Ива", charId: "iva", text: "Раньше я думала, что жизнь возвращается, когда погибшее снова начинает расти. Теперь понимаю, что иногда жизнь — это то, что появляется впервые." },
         { speaker: "Нереус", charId: "nereus", text: "Вода тоже изменилась. Она больше не повторяет старые пути. Она прокладывает новые." },
@@ -1613,6 +1613,353 @@ export const CHAPTER_1: StoryChapter = {
         { speaker: "Авелин", charId: "aveline", text: "Там не другая версия нашего мира." },
         { speaker: "Керн", charId: "kern", text: "Что тогда?" },
         { speaker: "Авелин", charId: "aveline", text: "Другая история." }
+      ],
+      reward: { gems: 500, gold: 100000, exp: 50000 }
+    },
+    {
+      id: "s1_78",
+      name: "78. Новая граница",
+      description: "Герои переступают через прозрачную грань и попадают в пространство Разрушенного Переплёта.",
+      type: 'DIALOGUE',
+      level: 25,
+      dialogue: [
+        { speaker: "Мо Янь", charId: "moyan", text: "Шаг за грань ощущается иначе... Будто сам воздух сложен из листов бумаги." },
+        { speaker: "Копро", charId: "kopro", text: "И звучит всё так, будто кто-то перелистывает огромный фолиант." },
+        { speaker: "Нейрон", charId: "neuron", text: "Осторожнее. Мы находимся в самом истоке фиксации историй — в Библиотеке Переплёта." },
+        { speaker: "Авелин", charId: "aveline", text: "Смотрите, здесь висят черновики прошлых миров. Они не стираются, но и не живут." },
+        { speaker: "Кайрен", charId: "kairen", text: "Мы должны пройти сквозь них, не разрушив баланс." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_79",
+      name: "79. Шорох страниц",
+      description: "Шуршащие стены архива начинают реагировать на приход чужаков.",
+      type: 'DIALOGUE',
+      level: 25,
+      dialogue: [
+        { speaker: "Ива", charId: "iva", text: "Растения здесь сплетены из высохших чернил." },
+        { speaker: "Нереус", charId: "nereus", text: "А река состоит из чистого текста... Если присмотреться, можно прочесть свои мысли." },
+        { speaker: "Керн", charId: "kern", text: "Не смотри слишком долго. Текст пытается переписать то, что ты думаешь." },
+        { speaker: "Копро", charId: "kopro", text: "Отлично, теперь мой собственный разум сомневается, что я — это я." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Идём дальше. Впереди виден центральный архив." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_80",
+      name: "80. Фрагменты текста",
+      description: "Автоматические защитники Библиотеки пытаются удалить героев как лишнюю запись.",
+      type: 'BATTLE',
+      level: 25,
+      enemyBlueprintIds: ['glitch_void', 'shadow_drone'],
+      dialogue: [
+        { speaker: "Кайрен", charId: "kairen", text: "Фантомные стражи! Они состоят из неоконченных предложений." },
+        { speaker: "Авелин", charId: "aveline", text: "Покажем им, что нашу историю не так легко стереть!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_81",
+      name: "81. Тень Архива",
+      description: "После боя герои находят древний каталог, в котором записаны судьбы.",
+      type: 'DIALOGUE',
+      level: 26,
+      dialogue: [
+        { speaker: "Нейрон", charId: "neuron", text: "Смотрите. В этом каталоге каждый наш шаг задокументирован заранее." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Даже то, что я скажу прямо сейчас?" },
+        { speaker: "Нейрон", charId: "neuron", text: "«Даже то, что я скажу прямо сейчас?» — ровно эта фраза записана здесь." },
+        { speaker: "Копро", charId: "kopro", text: "Тогда скажи что-нибудь глупое, чтобы сломать сценарий!" },
+        { speaker: "Мо Янь", charId: "moyan", text: "Банан!" },
+        { speaker: "Нейрон", charId: "neuron", text: "Хм... Страница пожелтела. Сценарий дал сбой." },
+        { speaker: "Авелин", charId: "aveline", text: "Ха-ха, похоже, живая воля сильнее древнего текста!" }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_82",
+      name: "82. Загадка Первого тома",
+      description: "Чтобы открыть двери в глубины Архива, необходимо разгадать шифр Наблюдателя.",
+      type: 'RIDDLE',
+      level: 26,
+      riddle: {
+        question: "Слово, которое написано, нельзя изменить. Слово, которое сказано, можно забыть. Что связывает прошлую страницу и будущую?",
+        options: ["Переплёт", "Чернила", "Намерение", "Стирайка"],
+        correctIndex: 2,
+        hint: "Не инструмент материального мира, а то, с чего начинается любое решение."
+      },
+      reward: { gems: 50, gold: 5000 }
+    },
+    {
+      id: "s1_83",
+      name: "83. Библиотекарь",
+      description: "Древний конструкт-архивариус преграждает путь к залу редких рукописей.",
+      type: 'BATTLE',
+      level: 26,
+      enemyBlueprintIds: ['void_prism', 'glitch_robot'],
+      dialogue: [
+        { speaker: "Керн", charId: "kern", text: "Этот конструкт питается энергией нереализованных вариантов!" },
+        { speaker: "Ива", charId: "iva", text: "Защитим наше настоящее от его иллюзий!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_84",
+      name: "84. Разорванные нити",
+      description: "За Библиотекарем открывается Зал Переплёта, где нити судеб переплетены в узлы.",
+      type: 'DIALOGUE',
+      level: 27,
+      dialogue: [
+        { speaker: "Нереус", charId: "nereus", text: "Здесь тысячи нитей... Каждая ведёт к отдельному миру." },
+        { speaker: "Кайрен", charId: "kairen", text: "И многие из них разорваны." },
+        { speaker: "Авелин", charId: "aveline", text: "Кто-то пытался вырезать фрагменты истории." },
+        { speaker: "Нейрон", charId: "neuron", text: "Это следы Наблюдателя. Он вычищал то, что считал аномалией." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Мы свяжем их заново, если потребуется." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_85",
+      name: "85. Печать Забытых",
+      description: "Герои наталкиваются на заблокированную секцию с надписью «Удалено».",
+      type: 'DIALOGUE',
+      level: 27,
+      dialogue: [
+        { speaker: "Копро", charId: "kopro", text: "Тут буквально висит огромный замок с надписью «ОПАСНО: СТЁРТАЯ РЕАЛЬНОСТЬ»." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Естественно, нам нужно именно туда." },
+        { speaker: "Ива", charId: "iva", text: "Чувствую, за этой дверью ещё дышат забытые духи." },
+        { speaker: "Керн", charId: "kern", text: "Я сорву печать. Будьте готовы к бою." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_86",
+      name: "86. Голоса прошлого",
+      description: "Из сорванной печати вырываются тени удалённых сущностей.",
+      type: 'BATTLE',
+      level: 27,
+      enemyBlueprintIds: ['frost_giant', 'shadow_drone'],
+      dialogue: [
+        { speaker: "Авелин", charId: "aveline", text: "Они не злые! Они просто дезориентированы тем, что их вычеркнули!" },
+        { speaker: "Нереус", charId: "nereus", text: "Успокоим их энергией нашего мира!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_87",
+      name: "87. Стеклянный зал",
+      description: "Секция удалённых реальностей ведёт в величественный Стеклянный зал Зеркал.",
+      type: 'DIALOGUE',
+      level: 28,
+      dialogue: [
+        { speaker: "Кайрен", charId: "kairen", text: "Каждое зеркало показывает отражение того, кем мы могли бы стать." },
+        { speaker: "Мо Янь", charId: "moyan", text: "В моём зеркале я лежу на диване и ничего не делаю..." },
+        { speaker: "Копро", charId: "kopro", text: "И это идеальный мир!" },
+        { speaker: "Нейрон", charId: "neuron", text: "Не поддавайтесь иллюзиям. Это ловушка статической реальности." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_88",
+      name: "88. Загадка Отражений",
+      description: "Зеркальный лабиринт требует найти истинное отражение собственного выбора.",
+      type: 'RIDDLE',
+      level: 28,
+      riddle: {
+        question: "Если три зеркала отражают прошлое, настоящее и будущее, какое из них показывает правду?",
+        options: ["Зеркало прошлого", "Зеркало настоящего", "Зеркало будущего", "Все три в совокупности"],
+        correctIndex: 3,
+        hint: "Ни один момент времени не существует в изоляции от остальных."
+      },
+      reward: { gems: 50, gold: 5000 }
+    },
+    {
+      id: "s1_89",
+      name: "89. Охрана Зала",
+      description: "Зеркальные стражи атакуют отряд, копируя их форму.",
+      type: 'BATTLE',
+      level: 28,
+      enemyBlueprintIds: ['void_prism', 'glitch_void'],
+      dialogue: [
+        { speaker: "Авелин", charId: "aveline", text: "Они пытаются подражать нашим движениям!" },
+        { speaker: "Мо Янь", charId: "moyan", text: "Тогда действуем нестандартно!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_90",
+      name: "90. Страж Истоков",
+      description: "Герои приближаются к центральному реактору Архива.",
+      type: 'DIALOGUE',
+      level: 29,
+      dialogue: [
+        { speaker: "Нейрон", charId: "neuron", text: "Мы у цели. Это Ядро Черновиков." },
+        { speaker: "Ива", charId: "iva", text: "Отсюда исходит вся энергия переписывания эпох." },
+        { speaker: "Керн", charId: "kern", text: "Кто-то удерживает реактор в нестабильном состоянии." },
+        { speaker: "Нереус", charId: "nereus", text: "Нам придётся пройти через систему безопасности." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_91",
+      name: "91. Крах переплёта",
+      description: "Ядро начинает перегреваться, угрожая стереть весь 1-й регион.",
+      type: 'DIALOGUE',
+      level: 29,
+      dialogue: [
+        { speaker: "Копро", charId: "kopro", text: "Почему всё всегда начинает взрываться, когда мы приходим?!" },
+        { speaker: "Мо Янь", charId: "moyan", text: "Потому что мы — катализатор изменений!" },
+        { speaker: "Кайрен", charId: "kairen", text: "Защитим ядра стабилизации!" }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_92",
+      name: "92. Фантомы Бездны",
+      description: "Сбой реактора порождает сгустки чистого цифрового хаоса.",
+      type: 'BATTLE',
+      level: 29,
+      enemyBlueprintIds: ['glitch_slime', 'superconducting_colossus'],
+      dialogue: [
+        { speaker: "Авелин", charId: "aveline", text: "Сдерживаем волну до полной стабилизации!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_93",
+      name: "93. Архитектор Переплёта",
+      description: "Тень Архитектора появляется перед отрядом.",
+      type: 'DIALOGUE',
+      level: 30,
+      dialogue: [
+        { speaker: "Архитектор", charId: "neuron", text: "Вы зашли слишком далеко, смертные. Вы пытаетесь сохранить мир, который по всем законам логики должен быть переписан." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Логика — это лишь инструмент, а не смысл существования!" },
+        { speaker: "Авелин", charId: "aveline", text: "Наш мир живой, со всеми его ошибками и незавершёнными страницами!" },
+        { speaker: "Архитектор", charId: "neuron", text: "Тогда докажите, что ваша ошибка имеет право на жизнь." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_94",
+      name: "94. Загадка Стеклянных Сфер",
+      description: "Архитектор предлагает испытание разума перед финальным решением.",
+      type: 'RIDDLE',
+      level: 30,
+      riddle: {
+        question: "В одной сфере — порядок без жизни. В другой — жизнь без порядка. Что нужно добавить, чтобы создать истинный мир?",
+        options: ["Больше порядка", "Больше хаоса", "Связующую нить выбора", "Ничего"],
+        correctIndex: 2,
+        hint: "Только осознанный выбор связывает противоположности."
+      },
+      reward: { gems: 50, gold: 5000 }
+    },
+    {
+      id: "s1_95",
+      name: "95. Разлом Реальности",
+      description: "Первая фаза сражения с проекцией Архитектора.",
+      type: 'BATTLE',
+      level: 30,
+      enemyBlueprintIds: ['void_prism', 'frost_giant', 'shadow_drone'],
+      dialogue: [
+        { speaker: "Керн", charId: "kern", text: "Он использует проекции старых катаклизмов!" },
+        { speaker: "Нереус", charId: "nereus", text: "Держим строй!" }
+      ],
+      reward: { gems: 100, gold: 8000, exp: 4000 }
+    },
+    {
+      id: "s1_96",
+      name: "96. Тень Создателя",
+      description: "Архитектор раскрывает истинную причину создания аномалии.",
+      type: 'DIALOGUE',
+      level: 31,
+      dialogue: [
+        { speaker: "Архитектор", charId: "neuron", text: "Я создавал этот мир как идеальный черновик... Но вы принесли в него непредсказуемость." },
+        { speaker: "Ива", charId: "iva", text: "Непредсказуемость и есть жизнь! Без неё мир — просто застывший кристалл." },
+        { speaker: "Кайрен", charId: "kairen", text: "Мы не дадим тебе вернуть всё к первому слову." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_97",
+      name: "97. Восстановление Черновика",
+      description: "Герои перенаправляют потоки энергии, чтобы зафиксировать текущее состояние мира.",
+      type: 'DIALOGUE',
+      level: 31,
+      dialogue: [
+        { speaker: "Нейрон", charId: "neuron", text: "Я переписываю код ядра! Если удержим позицию, черновик станет константой!" },
+        { speaker: "Копро", charId: "kopro", text: "Давай быстрее, а то у меня ноги отнимаются от этого напряжения!" },
+        { speaker: "Мо Янь", charId: "moyan", text: "Мы прикроем тебя, Нейрон!" }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_98",
+      name: "98. Последний Код",
+      description: "Завершающая подготовка к финальной битве за судьбу региона.",
+      type: 'DIALOGUE',
+      level: 31,
+      dialogue: [
+        { speaker: "Авелин", charId: "aveline", text: "Все страницы встали на свои места. Осталось лишь одно нерешённое уравнение — сам Архитектор." },
+        { speaker: "Мо Янь", charId: "moyan", text: "Время поставить точку в этой главе!" }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_99",
+      name: "99. Загадка Нового Мира",
+      description: "Последний замок на вратах к ядру аномалии.",
+      type: 'RIDDLE',
+      level: 32,
+      riddle: {
+        question: "Что остаётся, когда прочитана последняя страница книги?",
+        options: ["Пустота", "Память и новое начало", "Конец всего", "Забытье"],
+        correctIndex: 1,
+        hint: "Завершение одного — это зачин для следующего."
+      },
+      reward: { gems: 50, gold: 5000 }
+    },
+    {
+      id: "s1_100",
+      name: "100. Ядро Аномалии",
+      description: "Грандиозная битва с аватаром Разрушенного Переплёта.",
+      type: 'BATTLE',
+      isBoss: true,
+      level: 32,
+      enemyBlueprintIds: ['superconducting_colossus', 'void_prism', 'glitch_void'],
+      dialogue: [
+        { speaker: "Архитектор", charId: "neuron", text: "Примите неизбежное! Ваш мир перевернёт страницу!" },
+        { speaker: "Мо Янь", charId: "moyan", text: "Мы сами напишем продолжение!" },
+        { speaker: "Авелин", charId: "aveline", text: "Вперёд, за наше будущее!" }
+      ],
+      reward: { gems: 300, gold: 50000, exp: 25000 }
+    },
+    {
+      id: "s1_101",
+      name: "101. После Шторма",
+      description: "Абсолютная тишина воцаряется в залах Архива после падения аватара.",
+      type: 'DIALOGUE',
+      level: 32,
+      dialogue: [
+        { speaker: "Копро", charId: "kopro", text: "Мы... выжили? Ничего не взрывается?" },
+        { speaker: "Нейрон", charId: "neuron", text: "Ядро стабилизировалось. Записи больше не угрожают быть стёртыми." },
+        { speaker: "Ива", charId: "iva", text: "Смотрите, на полках распускаются настоящие цветы... не из чернил, а настоящие!" },
+        { speaker: "Нереус", charId: "nereus", text: "Река снова течёт чистой водой." },
+        { speaker: "Керн", charId: "kern", text: "Фундамент мира выдержал. Мы отстояли наше право на существование." }
+      ],
+      reward: { gems: 50, gold: 5000, exp: 3000 }
+    },
+    {
+      id: "s1_102",
+      name: "102. Финал Главы I: Новая Страница",
+      description: "Финал 1.4. Герои возвращаются в свой мир, готовясь к новым горизонтам.",
+      type: 'DIALOGUE',
+      level: 32,
+      dialogue: [
+        { speaker: "Авелин", charId: "aveline", text: "Глава завершена. Но история только начинается." },
+        { speaker: "Кайрен", charId: "kairen", text: "Впереди нас ждут другие регионы и новые тайны." },
+        { speaker: "Мо Янь", charId: "moyan", text: "И что бы ни случилось, мы пройдём этот путь вместе." },
+        { speaker: "Копро", charId: "kopro", text: "Главное — поешьте перед следующим путешествием!" },
+        { speaker: "Нейрон", charId: "neuron", text: "Открывается горизонт Главы II..." }
       ],
       reward: { gems: 500, gold: 100000, exp: 50000 }
     }

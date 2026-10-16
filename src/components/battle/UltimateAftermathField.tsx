@@ -19,14 +19,15 @@ export const UltimateAftermathField: React.FC<{
         {aftermath && (
           <motion.div
             key={`aftermath-action-${aftermath.charId}-${aftermath.timestamp}`}
-            initial={{ opacity: 0, scale: 0.92 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.08, filter: 'blur(4px)' }}
+            exit={{ opacity: 0, scale: 1.05 }}
             transition={{ 
-              duration: 0.25,
+              duration: 0.2,
               ease: "easeOut"
             }}
-            className="absolute inset-0"
+            style={{ transform: 'translateZ(0)', willChange: 'opacity, transform' }}
+            className="absolute inset-0 pointer-events-none"
           >
             
             {/* 1. VOLTA: High-Voltage Lightning Ground Burst & Plasma Shockwave */}
@@ -368,6 +369,219 @@ export const UltimateAftermathField: React.FC<{
                 >☀️</motion.div>
               </div>
             )}
+
+            {/* 11. VAIREN: Ancient Forest Heart & Dark Thorn Vines Action Burst */}
+            {aftermath.charId === 'vairen' && (
+              <div className="absolute inset-0 pointer-events-none">
+                <motion.div 
+                  initial={{ scale: 0.25, opacity: 1 }}
+                  animate={{ scale: 2.3, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[520px] h-36 rounded-full border-4 border-emerald-400 shadow-[0_0_40px_rgba(16,185,129,1)]"
+                />
+                <motion.div 
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.65, delay: 0.1, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-96 h-28 rounded-full border-2 border-teal-300 shadow-[0_0_30px_rgba(52,211,153,1)]"
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-emerald-950/50 via-teal-900/30 to-transparent" />
+                <motion.div 
+                  initial={{ scale: 0.4, rotate: 0, opacity: 0.95 }}
+                  animate={{ scale: 1.7, rotate: 60, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 w-64 h-64 pointer-events-none"
+                >
+                  <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                    <circle cx="100" cy="100" r="75" stroke="#34d399" strokeWidth="3" strokeDasharray="10 5" />
+                    <polygon points="100,20 120,80 180,100 120,120 100,180 80,120 20,100 80,80" stroke="#059669" strokeWidth="3.5" fill="rgba(16,185,129,0.3)" />
+                  </svg>
+                </motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -90, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-10 left-1/3 text-2xl text-emerald-300 drop-shadow-[0_0_14px_rgba(16,185,129,1)]"
+                >🥀</motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -95, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, delay: 0.05, ease: "easeOut" }}
+                  className="absolute bottom-10 right-1/3 text-2xl text-teal-300 drop-shadow-[0_0_14px_rgba(45,212,191,1)]"
+                >🌿</motion.div>
+              </div>
+            )}
+
+            {/* 12. FENRIS: Great Hunt Wild Beast Shockwave & Amber-Emerald Claws */}
+            {aftermath.charId === 'fenris' && (
+              <div className="absolute inset-0">
+                <motion.div 
+                  initial={{ scale: 0.3, opacity: 1 }}
+                  animate={{ scale: 2.3, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[520px] h-36 rounded-full border-4 border-amber-400 shadow-[0_0_35px_rgba(245,158,11,1)]"
+                />
+                <motion.div 
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.65, delay: 0.1, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-96 h-28 rounded-full border-2 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,1)]"
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-amber-950/45 via-emerald-950/25 to-transparent" />
+                <motion.div 
+                  initial={{ scale: 0.4, opacity: 0.95 }}
+                  animate={{ scale: 1.6, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-64 pointer-events-none"
+                >
+                  <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                    <path d="M 40 30 L 70 170" stroke="#f59e0b" strokeWidth="8" strokeLinecap="round" />
+                    <path d="M 85 20 L 115 180" stroke="#fbbf24" strokeWidth="9" strokeLinecap="round" />
+                    <path d="M 130 30 L 160 170" stroke="#f59e0b" strokeWidth="8" strokeLinecap="round" />
+                  </svg>
+                </motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -90, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-10 left-1/3 text-3xl text-amber-300 drop-shadow-[0_0_14px_rgba(245,158,11,1)]"
+                >🐺</motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -95, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, delay: 0.05, ease: "easeOut" }}
+                  className="absolute bottom-10 right-1/3 text-2xl text-emerald-300 drop-shadow-[0_0_14px_rgba(16,185,129,1)]"
+                >🏹</motion.div>
+              </div>
+            )}
+
+            {/* 13. KRONA: Temporal Chrono Dial Shockwave & Ice Mist */}
+            {aftermath.charId === 'krona' && (
+              <div className="absolute inset-0">
+                <motion.div 
+                  initial={{ scale: 0.3, opacity: 1 }}
+                  animate={{ scale: 2.3, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[520px] h-36 rounded-full border-4 border-cyan-400 shadow-[0_0_35px_rgba(34,211,238,1)]"
+                />
+                <motion.div 
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.65, delay: 0.1, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-96 h-28 rounded-full border-2 border-sky-300 shadow-[0_0_25px_rgba(125,211,252,1)]"
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-cyan-950/45 via-blue-950/25 to-transparent" />
+                <motion.div 
+                  initial={{ scale: 0.4, rotate: 0, opacity: 0.95 }}
+                  animate={{ scale: 1.6, rotate: 180, opacity: 0 }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-64 pointer-events-none"
+                >
+                  <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                    <circle cx="100" cy="100" r="80" stroke="#38bdf8" strokeWidth="2.5" strokeDasharray="16 8" />
+                    <line x1="100" y1="100" x2="100" y2="25" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="100" y1="100" x2="160" y2="100" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                </motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -90, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-10 left-1/3 text-3xl text-cyan-300 drop-shadow-[0_0_14px_rgba(34,211,238,1)]"
+                >⏳</motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -95, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, delay: 0.05, ease: "easeOut" }}
+                  className="absolute bottom-10 right-1/3 text-2xl text-sky-200 drop-shadow-[0_0_14px_rgba(186,230,253,1)]"
+                >❄️</motion.div>
+              </div>
+            )}
+
+            {/* 14. AURUM: Tectonic Gold Ingot Shockwave & Gilded Coin Surge */}
+            {aftermath.charId === 'aurum' && (
+              <div className="absolute inset-0">
+                <motion.div 
+                  initial={{ scale: 0.3, opacity: 1 }}
+                  animate={{ scale: 2.3, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[520px] h-36 rounded-full border-4 border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,1)]"
+                />
+                <motion.div 
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.65, delay: 0.1, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-96 h-28 rounded-full border-2 border-amber-300 shadow-[0_0_25px_rgba(252,211,77,1)]"
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-yellow-950/45 via-amber-950/25 to-transparent" />
+                <motion.div 
+                  initial={{ scale: 0.4, opacity: 0.95 }}
+                  animate={{ scale: 1.6, opacity: 0 }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-64 pointer-events-none"
+                >
+                  <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                    <polygon points="100,15 165,40 190,100 165,160 100,185 35,160 10,100 35,40" stroke="#fbbf24" strokeWidth="3" fill="rgba(245,158,11,0.2)" />
+                    <circle cx="100" cy="100" r="50" stroke="#fde047" strokeWidth="2" strokeDasharray="8 4" />
+                  </svg>
+                </motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -90, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-10 left-1/3 text-3xl text-yellow-300 drop-shadow-[0_0_14px_rgba(250,204,21,1)]"
+                >🪙</motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -95, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, delay: 0.05, ease: "easeOut" }}
+                  className="absolute bottom-10 right-1/3 text-2xl text-amber-200 drop-shadow-[0_0_14px_rgba(251,191,36,1)]"
+                >👑</motion.div>
+              </div>
+            )}
+
+            {/* 15. ZEPHYR: Prismatic Mirror Cyclone & Electro Arcs */}
+            {aftermath.charId === 'zephyr' && (
+              <div className="absolute inset-0">
+                <motion.div 
+                  initial={{ scale: 0.3, opacity: 1 }}
+                  animate={{ scale: 2.3, opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[520px] h-36 rounded-full border-4 border-purple-500 shadow-[0_0_35px_rgba(168,85,247,1)]"
+                />
+                <motion.div 
+                  initial={{ scale: 0.2, opacity: 0.9 }}
+                  animate={{ scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.65, delay: 0.1, ease: "easeOut" }}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-96 h-28 rounded-full border-2 border-fuchsia-400 shadow-[0_0_25px_rgba(232,121,249,1)]"
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-purple-950/45 via-fuchsia-950/25 to-transparent" />
+                <motion.div 
+                  initial={{ scale: 0.4, rotate: 0, opacity: 0.95 }}
+                  animate={{ scale: 1.6, rotate: 120, opacity: 0 }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 w-64 h-64 pointer-events-none"
+                >
+                  <svg viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                    <polygon points="100,15 175,100 100,185 25,100" stroke="#c084fc" strokeWidth="2.5" fill="rgba(147,51,234,0.18)" />
+                    <circle cx="100" cy="100" r="70" stroke="#e879f9" strokeWidth="2" strokeDasharray="10 5" />
+                  </svg>
+                </motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -90, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, ease: "easeOut" }}
+                  className="absolute bottom-10 left-1/3 text-3xl text-purple-300 drop-shadow-[0_0_14px_rgba(168,85,247,1)]"
+                >⚡</motion.div>
+                <motion.div 
+                  initial={{ y: 15, scale: 0.5, opacity: 1 }}
+                  animate={{ y: -95, scale: 1.8, opacity: 0 }}
+                  transition={{ duration: 0.75, delay: 0.05, ease: "easeOut" }}
+                  className="absolute bottom-10 right-1/3 text-2xl text-fuchsia-200 drop-shadow-[0_0_14px_rgba(240,171,252,1)]"
+                >🪞</motion.div>
+              </div>
+            )}
+
 
           </motion.div>
         )}

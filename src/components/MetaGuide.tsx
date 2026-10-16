@@ -133,6 +133,7 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
 
   const tierList: Record<string, TierEntry[]> = {
     'T0': [
+      { id: 'vairen' },
       { id: 'nereus' },
       { id: 'iva' },
       { id: 'aveline' },
@@ -216,6 +217,18 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   };
 
   const recommendedTeams: TeamComposition[] = [
+    {
+      name: "Дикая Охота и Цветущий Мрак",
+      description: "Ультимативный Бутонизационный отряд. Вайрен генерирует и раскрывает Цветы мрака от реакций с Гидро, Фенрис обрушивает серии совместных звериных атак, Нереус активирует «Сад вечного моря» для непрерывных спавнов Морских цветов, а Авелин баффает урон и исцеляет отряд.",
+      members: ['fenris', 'vairen', 'nereus', 'aveline'],
+      tags: ["BLOOM", "DENDRO", "HYDRO", "T0", "BEAST"]
+    },
+    {
+      name: "Великое Цветение Прилива",
+      description: "Высокоскоростная Бутонизационная синергия. Вайрен поглощает Бутонизацию в Цветы мрака для запуска «Великого цветения», Нереус и Авелин создают непрерывный океанский прилив, а Эхо фантомно копирует атаки союзников и ускоряет отряд.",
+      members: ['vairen', 'nereus', 'aveline', 'echo'],
+      tags: ["BLOOM", "DENDRO", "HYDRO", "SPEED", "T0"]
+    },
     {
       name: "Ледяной Прилив",
       description: "Ультимативный Freeze-отряд с двойным Крио и Гидро резонансом. Кайрен и Фарина сковывают врагов «Белым полем» и Снежной пылью, Авелин усиливает элементальный урон и заливает Лепестки, а Нереус раскрывает «Сад вечного моря», нанося непрерывный урон Морскими цветами от каждой атаки союзников.",
@@ -371,15 +384,12 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
     if (['gotka', 'selina', 'blaze', 'ineffa'].includes(char)) return 'text-red-400 border-red-500/20 bg-red-500/5';
     if (['krona', 'glacier', 'snezhana', 'farina', 'kairen'].includes(char)) return 'text-cyan-300 border-cyan-500/20 bg-cyan-500/5';
     if (['aveline', 'tide', 'volosatinya', 'nereus'].includes(char)) return 'text-blue-400 border-blue-500/20 bg-blue-500/5';
-    if (['aelita', 'kopro', 'fenris', 'iva'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
+    if (['aelita', 'kopro', 'fenris', 'iva', 'vairen', 'gaia'].includes(char)) return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
     return 'text-white border-white/10 bg-white/5';
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }}
+    <div 
       className="fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col font-sans text-white overflow-hidden"
     >
       {/* Background decor */}
@@ -661,6 +671,6 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
 
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

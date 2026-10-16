@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../../lib/utils';
 
 interface ArenaOverlaysProps {
   circuitTurns: number;
@@ -38,6 +39,22 @@ interface ArenaOverlaysProps {
   gotkaPuppetsCount?: number;
   // Volosatinya
   volosatinyaMeadowActive?: boolean;
+  // Vairen
+  vairenDarkSeedsCount?: number;
+  vairenDarkFlowersCount?: number;
+  vairenForestHeartStacks?: number;
+  vairenForestHeartTurns?: number;
+  vairenEternalBloomStacks?: number;
+  // Fenris
+  isFenrisInParty?: boolean;
+  fenrisMode?: string;
+  // Krona
+  isKronaInParty?: boolean;
+  // Aurum
+  isAurumInParty?: boolean;
+  aurumShield?: number;
+  // Zephyr
+  isZephyrInParty?: boolean;
 }
 
 export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
@@ -68,6 +85,17 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
   ineffaFragmentsCount = 0,
   gotkaPuppetsCount = 0,
   volosatinyaMeadowActive = false,
+  vairenDarkSeedsCount = 0,
+  vairenDarkFlowersCount = 0,
+  vairenForestHeartStacks = 0,
+  vairenForestHeartTurns = 0,
+  vairenEternalBloomStacks = 0,
+  isFenrisInParty = false,
+  fenrisMode = 'Aggressive',
+  isKronaInParty = false,
+  isAurumInParty = false,
+  aurumShield = 0,
+  isZephyrInParty = false
 }) => {
   const isCircuitActive = circuitTurns > 0;
   const isAzureGardenActive = gardenTurns > 0;
@@ -619,6 +647,43 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
         )}
       </AnimatePresence>
 
+      {/* 14. Vairen Dark Thorn Forest Arena Overlay */}
+      <AnimatePresence>
+        {(vairenDarkSeedsCount > 0 || vairenDarkFlowersCount > 0 || vairenForestHeartStacks > 0) && (
+          <motion.div
+            key="vairen-forest-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            {/* Emerald Thorn Garden Bottom Mist */}
+            <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-emerald-950/40 via-teal-950/20 to-transparent" />
+            
+            {/* Pulsing Thorny Vignette Border */}
+            <div className="absolute inset-0 border border-emerald-500/30 rounded-2xl shadow-[inset_0_0_30px_rgba(16,185,129,0.2)]" />
+            
+            {/* Creeping Thorny Vines SVG at Bottom */}
+            <svg className="absolute bottom-0 left-0 right-0 h-16 w-full opacity-60 overflow-visible" preserveAspectRatio="none" viewBox="0 0 400 40">
+              <path d="M 0 40 Q 50 10 100 30 T 200 15 T 300 35 T 400 20" stroke="#047857" strokeWidth="2.5" fill="none" className="drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              <path d="M 0 35 Q 70 20 150 35 T 280 10 T 400 30" stroke="#10b981" strokeWidth="1.8" fill="none" className="drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+            </svg>
+
+            {/* Bioluminescent Spores & Floating Petals */}
+            <div style={{ left: '18%', bottom: '30px' }} className="absolute text-sm text-emerald-300 drop-shadow-[0_0_10px_rgba(16,185,129,1)] anim-float-particle select-none">
+              🥀
+            </div>
+            <div style={{ left: '50%', bottom: '20px', animationDelay: '0.6s' }} className="absolute text-xs text-teal-300 drop-shadow-[0_0_8px_rgba(45,212,191,1)] anim-sparkle-twinkle select-none">
+              🌱
+            </div>
+            <div style={{ right: '18%', bottom: '32px', animationDelay: '1.2s' }} className="absolute text-sm text-emerald-200 drop-shadow-[0_0_10px_rgba(52,211,153,1)] anim-float-particle select-none">
+              🌿
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Status Banners Container (Aveline + Kairen + Cyrus + Nereus + Iva + Kern + Aelita + Maestro + Ineffa + Gotka + Volosatinya) */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 flex flex-wrap items-center justify-center gap-2 pointer-events-none max-w-full px-2">
         {/* Nereus Sea Garden */}
@@ -905,6 +970,140 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
               <span>🌊</span>
               <span>ПОЛЯНА ВОЛОС</span>
               <span className="text-[8px] text-sky-300 font-mono">+30 АТК отряду</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Vairen: Dark Seeds & Dark Flowers */}
+        <AnimatePresence>
+          {(vairenDarkSeedsCount > 0 || vairenDarkFlowersCount > 0) && (
+            <motion.div
+              key="badge-vairen-flowers"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#042416]/95 border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.45)] text-[9px] sm:text-[10px] font-black text-emerald-100 uppercase whitespace-nowrap"
+            >
+              <span>🥀</span>
+              <span>ТЁМНЫЙ САД</span>
+              {vairenDarkSeedsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-950/90 text-emerald-300 text-[8px] border border-emerald-500/40 font-mono">
+                  Семян: {vairenDarkSeedsCount}
+                </span>
+              )}
+              {vairenDarkFlowersCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-900/90 text-emerald-200 text-[8px] border border-emerald-400/50 font-mono">
+                  Цветков: {vairenDarkFlowersCount}/3
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Vairen: Forest Heart Boost */}
+        <AnimatePresence>
+          {vairenForestHeartStacks > 0 && (
+            <motion.div
+              key="badge-vairen-forest-heart"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#06331e]/95 border border-teal-300/80 shadow-[0_0_14px_rgba(20,184,166,0.5)] text-[9px] sm:text-[10px] font-black text-teal-100 uppercase whitespace-nowrap"
+            >
+              <span>🌿</span>
+              <span>СЕРДЦЕ ЛЕСА</span>
+              <span className="text-[8px] text-teal-300 font-mono">
+                +{vairenForestHeartStacks * 10}% Dendro ({vairenForestHeartTurns} х.)
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Vairen C6: Eternal Bloom Charges */}
+        <AnimatePresence>
+          {vairenEternalBloomStacks > 0 && (
+            <motion.div
+              key="badge-vairen-eternal-bloom"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1e0724]/95 border border-pink-400/90 shadow-[0_0_15px_rgba(244,114,182,0.5)] text-[9px] sm:text-[10px] font-black text-pink-100 uppercase whitespace-nowrap"
+            >
+              <span>🌸</span>
+              <span>ВЕЧНОЕ ЦВЕТЕНИЕ</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-pink-950/90 text-pink-300 text-[8px] border border-pink-500/40 font-mono">
+                {vairenEternalBloomStacks}/3
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Fenris: Current Beast Stance Badge */}
+        <AnimatePresence>
+          {isFenrisInParty && (
+            <motion.div
+              key={`badge-fenris-${fenrisMode}`}
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[9px] sm:text-[10px] font-black uppercase whitespace-nowrap shadow-lg",
+                fenrisMode === 'Protective'
+                  ? "bg-[#032415]/95 border-emerald-400 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                  : "bg-[#250808]/95 border-red-500 text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.5)] animate-pulse"
+              )}
+            >
+              <span>{fenrisMode === 'Protective' ? '🛡️' : '🐺'}</span>
+              <span>ФЕНРИС: {fenrisMode === 'Protective' ? 'РЕЖИМ ЗАЩИТЫ (ЩИТ)' : 'РЕЖИМ АТАКИ (ЯРОСТЬ)'}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Krona: Temporal Stasis Indicator */}
+        <AnimatePresence>
+          {isKronaInParty && (
+            <motion.div
+              key="badge-krona-chrono"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#041a27]/95 border border-cyan-400/80 shadow-[0_0_12px_rgba(34,211,238,0.5)] text-[9px] sm:text-[10px] font-black text-cyan-100 uppercase whitespace-nowrap"
+            >
+              <span>⏳</span>
+              <span>КРОНА: ХРОНО-КОНТРОЛЬ</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Aurum: Golden Aegis Indicator */}
+        <AnimatePresence>
+          {isAurumInParty && (
+            <motion.div
+              key="badge-aurum-wealth"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#271904]/95 border border-yellow-400/80 shadow-[0_0_12px_rgba(250,204,21,0.5)] text-[9px] sm:text-[10px] font-black text-amber-100 uppercase whitespace-nowrap"
+            >
+              <span>🪙</span>
+              <span>АУРУМ: ЭГИДА РОСКОШИ</span>
+              {aurumShield > 0 && <span className="text-[8px] text-yellow-300 font-mono">({Math.round(aurumShield)} ЩИТ)</span>}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Zephyr: Prismatic Mirror Indicator */}
+        <AnimatePresence>
+          {isZephyrInParty && (
+            <motion.div
+              key="badge-zephyr-prism"
+              initial={{ y: -15, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -15, opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1b0826]/95 border border-purple-400/80 shadow-[0_0_12px_rgba(192,132,252,0.5)] text-[9px] sm:text-[10px] font-black text-purple-100 uppercase whitespace-nowrap"
+            >
+              <span>🪞</span>
+              <span>ЗЕФИР: ЗЕРКАЛЬНАЯ ПРИЗМА</span>
             </motion.div>
           )}
         </AnimatePresence>
