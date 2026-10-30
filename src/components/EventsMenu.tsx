@@ -28,33 +28,26 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
   // ==========================================
   const testRuns = [
     { 
-      id: 'test_vairen', 
-      char: 'vairen', 
-      title: 'Вайрен',
-      desc: 'Сердце Древнего Леса • Тёмные Семена & Цветы',
-      team: ['vairen', 'fenris', 'nereus', 'aveline'] 
+      id: 'test_ineffa', 
+      char: 'ineffa', 
+      title: 'Инеффа',
+      desc: 'Солнечная Призма • Ускорение Отражения',
+      team: ['ineffa', 'zephyr', 'aurum', 'rix'] 
     },
     { 
-      id: 'test_zephyr', 
-      char: 'zephyr', 
-      title: 'Зефир',
-      desc: 'Грозовая Призма • Ускорение Отражения',
-      team: ['zephyr', 'ineffa', 'aegis', 'rix'] 
+      id: 'test_volta', 
+      char: 'volta', 
+      title: 'Вольта',
+      desc: 'Электрический Шторм • Крит-Бафф & Ударная Волна',
+      team: ['volta', 'selina', 'asher', 'gotka'] 
     },
     { 
-      id: 'test_aurum', 
-      char: 'aurum', 
-      title: 'Аурум',
-      desc: 'Золотая Эгида • Тектонический Щит & Крит-Бафф',
-      team: ['aurum', 'ineffa', 'neuron', 'rix'] 
-    },
-    { 
-      id: 'test_krona', 
-      char: 'krona', 
-      title: 'Крона',
-      desc: 'Вектор Времени • Крио-Застой & Темпоральный Сдвиг',
-      team: ['krona', 'aelita', 'iva', 'gaia'] 
-    },
+      id: 'test_kairen', 
+      char: 'kairen', 
+      title: 'Кайрен',
+      desc: 'Ультимативная заморозка • Трон Льда',
+      team: ['kairen', 'nereus', 'aveline', 'snezhana'] 
+    }
   ];
 
   const completedTestRuns: string[] = eventsData.completedTestRuns || [];
@@ -187,7 +180,7 @@ export default function EventsMenu({ profile, updateProfile, setRoute }: Props) 
           <div className="space-y-6 max-w-4xl mx-auto">
             <div className="bg-gradient-to-r from-amber-900/40 to-black border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
                <h2 className="text-2xl sm:text-3xl font-black text-amber-400 uppercase tracking-tight flex items-center gap-3">
-                 <Swords className="w-8 h-8" /> Тестовый Забег (Баннеры 1.4)
+                 <Swords className="w-8 h-8" /> Тестовый Забег (Баннеры 1.5)
                </h2>
                <p className="text-sm text-white/60 mt-2 max-w-2xl leading-relaxed">
                  Испытайте персонажей текущих баннеров в сбалансированных синергетических отрядах на среднем уровне прокачки! Получите 50 Гемов за каждое первое прохождение.
