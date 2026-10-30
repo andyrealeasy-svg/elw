@@ -36,12 +36,13 @@ interface Props {
   profile: PlayerProfile;
   updateProfile: (updater: (p: PlayerProfile) => PlayerProfile) => void;
   onBack: () => void;
+  isEventGacha?: boolean;
 }
 
 type PullResult = {
   charId: string;
   charName: string;
-  rarity: "B" | "A" | "S";
+  rarity: "G" | "B" | "A" | "S";
   isNew: boolean;
   constellation: number;
   refunded: number;
@@ -49,11 +50,11 @@ type PullResult = {
   won5050?: boolean | null;
 };
 
-export default function Gacha({ profile, updateProfile, onBack }: Props) {
-  const [activeBanner, setActiveBanner] = useState<string>('VAIREN');
+export default function Gacha({ profile, updateProfile, onBack, isEventGacha = false }: Props) {
+  const [activeBanner, setActiveBanner] = useState<string>(isEventGacha ? 'HOFMANNITA' : 'INEFFA');
   
-  const permanentBanners: ('VAIREN' | 'ZEPHYR' | 'AURUM' | 'KRONA')[] = ['VAIREN', 'ZEPHYR', 'AURUM', 'KRONA'];
-  const allAvailableBanners = permanentBanners;
+  const permanentBanners = ['INEFFA', 'VOLTA', 'KAIREN'];
+  const allAvailableBanners = isEventGacha ? ['HOFMANNITA', 'CMH'] : permanentBanners;
 
   const bannerDisplayDetails: Record<string, {
     title: string;
@@ -110,6 +111,61 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       desc: "Шанс на получение Кроны [S] увеличен! Cryo Control / Sub-DPS: замораживает и отбрасывает шкалу ходов (ATB) врагов, замедляя их скорость!",
       aRateUps: ["rix", "gotka", "echo"]
     },
+    INEFFA: {
+      title: "ЗЕРКАЛО РАССВЕТНОГО УТРА",
+      subtitle: "Коллекционер отражений",
+      sId: "ineffa",
+      sName: "Инеффа",
+      sElement: "Pyro",
+      sThemeColor: "text-red-300 border-red-500/40 bg-red-950/40",
+      sBgAccent: "from-red-600/20 to-transparent",
+      desc: "Инеффа [S] возвращается! Пиро-боец, который вызывает «Отражение» на Электро-целях и накапливает фрагменты зеркала для усиления атак и ультимейта.",
+      aRateUps: ["aegis", "pulse", "snezhana"]
+    },
+    VOLTA: {
+      title: "БИОЭЛЕКТРИЧЕСКИЙ РЕЗОНАНС",
+      subtitle: "Проводящий контур",
+      sId: "volta",
+      sName: "Вольта",
+      sElement: "Electro",
+      sThemeColor: "text-violet-300 border-violet-500/40 bg-violet-950/40",
+      sBgAccent: "from-violet-600/20 to-transparent",
+      desc: "Вольта [S] возвращается! Универсальная поддержка с лечением, щитами, снижением входящего урона и ускорением ATB команды.",
+      aRateUps: ["aegis", "pulse", "snezhana"]
+    },
+    KAIREN: {
+      title: "ТРОН БЕЗМОЛВНОЙ ЗИМЫ",
+      subtitle: "Вечная зима",
+      sId: "kairen",
+      sName: "Кайрен",
+      sElement: "Cryo",
+      sThemeColor: "text-cyan-300 border-cyan-500/40 bg-cyan-950/40",
+      sBgAccent: "from-cyan-600/20 to-transparent",
+      desc: "Кайрен [S] возвращается! Cryo-боец накапливает осколки инея, усиливает ими AoE-атаки и наносит дополнительные удары по противникам.",
+      aRateUps: ["aegis", "pulse", "snezhana"]
+    },
+    HOFMANNITA: {
+      title: "ХАЙП НА ПОЛНУЮ",
+      subtitle: "Коллаборация • G-Tier",
+      sId: "hofmannita",
+      sName: "Хофманнита",
+      sElement: "Electro",
+      sThemeColor: "text-fuchsia-300 border-fuchsia-400/50 bg-fuchsia-950/50",
+      sBgAccent: "from-fuchsia-600/30 to-transparent",
+      desc: "Коллаб-баннер Хофманниты [G]. В ивентовой молитве доступны только G- и A-ранги; G гарантирован не позднее 10 молитв.",
+      aRateUps: []
+    },
+    CMH: {
+      title: "CRAZY MEGA HELL",
+      subtitle: "Коллаборация • G-Tier",
+      sId: "cmh",
+      sName: "CMH",
+      sElement: "Pyro",
+      sThemeColor: "text-orange-300 border-red-400/50 bg-red-950/50",
+      sBgAccent: "from-red-600/30 to-transparent",
+      desc: "Коллаб-баннер CMH [G]. В ивентовой молитве доступны только G- и A-ранги; G гарантирован не позднее 10 молитв.",
+      aRateUps: []
+    },
     STANDARD: {
       title: "ЭХО ПРЕДКОВ",
       subtitle: "Обычная молитва",
@@ -124,55 +180,90 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
   };
 
   const currentBannerData = bannerDisplayDetails[activeBanner];
+  const isGBanner = activeBanner === "HOFMANNITA" || activeBanner === "CMH";
+  const currentGachaPityG = isEventGacha
+    ? profile.events?.event15GachaPity?.[activeBanner] ?? 0
+    : activeBanner === "CMH"
+      ? profile.gachaPityGCMH ?? 0
+      : profile.gachaPityG ?? 0;
+  const currentGachaPityA = profile.gachaPityA ?? 0;
 
   const [pullStage, setPullStage] = useState<'IDLE' | 'ANIMATING' | 'REVEALING' | 'SUMMARY'>('IDLE');
   const [showRatesModal, setShowRatesModal] = useState(false);
   const [pulls, setPulls] = useState<PullResult[]>([]);
   const [revealIndex, setRevealIndex] = useState(0);
   
-  const PULL_COST = 160;
+  const PULL_COST = isEventGacha ? 10 : 160;
   const MAX_PITY_S = 80;
   const MAX_PITY_A = 10;
+  const MAX_PITY_G = isEventGacha ? 10 : 120;
+  const G_RATE = isEventGacha ? 0.08 : 0.008;
   
   const performPull = (times: number) => {
     const totalCost = times * PULL_COST;
-    if (profile.gems < totalCost) return;
+    const availableCurrency = isEventGacha ? profile.events?.event15Tickets ?? 0 : profile.gems;
+    if (availableCurrency < totalCost) return;
 
     let nextP = { 
       ...profile, 
-      gems: profile.gems - totalCost, 
+      gems: isEventGacha ? profile.gems : profile.gems - totalCost,
       dailies: { ...profile.dailies, gachaPulls: profile.dailies.gachaPulls + times },
-      roster: { ...profile.roster }
+      roster: { ...profile.roster },
+      events: isEventGacha
+        ? { ...profile.events, event15Tickets: availableCurrency - totalCost }
+        : profile.events
     };
     
     let currentPulls: PullResult[] = [];
     
     let currentPityS = nextP.gachaPityS ?? 0;
     let currentPityA = nextP.gachaPityA ?? 0;
+    let currentPityG = isEventGacha
+      ? nextP.events?.event15GachaPity?.[activeBanner] ?? 0
+      : activeBanner === "CMH"
+        ? nextP.gachaPityGCMH ?? 0
+        : nextP.gachaPityG ?? 0;
     let currentGuaranteed = nextP.gachaGuaranteed ?? false;
 
     for(let i=0; i<times; i++) {
-      currentPityS += 1;
-      currentPityA += 1;
+      if (!isEventGacha) currentPityS += 1;
+      if (!isEventGacha) currentPityA += 1;
 
-      let rarityTarget: "S" | "A" | "B" = "B";
+      let rarityTarget: "G" | "S" | "A" | "B" = "B";
       const roll = Math.random();
-
-      if (roll < 0.05 || currentPityS >= MAX_PITY_S) {
+      if (isEventGacha) {
+        currentPityG += 1;
+        if (roll < G_RATE || currentPityG >= MAX_PITY_G) {
+          rarityTarget = "G";
+          currentPityG = 0;
+        } else {
+          rarityTarget = "A";
+        }
+      } else if (isGBanner) {
+        currentPityG += 1;
+        if (roll < G_RATE || currentPityG >= MAX_PITY_G) {
+          rarityTarget = "G";
+          currentPityG = 0;
+        } else if (roll < G_RATE + 0.05 || currentPityS >= MAX_PITY_S) {
+          rarityTarget = "S";
+        } else if (roll < G_RATE + 0.20 || currentPityA >= MAX_PITY_A) {
+          rarityTarget = "A";
+        }
+      } else if (roll < 0.05 || currentPityS >= MAX_PITY_S) {
         rarityTarget = "S";
       } else if (roll < 0.20 || currentPityA >= MAX_PITY_A) {
         rarityTarget = "A";
-      } else {
-        rarityTarget = "B";
       }
       
       let charId = "";
       let won5050: boolean | null = null;
       
-      if (rarityTarget === "S") {
+      if (rarityTarget === "G") {
+        charId = currentBannerData.sId;
+      } else if (rarityTarget === "S") {
         currentPityS = 0; // reset S-pity
         
-        if (activeBanner === 'STANDARD') {
+        if (activeBanner === 'STANDARD' || isGBanner) {
            charId = STANDARD_S_POOL[Math.floor(Math.random() * STANDARD_S_POOL.length)];
         } else {
            const featuredS = activeBanner.toLowerCase();
@@ -229,8 +320,10 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
            nextP.roster[charId] = { ...nextP.roster[charId], constellation: nextP.roster[charId].constellation + 1 };
            constel = nextP.roster[charId].constellation;
          } else {
-           nextP.gems += 80;
-           refunded = 80;
+           if (!isEventGacha) {
+             nextP.gems += 80;
+             refunded = 80;
+           }
            constel = 6;
          }
       } else {
@@ -239,13 +332,22 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       }
 
       currentPulls.push({
-         charId, charName, rarity: rarityTarget as "B"|"A"|"S", isNew, constellation: constel, refunded, element, won5050
+         charId, charName, rarity: rarityTarget, isNew, constellation: constel, refunded, element, won5050
       });
     }
     
-    nextP.gachaPityS = currentPityS;
-    nextP.gachaPityA = currentPityA;
-    nextP.gachaGuaranteed = currentGuaranteed;
+    if (isEventGacha) {
+      nextP.events = {
+        ...nextP.events,
+        event15GachaPity: { ...nextP.events?.event15GachaPity, [activeBanner]: currentPityG }
+      };
+    } else {
+      nextP.gachaPityS = currentPityS;
+      nextP.gachaPityA = currentPityA;
+      if (activeBanner === "CMH") nextP.gachaPityGCMH = currentPityG;
+      else if (activeBanner === "HOFMANNITA") nextP.gachaPityG = currentPityG;
+      nextP.gachaGuaranteed = currentGuaranteed;
+    }
 
     updateProfile(() => nextP);
     setPulls(currentPulls);
@@ -267,6 +369,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
 
   const renderBannerTabIcon = (bKey: string) => {
     switch (bKey) {
+      case 'HOFMANNITA': return <Sparkles className="w-4 h-4 text-fuchsia-300" />;
+      case 'CMH': return <Zap className="w-4 h-4 text-orange-300" />;
       case 'VAIREN': return <Flower2 className="w-4 h-4 text-emerald-400" />;
       case 'ZEPHYR': return <Zap className="w-4 h-4 text-purple-400" />;
       case 'AURUM': return <Shield className="w-4 h-4 text-amber-400" />;
@@ -289,6 +393,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     if (bKey === 'ZEPHYR') return 'bg-purple-800 text-white border-purple-600 shadow-[0_0_12px_rgba(168,85,247,0.4)]';
     if (bKey === 'AURUM') return 'bg-amber-600 text-white border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]';
     if (bKey === 'KRONA') return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
+    if (bKey === 'HOFMANNITA') return 'bg-fuchsia-800 text-white border-fuchsia-400 shadow-[0_0_12px_rgba(232,121,249,0.45)]';
+    if (bKey === 'CMH') return 'bg-red-800 text-white border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.45)]';
     switch (bKey) {
       case 'AVELINE': return 'bg-blue-600 text-white border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]';
       case 'KAIREN': return 'bg-cyan-600 text-white border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]';
@@ -308,6 +414,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     if (bKey === 'AURUM') return 'Аурум';
     if (bKey === 'KRONA') return 'Крона';
     switch (bKey) {
+      case 'HOFMANNITA': return 'Хофманнита';
+      case 'CMH': return 'CMH';
       case 'AVELINE': return 'Авелин';
       case 'KAIREN': return 'Кайрен';
       case 'VOLTA': return 'Вольта';
@@ -320,8 +428,15 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
     }
   };
 
-  const maxRarityInPulls = pulls.reduce((max, p) => p.rarity === 'S' ? 'S' : (p.rarity === 'A' && max !== 'S') ? 'A' : max, 'B');
-  const meteorColor = maxRarityInPulls === 'S' ? 'from-yellow-400 to-yellow-600 shadow-yellow-500' : maxRarityInPulls === 'A' ? 'from-purple-400 to-purple-600 shadow-purple-500' : 'from-blue-400 to-blue-600 shadow-blue-500';
+  const maxRarityInPulls = pulls.reduce((max, p) =>
+    p.rarity === 'G' || (p.rarity === 'S' && max !== 'G') || (p.rarity === 'A' && max !== 'G' && max !== 'S')
+      ? p.rarity
+      : max, 'B' as PullResult['rarity']);
+  const meteorColor = maxRarityInPulls === 'G' ? 'from-fuchsia-300 to-violet-500 shadow-fuchsia-400' : maxRarityInPulls === 'S' ? 'from-yellow-400 to-yellow-600 shadow-yellow-500' : maxRarityInPulls === 'A' ? 'from-purple-400 to-purple-600 shadow-purple-500' : 'from-blue-400 to-blue-600 shadow-blue-500';
+  const getStarCount = (rarity: PullResult['rarity']) =>
+    rarity === 'G' ? 6 : rarity === 'S' ? 5 : rarity === 'A' ? 4 : 3;
+  const getRarityTextColor = (rarity: PullResult['rarity']) =>
+    rarity === 'G' ? 'text-fuchsia-300' : rarity === 'S' ? 'text-yellow-400' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
 
   return (
     <div className="w-full max-w-5xl h-[100dvh] md:h-[80vh] md:min-h-[600px] bg-gradient-to-br from-indigo-950 via-purple-900 to-black md:rounded-2xl border-4 border-white/5 shadow-2xl flex flex-col font-sans text-white/90 overflow-hidden relative">
@@ -334,12 +449,12 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                 <ArrowLeft className="w-6 h-6" />
              </button>
              <h1 className="text-xl font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-purple-400">
-               Молитвы
+             {isEventGacha ? 'Разломный резонанс' : 'Молитвы'}
              </h1>
           </div>
           <div className="flex items-center gap-2 bg-[#111111] px-4 py-1.5 rounded-full border border-white/10">
-                <Gem className="w-4 h-4 text-pink-400" />
-                <span className="font-mono font-bold">{profile.gems}</span>
+              {isEventGacha ? <Sparkles className="w-4 h-4 text-fuchsia-300" /> : <Gem className="w-4 h-4 text-pink-400" />}
+              <span className="font-mono font-bold">{isEventGacha ? profile.events?.event15Tickets ?? 0 : profile.gems}</span>
           </div>
         </div>
       )}
@@ -351,7 +466,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
 
            <div className="z-10 w-full flex flex-col items-center">
               <div className="flex flex-nowrap justify-start md:justify-center overflow-x-auto max-w-full gap-3 mb-8 w-full px-4 custom-scrollbar pb-2">
-                {['STANDARD', ...allAvailableBanners].map((bKey) => {
+                {(isEventGacha ? allAvailableBanners : ['STANDARD', ...allAvailableBanners]).map((bKey) => {
                   const data = bannerDisplayDetails[bKey as keyof typeof bannerDisplayDetails];
                   const splash = getCharSplash(data.sId);
                   const isActive = activeBanner === bKey;
@@ -384,7 +499,9 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                       <div className="absolute inset-0 flex flex-col justify-center items-start px-3 sm:px-4 z-10">
                         {isActive ? (
                           <div className="flex flex-col items-start gap-1">
-                             <span className="text-[9px] font-black text-white/50 tracking-widest uppercase">{bKey === 'STANDARD' ? 'Базовый' : 'Событие'}</span>
+                             <span className="text-[9px] font-black text-white/50 tracking-widest uppercase">
+                               {isEventGacha ? 'Коллаборация' : bKey === 'STANDARD' ? 'Базовый' : 'Событие'}
+                             </span>
                              <span className="text-xs sm:text-sm font-black uppercase text-white truncate tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                                {bKey === 'STANDARD' ? 'Стандарт' : getBannerTabName(bKey as any)}
                              </span>
@@ -445,8 +562,12 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                            {/* Left side: Golden 5-Star S-rank character information */}
                            <div className="flex flex-col">
                               <div className="flex items-center gap-2">
-                                 <span className="text-[10px] font-black text-yellow-500 tracking-wider bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 rounded uppercase">
-                                    Рекомендуемый S-Ранг
+                                 <span className={`text-[10px] font-black tracking-wider px-2 py-0.5 rounded uppercase ${
+                                    isGBanner
+                                      ? 'text-fuchsia-300 bg-fuchsia-500/10 border border-fuchsia-400/30'
+                                      : 'text-yellow-500 bg-yellow-500/10 border border-yellow-500/30'
+                                 }`}>
+                                       {isGBanner ? 'Рекомендуемый G-Ранг' : 'Рекомендуемый S-Ранг'}
                                  </span>
                                  <span className="text-xs text-white/70 font-mono font-bold">
                                     [{currentBannerData.sElement}]
@@ -456,8 +577,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                                  {currentBannerData.sName}
                               </h3>
                               <div className="flex gap-0.5 mt-1">
-                                 {Array.from({length: 5}).map((_, idx) => (
-                                    <Star key={idx} className="w-4 h-4 fill-current text-yellow-400 drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)] animate-pulse" style={{ animationDelay: `${idx * 150}ms` }} />
+                                 {Array.from({length: isGBanner ? 6 : 5}).map((_, idx) => (
+                                    <Star key={idx} className={`w-4 h-4 fill-current ${isGBanner ? 'text-fuchsia-300' : 'text-yellow-400'} drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)] animate-pulse`} style={{ animationDelay: `${idx * 150}ms` }} />
                                  ))}
                               </div>
                            </div>
@@ -520,7 +641,11 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                            {/* Standard fallback message */}
                            {currentBannerData.aRateUps.length === 0 && (
                               <div className="text-right text-[10px] text-white/50 max-w-[180px] leading-snug font-mono hidden sm:block">
-                                 Содержит всех стандартных 4★ и 5★ персонажей в равной пропорции.
+                                 {isGBanner
+                                    ? isEventGacha
+                                      ? `G-tier: шанс 8%; ${currentBannerData.sName} гарантирован не позднее 10 молитв на этом баннере.`
+                                      : `G-tier: шанс 0,8% с общим гарантом не позднее 120 молитв. Активный персонаж: ${currentBannerData.sName}.`
+                                    : 'Содержит всех стандартных 4★ и 5★ персонажей в равной пропорции.'}
                               </div>
                            )}
                         </div>
@@ -537,21 +662,29 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                        Шансы и Детали
                     </button>
                  </div>
-                 <div className="flex justify-between items-center px-1 font-mono">
-                    <span className="text-white/50 flex items-center gap-1.5">
-                       <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse"></span>
-                       До гаранта <span className="text-yellow-400 font-bold">★ S-ранга</span>:
-                    </span>
-                    <span className="text-yellow-400 font-black">{MAX_PITY_S - (profile.gachaPityS ?? 0)} / {MAX_PITY_S}</span>
-                 </div>
-                 <div className="flex justify-between items-center px-1 font-mono">
+                 {!isEventGacha && (
+                   <div className="flex justify-between items-center px-1 font-mono">
+                      <span className="text-white/50 flex items-center gap-1.5">
+                         <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block animate-pulse"></span>
+                         До гаранта <span className="text-yellow-400 font-bold">★ S-ранга</span>:
+                      </span>
+                      <span className="text-yellow-400 font-black">{MAX_PITY_S - (profile.gachaPityS ?? 0)} / {MAX_PITY_S}</span>
+                   </div>
+                 )}
+                 {!isEventGacha && <div className="flex justify-between items-center px-1 font-mono">
                     <span className="text-white/50 flex items-center gap-1.5">
                        <span className="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>
                        До гаранта <span className="text-purple-400 font-bold">★ A-ранга</span>:
                     </span>
-                    <span className="text-purple-400 font-black">{MAX_PITY_A - (profile.gachaPityA ?? 0)} / {MAX_PITY_A}</span>
-                 </div>
-                 {activeBanner !== 'STANDARD' && (
+                    <span className="text-purple-400 font-black">{MAX_PITY_A - currentGachaPityA} / {MAX_PITY_A}</span>
+                 </div>}
+                 {isGBanner && (
+                    <div className="border-t border-white/5 pt-2.5 flex justify-between items-center px-1 font-mono">
+                       <span className="text-white/50">До гаранта G-tier:</span>
+                       <span className="text-fuchsia-300 font-black">{MAX_PITY_G - currentGachaPityG} / {MAX_PITY_G}</span>
+                    </div>
+                 )}
+                 {activeBanner !== 'STANDARD' && !isGBanner && (
                     <div className="border-t border-white/5 pt-2.5 flex justify-between items-center px-1">
                        <span className="text-white/50">Текущий статус 50/50:</span>
                        <span className={`font-bold uppercase tracking-wider text-xs px-2 py-0.5 rounded ${(profile.gachaGuaranteed ?? false) ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-orange-950 text-orange-400 border border-orange-500/30'}`}>
@@ -561,25 +694,30 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                  )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6 w-full max-w-lg justify-center">
-                 <button 
-                   onClick={() => performPull(1)}
-                   disabled={profile.gems < PULL_COST}
-                   className="flex-1 bg-slate-100 hover:bg-white text-black disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-2xl shadow-xl flex flex-col items-center transition hover:scale-105 active:scale-95"
-                 >
+              {isEventGacha && (
+                <p className="mb-3 text-center text-[11px] font-bold text-fuchsia-200/80">
+               Только G- и A-ранги • S- и B-ранги не выпадают • G гарантирован до {MAX_PITY_G}-й молитвы
+                </p>
+              )}
+              <div className="flex w-full max-w-lg flex-col justify-center gap-6 sm:flex-row">
+                <button
+                  onClick={() => performPull(1)}
+                  disabled={(isEventGacha ? profile.events?.event15Tickets ?? 0 : profile.gems) < PULL_COST}
+                  className="flex-1 bg-slate-100 hover:bg-white text-black disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-2xl shadow-xl flex flex-col items-center transition hover:scale-105 active:scale-95"
+                >
                     <span className="uppercase tracking-widest mb-1">1 Молитва</span>
                     <div className="flex items-center gap-1 text-sm font-mono opacity-80">
-                       <Gem className="w-3 h-3 text-pink-600" /> {PULL_COST}
+                       {isEventGacha ? <Sparkles className="w-3 h-3 text-fuchsia-500" /> : <Gem className="w-3 h-3 text-pink-600" />} {PULL_COST}
                     </div>
-                 </button>
-                 <button 
+                </button>
+                <button
                    onClick={() => performPull(10)}
-                   disabled={profile.gems < PULL_COST * 10}
+                   disabled={(isEventGacha ? profile.events?.event15Tickets ?? 0 : profile.gems) < PULL_COST * 10}
                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white disabled:opacity-50 disabled:cursor-not-allowed font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(217,70,239,0.5)] flex flex-col items-center transition hover:scale-105 active:scale-95"
                  >
                     <span className="uppercase tracking-widest mb-1">10 Молитв</span>
                     <div className="flex items-center gap-1 text-sm font-mono opacity-90">
-                       <Gem className="w-3 h-3" /> {PULL_COST * 10}
+                       {isEventGacha ? <Sparkles className="w-3 h-3 text-fuchsia-200" /> : <Gem className="w-3 h-3" />} {PULL_COST * 10}
                     </div>
                  </button>
               </div>
@@ -591,12 +729,14 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
       <AnimatePresence>
          {pullStage === 'ANIMATING' && (
             <CosmicComet
-               theme={maxRarityInPulls === 'S' ? 'GOLD' : maxRarityInPulls === 'A' ? 'PURPLE' : 'BLUE'}
+               theme={maxRarityInPulls === 'G' ? 'DISTORTION' : maxRarityInPulls === 'S' ? 'GOLD' : maxRarityInPulls === 'A' ? 'PURPLE' : 'BLUE'}
                isMulti={pulls.length > 1}
+               eventGacha={isEventGacha}
+               featuredHit={maxRarityInPulls === 'G'}
                subtitle={
                  pulls.length > 1
-                   ? `Молитва × 10 • ${maxRarityInPulls === 'S' ? 'ЗВЁЗДНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
-                   : `Молитва • ${maxRarityInPulls === 'S' ? 'ЛЕГЕНДАРНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
+                   ? `Молитва × 10 • ${maxRarityInPulls === 'G' ? 'ИЗМЕРЕНИЕ ОТКЛИКНУЛОСЬ • G-РАНГ!' : maxRarityInPulls === 'S' ? 'ЗВЁЗДНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
+                   : `Молитва • ${maxRarityInPulls === 'G' ? 'РАЗЛОМНЫЙ 6★ G-РАНГ!' : maxRarityInPulls === 'S' ? 'ЛЕГЕНДАРНЫЙ 5★ S-РАНГ!' : maxRarityInPulls === 'A' ? 'ЭПИЧЕСКИЙ 4★ A-РАНГ!' : '3★ B-РАНГ'}`
                }
                onImpact={() => {
                   setPullStage('REVEALING');
@@ -623,6 +763,7 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
               </div>
               
               <div className="relative">
+                 {pulls[revealIndex].rarity === 'G' && <div className="absolute -inset-10 bg-[radial-gradient(circle,_rgba(232,121,249,0.4)_0%,_transparent_65%)] pointer-events-none"></div>}
                  {pulls[revealIndex].rarity === 'S' && <div className="absolute -inset-10 bg-[radial-gradient(circle,_rgba(234,179,8,0.3)_0%,_transparent_65%)] pointer-events-none"></div>}
                  {pulls[revealIndex].rarity === 'A' && <div className="absolute -inset-10 bg-[radial-gradient(circle,_rgba(168,85,247,0.3)_0%,_transparent_65%)] pointer-events-none"></div>}
                  
@@ -630,8 +771,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                     {pulls[revealIndex].charName}
                  </h2>
                  <div className="flex justify-center gap-1 mb-8 relative z-10">
-                    {Array.from({length: pulls[revealIndex].rarity === 'S' ? 5 : pulls[revealIndex].rarity === 'A' ? 4 : 3}).map((_, i) => (
-                       <Star key={i} className={`w-6 h-6 fill-current ${pulls[revealIndex].rarity === 'S' ? 'text-yellow-400' : pulls[revealIndex].rarity === 'A' ? 'text-purple-400' : 'text-blue-400'}`} />
+                    {Array.from({length: getStarCount(pulls[revealIndex].rarity)}).map((_, i) => (
+                       <Star key={i} className={`w-6 h-6 fill-current ${getRarityTextColor(pulls[revealIndex].rarity)}`} />
                     ))}
                  </div>
               </div>
@@ -717,12 +858,14 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                         key={i} 
                         initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
                         className={`w-28 sm:w-32 h-40 sm:h-48 border rounded-2xl flex flex-col items-center justify-between p-2 relative overflow-hidden bg-[#111111] ${
+                           p.rarity === 'G' ? 'border-fuchsia-400 shadow-[0_0_18px_rgba(232,121,249,0.4)]' :
                            p.rarity === 'S' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' :
                            p.rarity === 'A' ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]' :
                            'border-blue-900'
                         }`}
                      >
                         <div className={`absolute inset-0 opacity-20 ${
+                           p.rarity === 'G' ? 'bg-gradient-to-t from-fuchsia-600 to-transparent' :
                            p.rarity === 'S' ? 'bg-gradient-to-t from-yellow-600 to-transparent' :
                            p.rarity === 'A' ? 'bg-gradient-to-t from-purple-600 to-transparent' :
                            'bg-gradient-to-t from-blue-600 to-transparent'
@@ -747,8 +890,8 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                         </div>
 
                         <div className="flex gap-0.5 mt-1 z-10">
-                           {Array.from({length: p.rarity === 'S' ? 5 : p.rarity === 'A' ? 4 : 3}).map((_, starIdx) => (
-                              <Star key={starIdx} className={`w-3 h-3 fill-current ${p.rarity === 'S' ? 'text-yellow-400' : p.rarity === 'A' ? 'text-purple-400' : 'text-blue-400'}`} />
+                           {Array.from({length: getStarCount(p.rarity)}).map((_, starIdx) => (
+                              <Star key={starIdx} className={`w-3 h-3 fill-current ${getRarityTextColor(p.rarity)}`} />
                            ))}
                         </div>
 
@@ -805,29 +948,44 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                   <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-8 text-sm text-white/80">
                      <section>
                         <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400 fill-current" /> Базовые Шансы</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                           <div className="bg-[#1a1a24] border border-yellow-500/30 rounded-2xl p-4 flex flex-col gap-1">
-                              <span className="text-yellow-400 font-black text-lg">5★ (S-ранг)</span>
-                              <span className="text-white/90 font-mono text-xl">5.0%</span>
-                              <span className="text-white/50 text-xs mt-1">Гарант на 80-й молитве</span>
-                           </div>
+                        <div className={`grid grid-cols-1 ${isEventGacha ? 'sm:grid-cols-2' : isGBanner ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
+                           {isGBanner && (
+                              <div className="bg-[#1a1a24] border border-fuchsia-400/40 rounded-2xl p-4 flex flex-col gap-1">
+                                 <span className="text-fuchsia-300 font-black text-lg">6★ (G-tier)</span>
+                                 <span className="text-white/90 font-mono text-xl">{isEventGacha ? '8.0%' : '0.8%'}</span>
+                                 <span className="text-white/50 text-xs mt-1">{currentBannerData.sName} гарантирован не позднее {MAX_PITY_G}-й молитвы на этом баннере</span>
+                              </div>
+                           )}
+                           {!isEventGacha && (
+                             <div className="bg-[#1a1a24] border border-yellow-500/30 rounded-2xl p-4 flex flex-col gap-1">
+                                <span className="text-yellow-400 font-black text-lg">5★ (S-ранг)</span>
+                                <span className="text-white/90 font-mono text-xl">5.0%</span>
+                                <span className="text-white/50 text-xs mt-1">Гарант на 80-й молитве</span>
+                             </div>
+                           )}
                            <div className="bg-[#1a1a24] border border-purple-500/30 rounded-2xl p-4 flex flex-col gap-1">
                               <span className="text-purple-400 font-black text-lg">4★ (A-ранг)</span>
-                              <span className="text-white/90 font-mono text-xl">15.0%</span>
-                              <span className="text-white/50 text-xs mt-1">Гарант на 10-й молитве</span>
+                              <span className="text-white/90 font-mono text-xl">{isEventGacha ? '92.0%' : '15.0%'}</span>
+                              <span className="text-white/50 text-xs mt-1">{isEventGacha ? 'Выпадает, если не выпал G-ранг' : 'Гарант на 10-й молитве'}</span>
                            </div>
-                           <div className="bg-[#1a1a24] border border-blue-500/30 rounded-2xl p-4 flex flex-col gap-1">
+                           {!isEventGacha && <div className="bg-[#1a1a24] border border-blue-500/30 rounded-2xl p-4 flex flex-col gap-1">
                               <span className="text-blue-400 font-black text-lg">3★ (B-ранг)</span>
-                              <span className="text-white/90 font-mono text-xl">80.0%</span>
+                              <span className="text-white/90 font-mono text-xl">{isGBanner ? '79.2%' : '80.0%'}</span>
                               <span className="text-white/50 text-xs mt-1">Остальные исходы</span>
-                           </div>
+                           </div>}
                         </div>
                      </section>
                      
                      <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
                         <h3 className="text-md font-bold text-white mb-3 uppercase tracking-wider">Правила Баннера "{currentBannerData.title}"</h3>
                         <ul className="list-disc list-inside space-y-2 text-white/70">
-                           {activeBanner === 'STANDARD' ? (
+                           {isGBanner ? (
+                              <>
+                                <li>Шанс получить {currentBannerData.sName} G-tier — {isEventGacha ? '8%' : '0,8%'}; если она не выпала раньше, она гарантируется на {MAX_PITY_G}-й молитве.</li>
+                                <li>{isEventGacha ? 'Счётчик гаранта отдельный для каждого баннера события.' : 'У каждого временного G-баннера свой счётчик гаранта; прогресс Хофманниты сохраняется отдельно.'}</li>
+                                <li>{isEventGacha ? 'В ивентовой гаче выпадают только G- и A-ранги: шанс A — 92%, а B- и S-ранги исключены. Молитва стоит 10 билетов Разлома.' : 'Остальные молитвы используют обычные шансы и гарант S/A-рангов; поражения 50/50 на этом баннере нет.'}</li>
+                              </>
+                           ) : activeBanner === 'STANDARD' ? (
                               <>
                                  <li>Все доступные персонажи 5★ и 4★ имеют равный шанс выпадения.</li>
                                  <li>В стандартной молитве не бывает проигрыша 50/50.</li>
@@ -843,14 +1001,21 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                      </section>
 
                      <section>
-                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 5★ Персонажей</h3>
+                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">
+                           {isEventGacha ? 'Доступные G- и A-ранги' : isGBanner ? 'Список G-tier и 5★ персонажей' : 'Список 5★ Персонажей'}
+                        </h3>
                         <div className="flex flex-wrap gap-2">
-                           {activeBanner !== 'STANDARD' && (
+                           {isGBanner && (
+                              <div className="bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                 {getCharEmoji(currentBannerData.sId)} {currentBannerData.sName} <span className="text-[10px] uppercase bg-fuchsia-500/30 px-1.5 py-0.5 rounded ml-1">6★ • G-tier</span>
+                              </div>
+                           )}
+                           {activeBanner !== 'STANDARD' && !isGBanner && (
                               <div className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
                                  {getCharEmoji(currentBannerData.sId)} {currentBannerData.sName} <span className="text-[10px] uppercase bg-yellow-500/30 px-1.5 py-0.5 rounded ml-1">Ивент</span>
                               </div>
                            )}
-                           {STANDARD_S_POOL.map(id => {
+                           {!isEventGacha && STANDARD_S_POOL.map(id => {
                               const bp = characterBlueprints[id]("temp",1,0);
                               return (
                                  <div key={id} className="bg-white/5 border border-white/10 text-white/80 px-3 py-1.5 rounded-lg flex items-center gap-2">
@@ -883,19 +1048,21 @@ export default function Gacha({ profile, updateProfile, onBack }: Props) {
                         </div>
                      </section>
 
-                     <section>
-                        <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 3★ Персонажей (B-ранг)</h3>
-                        <div className="flex flex-wrap gap-2">
-                           {B_POOL.map(id => {
-                              const bp = characterBlueprints[id]?.("temp", 1, 0);
-                              return (
-                                 <div key={id} className="bg-blue-500/10 border border-blue-500/20 text-blue-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
-                                    {getCharEmoji(id)} {bp ? bp.name : id}
-                                 </div>
-                              );
-                           })}
-                        </div>
-                     </section>
+                     {!isEventGacha && (
+                        <section>
+                           <h3 className="text-md font-bold text-white mb-4 uppercase tracking-wider">Список 3★ Персонажей (B-ранг)</h3>
+                           <div className="flex flex-wrap gap-2">
+                              {B_POOL.map(id => {
+                                 const bp = characterBlueprints[id]?.("temp", 1, 0);
+                                 return (
+                                    <div key={id} className="bg-blue-500/10 border border-blue-500/20 text-blue-300 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                       {getCharEmoji(id)} {bp ? bp.name : id}
+                                    </div>
+                                 );
+                              })}
+                           </div>
+                        </section>
+                     )}
                   </div>
                </motion.div>
             </motion.div>

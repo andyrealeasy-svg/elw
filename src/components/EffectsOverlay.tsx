@@ -62,18 +62,209 @@ export const EffectsOverlay = memo(forwardRef<EffectsOverlayRef, { unitId: strin
         return <div className="anim-impact-burst absolute text-yellow-300 text-5xl select-none">✨</div>;
       case "ultimate_aoe":
         return <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-4 border-white/70 shadow-[0_0_20px_rgba(255,255,255,0.8)] z-50" />;
+      case "cmh_drop":
+      case "cmh_field_drop":
+      case "cmh_drop_impact":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-4 border-orange-300 shadow-[0_0_30px_rgba(249,115,22,0.95)]" />
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-red-200" style={{ animationDelay: '0.06s' }} />
+            <svg className="w-36 h-36 overflow-visible absolute" viewBox="0 0 140 140" fill="none">
+              <circle cx="70" cy="70" r="53" stroke="#fb923c" strokeWidth="2" strokeDasharray="5 5" className="anim-bloom-rotate" />
+              <path d="M70 19L81 57L121 70L81 83L70 121L59 83L19 70L59 57L70 19Z" fill="rgba(220,38,38,0.35)" stroke="#fff7ed" strokeWidth="2" className="anim-impact-burst" />
+              <text x="70" y="111" textAnchor="middle" fill="#fff7ed" fontSize="12" fontWeight="900" letterSpacing="2">DROP</text>
+            </svg>
+          </div>
+        );
+      case "cmh_attack":
+      case "cmh_rhythm":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-orange-200 shadow-[0_0_22px_rgba(249,115,22,0.8)]" />
+            <div className="anim-impact-burst relative text-orange-100 text-5xl font-black italic [text-shadow:0_0_14px_rgba(249,115,22,1)]">♪</div>
+          </div>
+        );
+      case "cmh_ultimate":
+      case "cmh_overbeat":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-40 h-40 rounded-full border-4 border-red-300 shadow-[0_0_34px_rgba(249,115,22,0.95)]" />
+            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-orange-100" style={{ animationDelay: '0.08s' }} />
+            <div className="anim-impact-burst relative text-orange-50 text-4xl font-black italic [text-shadow:0_0_18px_rgba(249,115,22,1)]">RAVE</div>
+          </div>
+        );
+      case "hofmannita_drop":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-4 border-fuchsia-200 shadow-[0_0_30px_rgba(232,121,249,0.9)]" />
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-violet-200" style={{ animationDelay: '0.06s' }} />
+            <svg className="w-36 h-36 overflow-visible absolute" viewBox="0 0 140 140" fill="none">
+              <circle cx="70" cy="70" r="53" stroke="#e879f9" strokeWidth="2" strokeDasharray="5 5" className="anim-bloom-rotate" />
+              <circle cx="70" cy="70" r="38" fill="rgba(76,29,149,0.45)" stroke="#f5d0fe" strokeWidth="2" />
+              <circle cx="70" cy="70" r="29" stroke="#c084fc" strokeWidth="1.5" strokeDasharray="3 4" />
+              <path d="M20 70H43L52 52L63 88L75 43L86 70H120" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="anim-ice-slash" />
+              <path d="M27 82H42L48 73L54 87L63 66L71 80H112" stroke="#f0abfc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <text x="70" y="116" textAnchor="middle" fill="#fdf4ff" fontSize="13" fontWeight="900" letterSpacing="3">DROP</text>
+            </svg>
+            <div className="anim-impact-burst relative text-fuchsia-50 text-4xl font-black italic [text-shadow:0_0_14px_rgba(232,121,249,0.95)]">DROP</div>
+          </div>
+        );
+      case "hofmannita_drop_impact":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-fuchsia-200 shadow-[0_0_24px_rgba(232,121,249,0.9)]" />
+            <svg className="w-28 h-28 overflow-visible" viewBox="0 0 100 100" fill="none">
+              <path d="M56 8L29 53H46L38 92L73 43H54L56 8Z" fill="rgba(217,70,239,0.45)" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" className="anim-impact-burst drop-shadow-[0_0_14px_rgba(232,121,249,1)]" />
+              <path d="M8 50H29M72 50H92M50 8V27M50 73V92" stroke="#e879f9" strokeWidth="2" strokeLinecap="round" className="anim-ice-slash" />
+              <circle cx="50" cy="50" r="39" stroke="#f0abfc" strokeWidth="1" strokeDasharray="3 5" className="anim-bloom-rotate" />
+            </svg>
+          </div>
+        );
+      case "hofmannita_attack":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-violet-200 shadow-[0_0_18px_rgba(192,132,252,0.75)]" />
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              <circle cx="60" cy="60" r="45" stroke="#c084fc" strokeWidth="1.5" strokeDasharray="4 5" className="anim-bloom-rotate" />
+              <path d="M18 91L89 20" stroke="#a21caf" strokeWidth="9" strokeLinecap="round" opacity="0.55" className="anim-ice-slash" />
+              <path d="M22 94L92 24" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" className="anim-ice-slash" />
+              <path d="M34 83L42 74L48 81L56 61L64 69L72 48L80 55" stroke="#f0abfc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <polygon points="92,15 97,25 108,27 100,35 102,46 92,40 82,46 84,35 76,27 87,25" fill="#ffffff" stroke="#e879f9" strokeWidth="1.5" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "hofmannita_impulse":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-fuchsia-200 shadow-[0_0_20px_rgba(232,121,249,0.8)]" />
+            <div className="anim-shockwave-ring absolute w-20 h-20 rounded-full border border-violet-200" style={{ animationDelay: '0.08s' }} />
+            <svg className="w-32 h-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              <circle cx="60" cy="60" r="48" stroke="#c084fc" strokeWidth="1.5" strokeDasharray="3 5" className="anim-bloom-rotate" />
+              <path d="M60 60L90 17L78 52L109 47L68 99L78 66L48 74L60 60Z" fill="rgba(217,70,239,0.5)" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" className="anim-impact-burst" />
+              <path d="M12 60H35M85 60H108M60 12V35M60 85V108" stroke="#f5d0fe" strokeWidth="2" strokeLinecap="round" className="anim-ice-slash" />
+              <circle cx="60" cy="60" r="5" fill="#ffffff" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "hofmannita_stage":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-2 border-fuchsia-200 shadow-[0_0_24px_rgba(232,121,249,0.85)]" />
+            <svg className="w-40 h-40 overflow-visible" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="62" stroke="#e879f9" strokeWidth="2" strokeDasharray="8 5" className="anim-bloom-rotate" />
+              <circle cx="75" cy="75" r="47" stroke="#c4b5fd" strokeWidth="1.5" strokeDasharray="2 5" />
+              <path d="M75 11V37M75 113V139M11 75H37M113 75H139M30 30L48 48M102 102L120 120M120 30L102 48M48 102L30 120" stroke="#f5d0fe" strokeWidth="2" strokeLinecap="round" />
+              <path d="M27 84H43L51 66L60 91L70 51L80 83L89 69L98 84H123" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="anim-ice-slash" />
+              <circle cx="75" cy="75" r="18" fill="rgba(134,25,143,0.65)" stroke="#ffffff" strokeWidth="2" className="anim-impact-burst" />
+              <text x="75" y="81" textAnchor="middle" fill="#ffffff" fontSize="18" fontWeight="900">♪</text>
+            </svg>
+          </div>
+        );
+      case "hofmannita_ultimate":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute w-40 h-40 rounded-full border-4 border-fuchsia-100 shadow-[0_0_34px_rgba(232,121,249,1)]" />
+            <div className="anim-shockwave-ring absolute w-32 h-32 rounded-full border-2 border-violet-200" style={{ animationDelay: '0.08s' }} />
+            <svg className="w-48 h-48 overflow-visible" viewBox="0 0 180 180" fill="none">
+              <circle cx="90" cy="90" r="79" stroke="#e879f9" strokeWidth="2" strokeDasharray="12 6" className="anim-bloom-rotate" />
+              <circle cx="90" cy="90" r="60" stroke="#c4b5fd" strokeWidth="1.5" strokeDasharray="3 5" className="anim-bloom-rotate" style={{ animationDirection: 'reverse' }} />
+              <polygon points="90,16 101,70 155,90 101,101 90,164 79,101 25,90 79,70" fill="rgba(192,38,211,0.2)" stroke="#f5d0fe" strokeWidth="2" className="anim-impact-burst" />
+              <path d="M22 92H51L62 66L73 112L88 47L101 111L114 69L126 92H158" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="anim-ice-slash" />
+              <circle cx="90" cy="90" r="21" fill="rgba(76,29,149,0.75)" stroke="#ffffff" strokeWidth="2" />
+              <text x="90" y="96" textAnchor="middle" fill="#ffffff" fontSize="18" fontWeight="900">♫</text>
+              <text x="90" y="145" textAnchor="middle" fill="#fdf4ff" fontSize="9" fontWeight="900" letterSpacing="2">MAIN STAGE</text>
+            </svg>
+          </div>
+        );
       case "selina_rose":
         return (
           <div className="absolute flex items-center justify-center pointer-events-none">
-            <div className="anim-shockwave-ring absolute w-28 h-28 rounded-full border-2 border-rose-500" />
-            <div className="anim-impact-burst text-6xl select-none">🌹</div>
+            <div className="anim-shockwave-ring absolute h-32 w-32 rounded-full border-2 border-rose-300 shadow-[0_0_20px_rgba(251,113,133,0.8)]" />
+            <svg className="h-36 w-36 overflow-visible" viewBox="0 0 140 140" fill="none">
+              <circle cx="70" cy="70" r="52" stroke="#fb7185" strokeWidth="2" strokeDasharray="5 6" className="anim-bloom-rotate" />
+              <path d="M70 103C56 84 37 74 43 57C48 43 63 48 70 60C77 48 92 43 97 57C103 74 84 84 70 103Z" fill="rgba(225,29,72,0.42)" stroke="#ffe4e6" strokeWidth="2.5" className="anim-impact-burst" />
+              <path d="M70 103C73 112 74 120 68 132M68 117L53 111M72 122L88 113" stroke="#86efac" strokeWidth="3" strokeLinecap="round" />
+              <path d="M58 65C63 59 67 62 70 69C73 62 78 59 83 65" stroke="#fff1f2" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="70" cy="73" r="5" fill="#fff7ed" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "selina_thrust":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <svg className="h-32 w-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              <path d="M18 99L91 22M27 108L100 31" stroke="#fb7185" strokeWidth="7" strokeLinecap="round" className="anim-ice-slash drop-shadow-[0_0_12px_rgba(244,63,94,0.95)]" />
+              <path d="M26 96L89 29" stroke="#fff7ed" strokeWidth="2" strokeLinecap="round" className="anim-ice-slash" />
+              <path d="M85 18L105 14L100 35Z" fill="#f43f5e" stroke="#ffe4e6" strokeWidth="2" className="anim-impact-burst" />
+              <path d="M20 32L34 43M91 83L103 94M17 69L34 70M76 108L80 92" stroke="#fda4af" strokeWidth="2" strokeLinecap="round" className="anim-impact-burst" />
+              <circle cx="57" cy="62" r="7" fill="#fff7ed" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "selina_bloom":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-rose-300 shadow-[0_0_28px_rgba(244,63,94,0.9)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 160 160" fill="none">
+              <circle cx="80" cy="80" r="61" stroke="#fda4af" strokeWidth="2" strokeDasharray="7 5" className="anim-bloom-rotate" />
+              <path d="M80 126C64 104 39 92 47 70C54 51 71 57 80 72C89 57 106 51 113 70C121 92 96 104 80 126Z" fill="rgba(225,29,72,0.35)" stroke="#fff1f2" strokeWidth="3" />
+              <path d="M80 116V145M78 132L61 124M82 137L100 127" stroke="#86efac" strokeWidth="3" strokeLinecap="round" />
+              <path d="M80 24V44M24 80H44M116 80H136M40 40L54 54M106 106L120 120M120 40L106 54M54 106L40 120" stroke="#fb7185" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="80" cy="79" r="8" fill="#fff7ed" />
+            </svg>
+          </div>
+        );
+      case "selina_waltz":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-44 w-44 rounded-full border-4 border-rose-200 shadow-[0_0_32px_rgba(244,63,94,0.95)]" />
+            <div className="anim-shockwave-ring absolute h-32 w-32 rounded-full border-2 border-amber-200" style={{ animationDelay: '0.07s' }} />
+            <svg className="h-48 w-48 overflow-visible" viewBox="0 0 180 180" fill="none">
+              <circle cx="90" cy="90" r="78" stroke="#fb7185" strokeWidth="2" strokeDasharray="9 6" className="anim-bloom-rotate" />
+              <circle cx="90" cy="90" r="59" stroke="#fde68a" strokeWidth="1.5" strokeDasharray="3 7" className="anim-bloom-rotate" style={{ animationDirection: 'reverse' }} />
+              <path d="M90 147C70 119 39 105 49 76C57 53 79 61 90 80C101 61 123 53 131 76C141 105 110 119 90 147Z" fill="rgba(225,29,72,0.4)" stroke="#fff1f2" strokeWidth="3" />
+              <path d="M90 137V164M87 149L69 139M93 154L112 142" stroke="#86efac" strokeWidth="3" strokeLinecap="round" />
+              <path d="M90 15V34M15 90H34M146 90H165M36 36L50 50M130 130L144 144M144 36L130 50M50 130L36 144" stroke="#fde68a" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="90" cy="90" r="8" fill="#fff7ed" className="anim-impact-burst" />
+            </svg>
           </div>
         );
       case "asher_nature":
         return (
           <div className="absolute flex items-center justify-center pointer-events-none">
-            <div className="anim-shockwave-ring absolute w-24 h-24 rounded-full border-2 border-emerald-500" />
-            <div className="anim-impact-burst text-5xl select-none">🌳</div>
+            <div className="anim-shockwave-ring absolute h-32 w-32 rounded-full border-2 border-emerald-300 shadow-[0_0_22px_rgba(52,211,153,0.75)]" />
+            <svg className="h-36 w-36 overflow-visible" viewBox="0 0 140 140" fill="none">
+              <circle cx="70" cy="70" r="53" stroke="#6ee7b7" strokeWidth="2" strokeDasharray="5 6" className="anim-bloom-rotate" />
+              <path d="M70 119V68M70 91C48 91 39 75 43 61C57 62 68 73 70 91ZM70 80C91 80 102 63 97 49C84 51 72 63 70 80Z" fill="rgba(16,185,129,0.25)" stroke="#a7f3d0" strokeWidth="3" strokeLinecap="round" />
+              <path d="M28 101L43 92M112 101L97 92M39 38L50 49M101 49L112 38" stroke="#d9f99d" strokeWidth="2" strokeLinecap="round" className="anim-impact-burst" />
+              <circle cx="70" cy="67" r="6" fill="#ecfdf5" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "asher_mallet":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-28 w-28 rounded-full border-2 border-lime-300 shadow-[0_0_18px_rgba(132,204,22,0.75)]" />
+            <svg className="h-32 w-32 overflow-visible" viewBox="0 0 120 120" fill="none">
+              <path d="M23 96L78 37M67 29L88 48M74 22L96 44L86 54L64 32Z" fill="rgba(101,163,13,0.5)" stroke="#d9f99d" strokeWidth="3" strokeLinejoin="round" className="anim-ice-slash" />
+              <path d="M15 104L31 88M88 93L104 77M27 41L39 52M91 61L104 58" stroke="#bef264" strokeWidth="3" strokeLinecap="round" className="anim-impact-burst" />
+              <path d="M19 62H39M82 106H102M48 16V32" stroke="#ecfccb" strokeWidth="2" strokeLinecap="round" className="anim-impact-burst" />
+              <circle cx="58" cy="62" r="7" fill="#f7fee7" className="anim-impact-burst" />
+            </svg>
+          </div>
+        );
+      case "asher_heart":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-44 w-44 rounded-full border-4 border-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.85)]" />
+            <div className="anim-shockwave-ring absolute h-32 w-32 rounded-full border-2 border-lime-200" style={{ animationDelay: '0.07s' }} />
+            <svg className="h-48 w-48 overflow-visible" viewBox="0 0 180 180" fill="none">
+              <circle cx="90" cy="90" r="77" stroke="#6ee7b7" strokeWidth="2" strokeDasharray="8 6" className="anim-bloom-rotate" />
+              <path d="M90 147V72M90 109C57 109 43 85 49 64C72 65 88 83 90 109ZM90 91C121 91 137 67 130 47C110 50 93 68 90 91Z" fill="rgba(16,185,129,0.24)" stroke="#a7f3d0" strokeWidth="4" strokeLinecap="round" />
+              <path d="M33 121L51 105M147 121L129 105M45 42L60 57M120 57L135 42" stroke="#d9f99d" strokeWidth="3" strokeLinecap="round" />
+              <path d="M90 18V37M18 90H37M143 90H162M39 39L52 52M128 128L141 141M141 39L128 52M52 128L39 141" stroke="#ecfdf5" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="90" cy="69" r="9" fill="#f7fee7" className="anim-impact-burst" />
+            </svg>
           </div>
         );
       case "krona_ice":
@@ -1175,6 +1366,134 @@ export const EffectsOverlay = memo(forwardRef<EffectsOverlayRef, { unitId: strin
               <circle cx="75" cy="75" r="20" fill="#064e3b" stroke="#a7f3d0" strokeWidth="2.5" />
               <text x="75" y="84" textAnchor="middle" fontSize="26" fill="#a7f3d0">🌿</text>
             </svg>
+          </div>
+        );
+
+      case "iva_sprouts":
+      case "iva_floral_bond":
+      case "iva_primordial_bloom":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-36 w-36 rounded-full border-2 border-emerald-300 shadow-[0_0_26px_rgba(52,211,153,0.8)]" />
+            <svg className="h-40 w-40 overflow-visible anim-bloom-rotate" viewBox="0 0 140 140" fill="none">
+              <circle cx="70" cy="70" r="52" stroke="#a7f3d0" strokeWidth="2" strokeDasharray="5 5" />
+              <path d="M70 115V55M70 82C43 82 38 60 42 48C57 51 69 62 70 82ZM70 72C96 72 103 51 98 39C83 42 71 53 70 72Z" stroke="#34d399" strokeWidth="4" strokeLinecap="round" fill="rgba(16,185,129,0.22)" />
+              <circle cx="70" cy="70" r="12" fill="#064e3b" stroke="#d1fae5" strokeWidth="2" />
+            </svg>
+            <span className="absolute text-2xl text-emerald-100">✿</span>
+          </div>
+        );
+
+      case "nereus_tide_touch":
+      case "nereus_sea_flower":
+      case "nereus_eternal_garden":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-cyan-300 shadow-[0_0_28px_rgba(34,211,238,0.8)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="57" stroke="#67e8f9" strokeWidth="2" strokeDasharray="9 6" className="anim-bloom-rotate" />
+              <path d="M22 82C36 45 52 45 66 82S96 119 111 78S132 43 140 62" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" />
+              <path d="M24 94C42 75 58 75 75 94S108 111 128 90" stroke="#cffafe" strokeWidth="2" strokeLinecap="round" />
+              <path d="M75 28C87 45 92 54 75 66C58 54 63 45 75 28Z" fill="#06b6d4" stroke="#ecfeff" strokeWidth="2" />
+              <circle cx="75" cy="75" r="10" fill="#164e63" stroke="#a5f3fc" strokeWidth="2" />
+            </svg>
+            <span className="absolute text-2xl text-cyan-100">✦</span>
+          </div>
+        );
+
+      case "selva_punch":
+      case "selva_arcade_blast":
+      case "selva_god_mode":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-xl border-2 border-fuchsia-300 shadow-[0_0_28px_rgba(217,70,239,0.85)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 150 150" fill="none">
+              <path d="M34 34H116V116H34Z" stroke="#e879f9" strokeWidth="3" strokeDasharray="8 5" className="anim-bloom-rotate" />
+              <path d="M48 48H64V64H48ZM86 48H102V64H86ZM48 86H64V102H48ZM86 86H102V102H86Z" fill="#c026d3" stroke="#f5d0fe" strokeWidth="2" />
+              <path d="M75 18L82 55L118 37L95 68L132 76L94 84L116 116L83 96L75 134L67 96L34 116L56 84L18 76L56 68L33 37L68 55Z" fill="rgba(192,38,211,0.2)" stroke="#f0abfc" strokeWidth="2" />
+              <text x="75" y="83" textAnchor="middle" fill="white" fontSize="18" fontWeight="900">!</text>
+            </svg>
+            <span className="absolute text-2xl text-fuchsia-100">⚡</span>
+          </div>
+        );
+
+      case "moyan_inkstroke":
+      case "moyan_contract":
+      case "moyan_ink_revelation":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-amber-300 shadow-[0_0_28px_rgba(217,119,6,0.75)]" />
+            <svg className="h-44 w-44 overflow-visible anim-bloom-rotate" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="56" stroke="#fcd34d" strokeWidth="2" strokeDasharray="12 6" />
+              <path d="M44 48C62 36 80 38 98 48M45 67C64 55 84 57 105 68M44 88C62 77 84 79 105 89M49 107C67 97 84 98 100 108" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round" />
+              <path d="M63 28L84 122M89 27L60 123" stroke="#fef3c7" strokeWidth="1.5" opacity=".85" />
+              <circle cx="75" cy="75" r="13" fill="#78350f" stroke="#fde68a" strokeWidth="2" />
+            </svg>
+            <span className="absolute text-2xl text-amber-100">文</span>
+          </div>
+        );
+
+      case "neuron_synaptic_click":
+      case "neuron_catalytic_burst":
+      case "neuron_network_synapse":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-indigo-300 shadow-[0_0_28px_rgba(99,102,241,0.9)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="54" stroke="#818cf8" strokeWidth="2" strokeDasharray="4 5" className="anim-bloom-rotate" />
+              <path d="M30 75H50L61 51L76 101L89 64L99 75H121" stroke="#c7d2fe" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="30" cy="75" r="5" fill="#6366f1" /><circle cx="61" cy="51" r="5" fill="#a5b4fc" />
+              <circle cx="76" cy="101" r="5" fill="#818cf8" /><circle cx="99" cy="75" r="5" fill="#c7d2fe" />
+              <circle cx="121" cy="75" r="5" fill="#6366f1" />
+            </svg>
+            <span className="absolute text-2xl text-indigo-100">⌘</span>
+          </div>
+        );
+
+      case "kern_stone_rush":
+      case "kern_core_rift":
+      case "kern_undercore_catastrophe":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-4 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.85)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 150 150" fill="none">
+              <path d="M75 14L94 47L130 38L111 72L136 100L99 102L80 136L61 105L23 112L43 78L18 51L56 48Z" fill="rgba(180,83,9,0.3)" stroke="#fbbf24" strokeWidth="3" />
+              <path d="M75 31L87 62L119 75L86 87L75 119L63 87L31 75L63 63Z" fill="#92400e" stroke="#fef3c7" strokeWidth="2" />
+              <circle cx="75" cy="75" r="13" fill="#f59e0b" stroke="white" strokeWidth="2" />
+            </svg>
+            <span className="absolute text-2xl text-amber-50">◆</span>
+          </div>
+        );
+
+      case "pulse_arc":
+      case "pulse_charge":
+      case "pulse_overdrive":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-indigo-300 shadow-[0_0_28px_rgba(129,140,248,0.85)]" />
+            <svg className="h-44 w-44 overflow-visible anim-bloom-rotate" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="55" stroke="#818cf8" strokeWidth="2" strokeDasharray="3 6" />
+              <circle cx="75" cy="75" r="39" stroke="#c7d2fe" strokeWidth="2" strokeDasharray="12 5" />
+              <path d="M81 25L53 78H72L65 122L98 67H78L81 25Z" fill="#6366f1" stroke="#e0e7ff" strokeWidth="2" strokeLinejoin="round" />
+            </svg>
+            <span className="absolute text-2xl text-indigo-50">⚡</span>
+          </div>
+        );
+
+      case "kopro_spear":
+      case "kopro_frenzy":
+      case "kopro_dendroburst":
+        return (
+          <div className="absolute flex items-center justify-center pointer-events-none">
+            <div className="anim-shockwave-ring absolute h-40 w-40 rounded-full border-2 border-lime-300 shadow-[0_0_28px_rgba(132,204,22,0.8)]" />
+            <svg className="h-44 w-44 overflow-visible anim-impact-burst" viewBox="0 0 150 150" fill="none">
+              <circle cx="75" cy="75" r="53" stroke="#a3e635" strokeWidth="2" strokeDasharray="5 5" className="anim-bloom-rotate" />
+              <path d="M40 117L105 35" stroke="#bef264" strokeWidth="6" strokeLinecap="round" />
+              <path d="M97 31L116 27L110 48Z" fill="#65a30d" stroke="#ecfccb" strokeWidth="2" />
+              <path d="M62 89C39 88 32 70 37 58C52 61 63 72 62 89ZM78 72C79 50 96 42 109 47C106 63 95 74 78 72Z" fill="rgba(101,163,13,0.35)" stroke="#84cc16" strokeWidth="2" />
+              <circle cx="75" cy="75" r="8" fill="#365314" stroke="#d9f99d" strokeWidth="2" />
+            </svg>
+            <span className="absolute text-2xl text-lime-100">✦</span>
           </div>
         );
 

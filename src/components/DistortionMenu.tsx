@@ -736,7 +736,7 @@ export const DistortionMenu: React.FC<DistortionMenuProps> = ({
               const playerCharData = isOwned ? profile.roster[charId] : null;
               const splash = getCharSplash(charId);
               const rarity = charRarity[charId] || 'A';
-              const rColor = rarity === 'S' ? 'text-amber-400' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
+              const rColor = rarity === 'G' ? 'text-fuchsia-300' : rarity === 'S' ? 'text-amber-400' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
 
               const previewHero = createDistortionCombatant(charId, slot.usePlayerBuild, profile, slotIdx);
 
@@ -1009,7 +1009,7 @@ export const DistortionMenu: React.FC<DistortionMenuProps> = ({
                   const playerCharData = isOwned ? profile.roster[charId] : null;
                   const splash = getCharSplash(charId);
                   const rarity = charRarity[charId] || 'A';
-                  const rColor = rarity === 'S' ? 'text-amber-400' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
+                  const rColor = rarity === 'G' ? 'text-fuchsia-300' : rarity === 'S' ? 'text-amber-400' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
                   const dummy = characterBlueprints[charId]?.('temp', 1, 0);
 
                   const teamSlotIdx = runState.team.findIndex(t => t.charId === charId);

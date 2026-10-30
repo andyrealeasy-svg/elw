@@ -5,11 +5,12 @@ import { cn } from '../lib/utils';
 import { EffectsOverlay, EffectsOverlayRef } from './EffectsOverlay';
 import { WhiteFieldOverlay } from './WhiteFieldOverlay';
 import { BattleArenaOverlays } from './battle/BattleArenaOverlays';
-import { UltimateAftermathField, UltimateAftermathData } from './battle/UltimateAftermathField';
+import { CharacterBattleBurst } from './battle/CharacterBattleBurst';
+import { HofmannitaFieldEffectOverlay, HofmannitaFieldEffectData, HofmannitaStageField, UltimateAftermathField, UltimateAftermathData } from './battle/UltimateAftermathField';
 import { UnitCard } from './battle/UnitCard';
 import { UltimateCutsceneOverlay, UltimateCutsceneData, ULTIMATE_CHARACTER_CONFIGS } from './battle/UltimateCutsceneOverlay';
 import { motion, AnimatePresence } from 'motion/react';
-import { dealDamage, bloomDarkFlower } from '../data';
+import { dealDamage, bloomDarkFlower, startHofmannitaTurn, advanceHofmannitaTurn, startCMHTurn, advanceCMHTurn } from '../data';
 import { 
   playNormalAttackSound, 
   playElementalSkillSound, 
@@ -19,7 +20,12 @@ import {
   setSoundMuteState,
   playVairenAttackSound,
   playVairenSkillSound,
-  playVairenUltimateSound
+  playVairenUltimateSound,
+  playHofmannitaAttackSound,
+  playHofmannitaStageSound,
+  playHofmannitaUltimateSound,
+  playSignatureSkillSound,
+  startHofmannitaStageMusic
 } from '../lib/sound';
 
 interface BattleScreenProps {
@@ -34,7 +40,32 @@ interface BattleScreenProps {
   stageTitle?: string;
   isDistortionMode?: boolean;
   distortionBuffIds?: string[];
+  isTrainingMode?: boolean;
+  trainingDurationSeconds?: number;
 }
+
+const CHARACTER_BATTLE_BURST_LEVELS: Record<string, 'skill' | 'ultimate'> = {
+  iva_floral_bond: 'skill',
+  iva_primordial_bloom: 'ultimate',
+  nereus_sea_flower: 'skill',
+  nereus_eternal_garden: 'ultimate',
+  selva_arcade_blast: 'skill',
+  selva_god_mode: 'ultimate',
+  moyan_contract: 'skill',
+  moyan_ink_revelation: 'ultimate',
+  neuron_catalytic_burst: 'skill',
+  neuron_network_synapse: 'ultimate',
+  kern_core_rift: 'skill',
+  kern_undercore_catastrophe: 'ultimate',
+  pulse_charge: 'skill',
+  pulse_overdrive: 'ultimate',
+  kopro_frenzy: 'skill',
+  kopro_dendroburst: 'ultimate',
+  selina_bloom: 'skill',
+  selina_waltz: 'ultimate',
+  asher_nature: 'skill',
+  asher_heart: 'ultimate',
+};
 
 export default function BattleScreen({ 
   playerParty: initialPlayers, 
@@ -46,22 +77,24 @@ export default function BattleScreen({
   battleBuff, 
   stageTitle,
   isDistortionMode,
-  distortionBuffIds 
+  distortionBuffIds,
+  isTrainingMode = false,
+  trainingDurationSeconds = 60
 }: BattleScreenProps) {
   const [players, setPlayers] = useState<Combatant[]>(() => {
-    if (!battleBuff) return initialPlayers;
     return initialPlayers.map(p => {
        const pb = { ...p, buffs: { ...p.buffs } };
-       if (battleBuff.includes("Крит. урон")) pb.buffs.critDamage = (pb.buffs.critDamage || 0) + 50;
-       if (battleBuff.includes("защита")) pb.buffs.shield = (pb.buffs.shield || 0) + p.stats.maxHp * 0.2;
-       if (battleBuff.includes("игнорирует")) pb.buffs.dmgBoost = (pb.buffs.dmgBoost || 0) + 15;
+       if (battleBuff?.includes("Крит. урон")) pb.buffs.critDamage = (pb.buffs.critDamage || 0) + 50;
+       if (battleBuff?.includes("защита")) pb.buffs.shield = (pb.buffs.shield || 0) + p.stats.maxHp * 0.2;
+       if (battleBuff?.includes("игнорирует")) pb.buffs.dmgBoost = (pb.buffs.dmgBoost || 0) + 15;
+       if (p.id === 'cmh') pb.buffs.cmhBits = 1 + (initialPlayers.some(ally => ally.id === 'hofmannita') ? 1 : 0);
        return pb;
     });
   });
   const [currentWave, setCurrentWave] = useState(0);
   const [enemies, setEnemies] = useState<Combatant[]>(enemyWaves[0]);
   const [muted, setMuted] = useState(getSoundMuteState());
-  const [isAutoBattle, setIsAutoBattle] = useState(false);
+  const [isAutoBattle, setIsAutoBattle] = useState(isTrainingMode);
   const [cutsceneSpeedMode, setCutsceneSpeedMode] = useState<'full' | 'fast' | 'skip'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('ed_cutscene_speed_mode');
@@ -71,8 +104,11 @@ export default function BattleScreen({
   });
   const [showExitModal, setShowExitModal] = useState(false);
   const [victoryCelebration, setVictoryCelebration] = useState(false);
+  const [trainingSecondsLeft, setTrainingSecondsLeft] = useState(trainingDurationSeconds);
 
   const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const trainingTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const trainingFinishedRef = useRef(false);
   const victoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const damageDealtRef = useRef<Record<string, number>>({});
   const battleStartTimeRef = useRef<number>(Date.now());
@@ -80,6 +116,17 @@ export default function BattleScreen({
   const victorySoundPlayedRef = useRef(false);
   const totalCutsceneTimeRef = useRef<number>(0);
   const cutsceneStartTimeRef = useRef<number | null>(null);
+
+  const getElapsedBattleSeconds = React.useCallback(() => {
+    const now = Date.now();
+    const currentCutsceneElapsed = cutsceneStartTimeRef.current === null
+      ? 0
+      : now - cutsceneStartTimeRef.current;
+    return Math.max(
+      0,
+      (now - battleStartTimeRef.current - totalCutsceneTimeRef.current - currentCutsceneElapsed) / 1000
+    );
+  }, []);
 
   const triggerVictorySequence = React.useCallback((stats: Record<string, number>, finalParty?: Combatant[]) => {
     if (battleEndedRef.current) return;
@@ -129,28 +176,46 @@ export default function BattleScreen({
   };
 
   const getBattleDurationSeconds = React.useCallback(() => {
-    const now = Date.now();
-    let currentCutsceneElapsed = 0;
-    if (cutsceneStartTimeRef.current !== null) {
-      currentCutsceneElapsed = now - cutsceneStartTimeRef.current;
-    }
-    const totalCutscenes = totalCutsceneTimeRef.current + currentCutsceneElapsed;
-    const rawElapsed = now - battleStartTimeRef.current;
-    const netElapsed = Math.max(500, rawElapsed - totalCutscenes);
-    return Math.max(0.5, netElapsed / 1000);
-  }, []);
+    return Math.max(0.5, getElapsedBattleSeconds());
+  }, [getElapsedBattleSeconds]);
 
   const toggleMute = () => {
     const newState = !muted;
     setMuted(newState);
     setSoundMuteState(newState);
   };
+
+  const hofmannitaStageUnit = players.find(p => p.id === 'hofmannita' && p.stats.hp > 0);
+  const hofmannitaStageActive = Boolean(
+    hofmannitaStageUnit &&
+    ((hofmannitaStageUnit.buffs.hofmannitaMainStageTurns || 0) > 0 ||
+      (hofmannitaStageUnit.buffs.hofmannitaOverdriveTurns || 0) > 0)
+  );
+  const hofmannitaOverdriveActive = Boolean(
+    hofmannitaStageUnit && (hofmannitaStageUnit.buffs.hofmannitaOverdriveTurns || 0) > 0
+  );
+
+  useEffect(() => {
+    if (!hofmannitaStageActive || muted || victoryCelebration) return;
+    return startHofmannitaStageMusic();
+  }, [hofmannitaStageActive, muted, victoryCelebration]);
+
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const logsRef = useRef<string[]>(["Бой начался!"]);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [activeCutscene, setActiveCutscene] = useState<UltimateCutsceneData | null>(null);
   const [ultimateAftermath, setUltimateAftermath] = useState<UltimateAftermathData | null>(null);
+  const [hofmannitaFieldEffect, setHofmannitaFieldEffect] = useState<HofmannitaFieldEffectData | null>(null);
+  const [characterBattleBurst, setCharacterBattleBurst] = useState<{
+    type: string;
+    timestamp: number;
+    x: number;
+    y: number;
+    level: 'skill' | 'ultimate';
+  } | null>(null);
   const aftermathTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hofmannitaFieldEffectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const characterBattleBurstTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUltimateRef = useRef<(() => void) | null>(null);
   const pendingAftermathRef = useRef<{
     charId: string;
@@ -226,9 +291,47 @@ export default function BattleScreen({
     damageDealt: damageDealtRef.current,
     effectsRefs: {} as Record<string, EffectsOverlayRef>,
     lastChecksum: 0,
-    isAutoBattle: false,
+    isAutoBattle: isTrainingMode,
     isDistortionMode: false
   });
+
+  const finishTraining = React.useCallback((reason: 'timer' | 'party') => {
+    if (!isTrainingMode || trainingFinishedRef.current) return;
+    trainingFinishedRef.current = true;
+    if (trainingTimerIntervalRef.current) {
+      clearInterval(trainingTimerIntervalRef.current);
+      trainingTimerIntervalRef.current = null;
+    }
+    const stats = { ...damageDealtRef.current, __duration: getBattleDurationSeconds() };
+    if (reason === 'timer') {
+      triggerVictorySequence(stats, stateRef.current.players);
+      return;
+    }
+    battleEndedRef.current = true;
+    stateRef.current.isRunning = false;
+    if (tickIntervalRef.current) {
+      clearInterval(tickIntervalRef.current);
+      tickIntervalRef.current = null;
+    }
+    onDefeat(stats, stateRef.current.players);
+  }, [getBattleDurationSeconds, isTrainingMode, onDefeat, triggerVictorySequence]);
+
+  useEffect(() => {
+    if (!isTrainingMode) return;
+    const updateRemainingTime = () => {
+      const secondsLeft = Math.max(0, Math.ceil(trainingDurationSeconds - getElapsedBattleSeconds()));
+      setTrainingSecondsLeft(secondsLeft);
+      if (secondsLeft === 0) finishTraining('timer');
+    };
+    updateRemainingTime();
+    trainingTimerIntervalRef.current = setInterval(updateRemainingTime, 100);
+    return () => {
+      if (trainingTimerIntervalRef.current) {
+        clearInterval(trainingTimerIntervalRef.current);
+        trainingTimerIntervalRef.current = null;
+      }
+    };
+  }, [getElapsedBattleSeconds, isTrainingMode, finishTraining, trainingDurationSeconds]);
 
   const registerEffectsRef = React.useCallback((uid: string, el: any) => {
     if (el) stateRef.current.effectsRefs[uid] = el;
@@ -241,7 +344,39 @@ export default function BattleScreen({
   }, []);
 
   const playEffect = React.useCallback((targetUid: string, type: string) => {
+    if (type.startsWith("hofmannita_field_")) {
+      const effectType = type.slice("hofmannita_field_".length) as HofmannitaFieldEffectData["type"];
+      if (effectType === "drop" || effectType === "impulse" || effectType === "stage") {
+        if (hofmannitaFieldEffectTimeoutRef.current) clearTimeout(hofmannitaFieldEffectTimeoutRef.current);
+        setHofmannitaFieldEffect({ type: effectType, timestamp: Date.now() });
+        hofmannitaFieldEffectTimeoutRef.current = setTimeout(() => setHofmannitaFieldEffect(null), effectType === "stage" ? 900 : 650);
+        if (effectType !== "stage") triggerShake();
+      }
+      return;
+    }
     if (type === "shake" || type === "ultimate_aoe") triggerShake();
+    const burstLevel = CHARACTER_BATTLE_BURST_LEVELS[type];
+    const arena = arenaRef.current;
+    if (burstLevel && arena) {
+      const arenaBounds = arena.getBoundingClientRect();
+      const targetCard = Array.from(arena.querySelectorAll<HTMLElement>('[data-unit-uid]'))
+        .find(card => card.dataset.unitUid === targetUid);
+      const targetBounds = targetCard?.getBoundingClientRect();
+      if (targetBounds && arenaBounds.width > 0 && arenaBounds.height > 0) {
+        if (characterBattleBurstTimeoutRef.current) clearTimeout(characterBattleBurstTimeoutRef.current);
+        setCharacterBattleBurst({
+          type,
+          timestamp: Date.now(),
+          x: Math.min(82, Math.max(18, ((targetBounds.left + targetBounds.width / 2 - arenaBounds.left) / arenaBounds.width) * 100)),
+          y: Math.min(76, Math.max(22, ((targetBounds.top + targetBounds.height / 2 - arenaBounds.top) / arenaBounds.height) * 100)),
+          level: burstLevel,
+        });
+        characterBattleBurstTimeoutRef.current = setTimeout(() => {
+          setCharacterBattleBurst(null);
+          characterBattleBurstTimeoutRef.current = null;
+        }, burstLevel === 'ultimate' ? 1150 : 900);
+      }
+    }
     if (stateRef.current.effectsRefs[targetUid]) {
       stateRef.current.effectsRefs[targetUid].playEffect(targetUid, type);
     }
@@ -280,6 +415,14 @@ export default function BattleScreen({
       }
 
       const { players: currPlayers, enemies: currEnemies, damageDealt } = stateRef.current;
+      if (stateRef.current.activeUnitId !== 'cmh') {
+        currPlayers.forEach(p => {
+          if (p.id === 'cmh' && p.buffs.cmhExtraActionPending) {
+            p.buffs.cmhExtraActionPending = false;
+            p.atb = 100;
+          }
+        });
+      }
       
       // Distortion Mode: Heroes cannot die, instant revive with 50% max HP if somehow <= 0
       if (isDistortionMode || stateRef.current.isDistortionMode) {
@@ -295,7 +438,11 @@ export default function BattleScreen({
       }
 
       // Check Win/Loss
-      if (!isDistortionMode && !stateRef.current.isDistortionMode && currPlayers.every(p => p.stats.hp <= 0)) {
+      if (isTrainingMode && currPlayers.every(p => p.stats.hp <= 0)) {
+        finishTraining('party');
+        return;
+      }
+      if (!isTrainingMode && !isDistortionMode && !stateRef.current.isDistortionMode && currPlayers.every(p => p.stats.hp <= 0)) {
         if (!battleEndedRef.current) {
           battleEndedRef.current = true;
           if (tickIntervalRef.current) {
@@ -308,7 +455,7 @@ export default function BattleScreen({
         }
         return;
       }
-      if (currEnemies.every(e => e.stats.hp <= 0)) {
+      if (!isTrainingMode && currEnemies.every(e => e.stats.hp <= 0)) {
         if (currentWave < enemyWaves.length - 1) {
           // Next Wave!
           const nextWaveIndex = currentWave + 1;
@@ -359,6 +506,31 @@ export default function BattleScreen({
         if (p.atb >= 100 && !hasActive) {
           hasActive = true;
           setActiveUnitId(p.id);
+
+          if (p.id === "hofmannita") {
+            const turnState = {
+              playerParty: currPlayers,
+              enemyParty: newEnemies,
+              turnQueue: [],
+              activeUnit: p,
+              logs: [],
+              damageDealt: damageDealtRef.current,
+              lastChecksum: 0,
+            };
+            startHofmannitaTurn(p, turnState, stateRef.current.addFloatText, addLog);
+          }
+          if (p.id === "cmh") {
+            const turnState = {
+              playerParty: currPlayers,
+              enemyParty: newEnemies,
+              turnQueue: [],
+              activeUnit: p,
+              logs: [],
+              damageDealt: damageDealtRef.current,
+              lastChecksum: 0,
+            };
+            startCMHTurn(p, turnState, stateRef.current.addFloatText, addLog);
+          }
           
           // --- Farina Turn Start Logic ---
           const farina = currPlayers.find(f => f.id === 'farina');
@@ -379,7 +551,8 @@ export default function BattleScreen({
           }
           return p;
         } else if (p.atb < 100) {
-          return { ...p, atb: Math.min(100, p.atb + p.stats.spd * 0.0625) };
+          const rechargeBoost = (p.buffs.cmhEnergyRechargeTurns || 0) > 0 ? 1.1 : 1;
+          return { ...p, atb: Math.min(100, p.atb + p.stats.spd * 0.0625 * rechargeBoost) };
         }
         return p;
       });
@@ -448,8 +621,16 @@ export default function BattleScreen({
          else if (skill.target === "Self") targets = [p];
 
           if (targets.length > 0) {
-            const fakeState = { playerParty: newPlayers, enemyParty: newEnemies, turnQueue: [], activeUnit: p, logs: [], damageDealt: damageDealtRef.current,
-    lastChecksum: 0 };
+            const fakeState = {
+              playerParty: newPlayers,
+              enemyParty: newEnemies,
+              turnQueue: [],
+              activeUnit: p,
+              logs: [],
+              damageDealt: damageDealtRef.current,
+              lastChecksum: 0,
+              cmhActionId: `${p.uid}-${Date.now()}-${Math.random()}`,
+            };
 
             const isThirdSkill = skill.type === "Skill2" || p.skills[2]?.id === skill.id;
             const charConfig = ULTIMATE_CHARACTER_CONFIGS[p.id];
@@ -460,14 +641,20 @@ export default function BattleScreen({
 
               skill.execute(p, targets, fakeState, addLog, stateRef.current.addFloatText, stateRef.current.playEffect);
               
-              if (p.id === 'vairen') {
-                if (skill.type === "Attack") playVairenAttackSound();
-                else if (skill.type === "Skill1") playVairenSkillSound();
-                else playVairenUltimateSound();
-              } else {
-                if (skill.type === "Attack") playNormalAttackSound();
-                else if (skill.type === "Skill1") playElementalSkillSound();
-                else playUltimateBurstSound();
+              if (!playSignatureSkillSound(p.id, skill.type, cutsceneSpeedMode === 'skip')) {
+                if (p.id === 'hofmannita') {
+                  if (skill.type === "Attack") playHofmannitaAttackSound();
+                  else if (skill.type === "Skill1") playHofmannitaStageSound();
+                  else if (cutsceneSpeedMode === 'skip') playHofmannitaUltimateSound();
+                } else if (p.id === 'vairen') {
+                  if (skill.type === "Attack") playVairenAttackSound();
+                  else if (skill.type === "Skill1") playVairenSkillSound();
+                  else playVairenUltimateSound();
+                } else {
+                  if (skill.type === "Attack") playNormalAttackSound();
+                  else if (skill.type === "Skill1") playElementalSkillSound();
+                  else playUltimateBurstSound();
+                }
               }
 
               if (skill.type !== "Attack" && onSkillUse) onSkillUse();
@@ -487,6 +674,9 @@ export default function BattleScreen({
               if (p.buffs.conductionCircuit && p.buffs.conductionCircuit > 0) {
                  p.buffs.conductionCircuit--;
               }
+
+              advanceHofmannitaTurn(p, fakeState, addLog, stateRef.current.addFloatText);
+              if (p.id === 'cmh') advanceCMHTurn(p, addLog);
             };
 
             if (charConfig && isThirdSkill && cutsceneSpeedMode !== 'skip') {
@@ -624,6 +814,14 @@ export default function BattleScreen({
             });
 
             p.atb = 0;
+            if (p.buffs.hofmannitaExtraActionPending) {
+               p.buffs.hofmannitaExtraActionPending = false;
+               p.atb = 100;
+            }
+            if (p.buffs.cmhExtraActionPending) {
+               p.buffs.cmhExtraActionPending = false;
+               p.atb = 100;
+            }
             setActiveUnitId(null);
             setSelectedSkill(null);
             // hasActive remains true to prevent enemy from attacking immediately
@@ -682,6 +880,10 @@ export default function BattleScreen({
             if (modifiedE.buffs.isolationMark && modifiedE.buffs.isolationMark > 0) {
                modifiedE.buffs.isolationMark--;
             }
+            if ((modifiedE.buffs.cmhBassTurns || 0) > 0) {
+               modifiedE.buffs.cmhBassTurns--;
+               if (modifiedE.buffs.cmhBassTurns === 0) modifiedE.buffs.cmhBassResDown = 0;
+            }
 
             if (modifiedE.buffs.critOvercool && modifiedE.buffs.critOvercool > 0) {
                modifiedE.buffs.critOvercool--;
@@ -691,6 +893,10 @@ export default function BattleScreen({
                modifiedE.buffs.snowDust--;
                if (modifiedE.buffs.snowDust === 0 && stateRef.current.addFloatText) {
                   stateRef.current.addFloatText(modifiedE.uid, "Пыль рассеялась", "text-cyan-200/80 text-xs font-bold");
+               }
+
+               if (modifiedE.buffs.hofmannitaBrokenRhythmTurns && modifiedE.buffs.hofmannitaBrokenRhythmTurns > 0) {
+                  modifiedE.buffs.hofmannitaBrokenRhythmTurns--;
                }
             }
 
@@ -769,8 +975,16 @@ export default function BattleScreen({
         clearTimeout(victoryTimeoutRef.current);
         victoryTimeoutRef.current = null;
       }
+      if (hofmannitaFieldEffectTimeoutRef.current) {
+        clearTimeout(hofmannitaFieldEffectTimeoutRef.current);
+        hofmannitaFieldEffectTimeoutRef.current = null;
+      }
+      if (characterBattleBurstTimeoutRef.current) {
+        clearTimeout(characterBattleBurstTimeoutRef.current);
+        characterBattleBurstTimeoutRef.current = null;
+      }
     };
-  }, [onDefeat, onVictory, isDistortionMode]);
+  }, [onDefeat, onVictory, isDistortionMode, isTrainingMode, finishTraining]);
 
   const handleSkillSelect = (skill: Skill) => {
     if (selectedSkill?.id === skill.id) {
@@ -814,26 +1028,44 @@ export default function BattleScreen({
       setAttackingUnitId(activeUnit.uid);
       setTimeout(() => setAttackingUnitId(null), 600);
 
-      const fakeState = { playerParty: players, enemyParty: enemies, turnQueue: [], activeUnit: activeUnit, logs: [], damageDealt: damageDealtRef.current,
-      lastChecksum: 0 };
+      const fakeState = {
+        playerParty: players,
+        enemyParty: enemies,
+        turnQueue: [],
+        activeUnit,
+        logs: [],
+        damageDealt: damageDealtRef.current,
+        lastChecksum: 0,
+        cmhActionId: `${activeUnit.uid}-${Date.now()}-${Math.random()}`,
+      };
       selectedSkill.execute(activeUnit, targets, fakeState, addLog, addFloatText, playEffect);
       
       // Play sound matching skill type
-      if (activeUnit.id === 'vairen') {
-        if (selectedSkill.type === "Attack") {
-          playVairenAttackSound();
-        } else if (selectedSkill.type === "Skill1") {
-          playVairenSkillSound();
+      if (!playSignatureSkillSound(activeUnit.id, selectedSkill.type, cutsceneSpeedMode === 'skip')) {
+        if (activeUnit.id === 'hofmannita') {
+          if (selectedSkill.type === "Attack") {
+            playHofmannitaAttackSound();
+          } else if (selectedSkill.type === "Skill1") {
+            playHofmannitaStageSound();
+          } else if (cutsceneSpeedMode === 'skip') {
+            playHofmannitaUltimateSound();
+          }
+        } else if (activeUnit.id === 'vairen') {
+          if (selectedSkill.type === "Attack") {
+            playVairenAttackSound();
+          } else if (selectedSkill.type === "Skill1") {
+            playVairenSkillSound();
+          } else {
+            playVairenUltimateSound();
+          }
         } else {
-          playVairenUltimateSound();
-        }
-      } else {
-        if (selectedSkill.type === "Attack") {
-          playNormalAttackSound();
-        } else if (selectedSkill.type === "Skill1") {
-          playElementalSkillSound();
-        } else {
-          playUltimateBurstSound();
+          if (selectedSkill.type === "Attack") {
+            playNormalAttackSound();
+          } else if (selectedSkill.type === "Skill1") {
+            playElementalSkillSound();
+          } else {
+            playUltimateBurstSound();
+          }
         }
       }
 
@@ -876,6 +1108,9 @@ export default function BattleScreen({
          activeUnit.buffs.conductionCircuit--;
       }
 
+      advanceHofmannitaTurn(activeUnit, fakeState, addLog, addFloatText);
+      if (activeUnit.id === 'cmh') advanceCMHTurn(activeUnit, addLog);
+
       if (activeUnit.id === 'vairen') {
          activeUnit.buffs.vairenC3HealCountThisTurn = 0;
          if (activeUnit.buffs.vairenForestHeartTurns && activeUnit.buffs.vairenForestHeartTurns > 0) {
@@ -907,6 +1142,14 @@ export default function BattleScreen({
 
       // Reset ATB and clear active state
       activeUnit.atb = 0;
+      if (activeUnit.buffs.hofmannitaExtraActionPending) {
+         activeUnit.buffs.hofmannitaExtraActionPending = false;
+         activeUnit.atb = 100;
+      }
+      if (activeUnit.buffs.cmhExtraActionPending) {
+         activeUnit.buffs.cmhExtraActionPending = false;
+         activeUnit.atb = 100;
+      }
       setSelectedSkill(null);
       setActiveUnitId(null);
       
@@ -1067,7 +1310,7 @@ export default function BattleScreen({
   // Zephyr battle effect primitives
   const zephyrUnit = players.find(p => p.id === 'zephyr' && p.stats.hp > 0);
   const isZephyrInParty = Boolean(zephyrUnit);
-
+  const cmhUnit = players.find(p => p.id === 'cmh' && p.stats.hp > 0);
   return (
     <div 
       className="w-full max-w-7xl h-[100dvh] md:h-[95dvh] flex flex-col bg-[#07080b] md:rounded-3xl overflow-hidden md:border border-white/10 shadow-2xl font-sans text-white/90 ring-1 ring-white/5 relative"
@@ -1085,6 +1328,8 @@ export default function BattleScreen({
         )}
       >
         
+        <HofmannitaStageField active={hofmannitaStageActive} overdrive={hofmannitaOverdriveActive} />
+
         {/* White Field Battle Visual Effect (Белое поле Фарины) */}
         <WhiteFieldOverlay active={isWhiteFieldActive} duration={whiteFieldDuration} />
 
@@ -1129,10 +1374,15 @@ export default function BattleScreen({
           isAurumInParty={isAurumInParty}
           aurumShield={aurumShield}
           isZephyrInParty={isZephyrInParty}
+          cmhFullRaveTurns={cmhUnit?.buffs.cmhFullRaveTurns ?? 0}
+          cmhOverbeatTurns={cmhUnit?.buffs.cmhOverbeatTurns ?? 0}
+          cmhFinalDropTurns={cmhUnit?.buffs.cmhFinalDropTurns ?? 0}
         />
 
         {/* Lingering Ultimate Aftermath Elemental Field Effects */}
         <UltimateAftermathField aftermath={ultimateAftermath} />
+        <HofmannitaFieldEffectOverlay effect={hofmannitaFieldEffect} />
+        <CharacterBattleBurst effect={characterBattleBurst} />
 
         {/* Background Decorative elements */}
         <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
@@ -1152,12 +1402,18 @@ export default function BattleScreen({
               <span className="hidden sm:inline uppercase tracking-tighter">Звук</span>
             </button>
             <button 
-              onClick={() => setIsAutoBattle(!isAutoBattle)}
+              onClick={() => {
+                if (!isTrainingMode) setIsAutoBattle(!isAutoBattle);
+              }}
+              disabled={isTrainingMode}
+              aria-disabled={isTrainingMode}
               className={cn(
-                "group relative bg-[#111111]/60 hover:bg-white/10 border p-1.5 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center gap-1.5 text-xs font-bold backdrop-blur-md", 
-                isAutoBattle ? "text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10" : "text-white/60 hover:text-white border-white/10"
+                "group relative bg-[#111111]/60 border p-1.5 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center gap-1.5 text-xs font-bold backdrop-blur-md",
+                isAutoBattle ? "text-emerald-400 border-emerald-500/50" : "text-white/60 hover:text-white border-white/10",
+                !isTrainingMode && "hover:bg-white/10",
+                isTrainingMode && "cursor-not-allowed disabled:opacity-100"
               )}
-              title="Автобой (A)"
+              title={isTrainingMode ? "Автобой включён в тестовом режиме" : "Автобой (A)"}
             >
               <Sword className={cn("w-4 h-4", isAutoBattle ? "opacity-100 animate-pulse" : "opacity-50")} />
               <span className="hidden sm:inline uppercase tracking-tighter">Авто</span>
@@ -1196,6 +1452,11 @@ export default function BattleScreen({
                <div className="bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold text-slate-100 shadow-md flex items-center gap-2 backdrop-blur-md">
                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
                  <span>{stageTitle}</span>
+                 {isTrainingMode && (
+                   <span className={cn('ml-1 rounded-full border px-2 py-0.5 tabular-nums', trainingSecondsLeft <= 10 ? 'border-red-400/40 text-red-300' : 'border-cyan-400/25 text-cyan-200')}>
+                     {Math.floor(trainingSecondsLeft / 60)}:{String(trainingSecondsLeft % 60).padStart(2, '0')}
+                   </span>
+                 )}
                </div>
              ) : (
                <>

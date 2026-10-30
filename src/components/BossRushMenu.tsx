@@ -13,14 +13,15 @@ interface BossRushMenuProps {
 
 const BOSSES = [
   { 
-    id: 'tachyon_sentinel', 
-    name: 'Тахионный Часовой', 
-    level: 85, 
-    hpText: '620k HP', 
-    element: 'Cryo', 
-    desc: 'Обладает ускоренным хроно-приводом и смертоносным таймером. Уязвим к отбрасыванию шкалы ATB, Крио-замедлению и контролю времени (под Крону).', 
+    id: 'reactor_titan',
+    name: 'Реакторный Титан',
+    level: 88,
+    hpText: '720k HP',
+    element: 'Pyro',
+    team: 'Вольта • накопление Вольтажа и Проводящий контур',
+    desc: 'Разгоняет нестабильное ядро серией огненных импульсов. Вольтаж Вольты и активный Проводящий контур замыкают реактор, отражая часть атак и сбивая заряд босса.',
     icon: Zap, 
-    color: 'text-cyan-400' 
+    color: 'text-amber-400'
   },
   { 
     id: 'prism_colossus', 
@@ -28,19 +29,21 @@ const BOSSES = [
     level: 92, 
     hpText: '880k HP', 
     element: 'Pyro', 
-    desc: 'Защищен зеркальным барьером и сотрясает поле боя. Разрушается реакциями Отражения, крепкими Гео-щитами и электрической перегрузкой (под отряд Инеффа + Зефир + Аурум + Рикс).', 
+    team: 'Инеффа • Зефир • Аурум • Рикс',
+    desc: 'Меняет отражающие грани и накапливает энергию для сверхновой. Полный резонанс отряда Инеффы, Зефира, Аурума и Рикса пробивает призму, отражает сверхновую и обрушивает защиту босса.',
     icon: Flame, 
     color: 'text-amber-400' 
   },
   { 
-    id: 'abyssal_primordial', 
-    name: 'Владыка Топи и Прилива', 
+    id: 'frost_tide_lord',
+    name: 'Владыка Ледяного Прилива',
     level: 98, 
     hpText: '1.25M HP', 
-    element: 'Hydro', 
-    desc: 'Окутан темной тиной бездны. Требует непрерывных цепных детонаций Бутонизации, расцвета Тёмных Цветов и мощи Океана (под связку Вайрен + Нереус).', 
+    element: 'Cryo',
+    team: 'Кайрен • Нереус • Авелин • Фарина или Снежана',
+    desc: 'Сковывает отряд ледяной водой и усиливается, пока поле заполнено морозом. Кайрен и Нереус ломают ледяной панцирь, Авелин поддерживает водный резонанс, а Фарина или Снежана завершают цикл лечения и контроля.',
     icon: Mountain, 
-    color: 'text-teal-400' 
+    color: 'text-cyan-400'
   }
 ];
 
@@ -88,11 +91,11 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black uppercase italic tracking-wider flex items-center gap-2 text-white">
-                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 4
+                <Skull className="w-6 h-6 text-fuchsia-500" /> Теневой Натиск: Сезон 5
               </h1>
             </div>
             <p className="text-xs text-white/50 font-medium">
-              Соберите 3 специализированных отряда для 3 новых боссов (Обновление 1.4)
+              Обновление 1.5 • три босса и три отдельных отряда
             </p>
           </div>
         </div>
@@ -109,20 +112,20 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
       <div className="bg-[#111111]/80 backdrop-blur-sm border-b border-white/5 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between z-10 shrink-0 gap-3">
          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <span className="text-xs sm:text-sm font-bold text-white/80 uppercase tracking-wider">Награды за сезон:</span>
-            {profile.bossRushSeason4Claimed ? (
+            {profile.bossRushSeason5Claimed ? (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                    ✓ Получено
                  </span>
-                 <span className="text-[10px] sm:text-xs text-white/40">Награды за Сезон 4 уже собраны. Базовый опыт и золото.</span>
+                 <span className="text-[10px] sm:text-xs text-white/40">Главные награды получены. Повторное прохождение даёт опыт, золото и боевой пропуск.</span>
                </div>
             ) : (
                <div className="flex items-center gap-2 flex-wrap">
                  <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20 flex items-center gap-1.5">
-                   💎 1500 Гемов
+                   💎 1500 самоцветов
                  </span>
                  <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1.5">
-                   🛡️ 10x 5★ (Заросли Тёмного Древа / Зов Дикой Охоты)
+                   🛡️ 5 артефактов 5★ «Заросли Тёмного Древа» + 5 «Зов Дикой Охоты»
                  </span>
                </div>
             )}
@@ -153,6 +156,7 @@ export const BossRushMenu: React.FC<BossRushMenuProps> = ({ profile, onBack, onS
                   </div>
                   <h3 className="text-lg font-black uppercase text-white tracking-tight">{boss.name}</h3>
                   <p className="text-xs text-white/50 mt-2 leading-relaxed">{boss.desc}</p>
+                  <p className="text-[10px] text-fuchsia-300/80 mt-2 font-bold uppercase tracking-wide">Рекомендуемый отряд: {boss.team}</p>
                 </div>
                 
                 <div className="sm:w-2/3 grid grid-cols-4 gap-2">

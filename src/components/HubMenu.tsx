@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, Step, EventData, STATUS } from 'react-joyride';
 import { PlayerProfile, GameRoute } from '../types';
-import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle, Sparkles, Cloud, Database, RefreshCw, Check, Ticket, Loader2, KeyRound, Copy, Download, Upload } from 'lucide-react';
+import { Gem, Zap, Swords, Compass, Star, CheckCircle, Info, Users, Gift, Calendar, Map, Menu, X, Layers, Trophy, Book, Globe, Skull, HelpCircle, Sparkles, Cloud, Database, RefreshCw, Check, Ticket, Loader2, KeyRound, Copy, Download, Upload, Target } from 'lucide-react';
 import { characterBlueprints, charRarity, getCharEmoji, getCharSplash } from '../data';
 import EventsMenu from './EventsMenu';
 import { cn } from '../lib/utils';
@@ -647,6 +647,9 @@ export default function HubMenu({
                <button onClick={() => setRoute('ROSTER')} className="desk-tutorial-roster w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 transition-colors">
                   <Users className="w-4 h-4" /> <span className="text-sm">Отряд ({Object.keys(profile.roster).length})</span>
                </button>
+               <button onClick={() => setRoute('TRAINING_SETUP')} className="w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-white/70 transition-colors">
+                  <Target className="w-4 h-4" /> <span className="text-sm">Тест отряда</span>
+               </button>
                <button onClick={() => setRoute('DISTORTION')} className="w-full flex items-center gap-3 p-2.5 rounded-xl font-medium hover:bg-[#1a1a1a]/50 text-purple-300 border border-purple-500/20 bg-purple-500/10 transition-colors">
                   <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" /> <span className="text-sm font-bold">Искажение</span>
                   <span className="ml-auto text-[8px] bg-purple-500/30 text-purple-200 px-1.5 py-0.5 rounded font-black uppercase">NEW</span>
@@ -852,6 +855,13 @@ export default function HubMenu({
                         <Users className="w-5 h-5" />
                         <span className="text-xs font-medium tracking-wide">Отряд</span>
                      </button>
+                     <button
+                        onClick={() => { setRoute('TRAINING_SETUP'); setMenuOpen(false); }}
+                        className="flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70"
+                     >
+                        <Target className="w-5 h-5 text-white/50" />
+                        <span className="text-xs font-medium tracking-wide">Тест отряда</span>
+                     </button>
                      <button 
                         onClick={() => { setActiveTab('DUNGEONS'); setMenuOpen(false); }}
                         className={`mob-tutorial-dungeons flex items-center justify-start p-3 rounded-2xl border-2 transition-all gap-3 text-left ${
@@ -879,14 +889,11 @@ export default function HubMenu({
                      </button>
                      <button 
                         onClick={() => { setRoute('DISTORTION'); setMenuOpen(false); }}
-                        className="flex items-center justify-start p-3 rounded-2xl border-2 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 transition-all gap-3 text-left text-purple-300 col-span-2"
+                        className="flex items-center justify-start p-3 rounded-2xl border-2 border-white/5 bg-[#111111]/40 hover:bg-[#111111] transition-all gap-3 text-left text-white/70"
                      >
-                        <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
-                        <div className="flex flex-col">
-                           <span className="text-xs font-bold tracking-wide">Искажение (Новый режим)</span>
-                           <span className="text-[9px] text-purple-300/60 font-mono">10 этапов • Бессмертие • 32 искажения</span>
-                        </div>
-                        <span className="ml-auto text-[8px] bg-purple-500/30 text-purple-200 px-1.5 py-0.5 rounded font-black uppercase">NEW</span>
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <span className="text-xs font-medium tracking-wide">Искажение</span>
+                        <span className="ml-auto text-[8px] bg-white/10 text-white/50 px-1.5 py-0.5 rounded font-bold uppercase">NEW</span>
                      </button>
                   </div>
                </div>
@@ -1143,7 +1150,7 @@ export default function HubMenu({
                            if (!charInfo) return null;
                            const char = characterBlueprints[id]("mock", charInfo.level, charInfo.constellation);
                            const rarity = charRarity[id];
-                           const rColor = rarity === 'S' ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
+                           const rColor = rarity === 'G' ? 'text-fuchsia-300 drop-shadow-[0_0_8px_rgba(232,121,249,0.5)]' : rarity === 'S' ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]' : rarity === 'A' ? 'text-purple-400' : 'text-blue-400';
                            
                            return (
                               <div key={id} className="group bg-[#111111] border border-white/5 p-4 rounded-3xl flex items-center gap-4 hover:bg-[#1a1a1a] transition-all cursor-pointer relative overflow-hidden">
@@ -1165,7 +1172,7 @@ export default function HubMenu({
                                     <div className="text-[9px] font-black font-mono text-white/40 uppercase tracking-widest mt-0.5">Constellation {char.constellation}</div>
                                  </div>
                                  
-                                 <div className={cn("absolute right-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity", rarity === 'S' ? 'bg-yellow-500' : 'bg-indigo-500')} />
+                                 <div className={cn("absolute right-0 top-0 bottom-0 w-1 opacity-0 group-hover:opacity-100 transition-opacity", rarity === 'G' ? 'bg-fuchsia-400' : rarity === 'S' ? 'bg-yellow-500' : 'bg-indigo-500')} />
                               </div>
                            );
                         })}

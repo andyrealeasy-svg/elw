@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getCharSplash } from '../../data';
+import { getCharEmoji, getCharSplash } from '../../data';
 import { cn } from '../../lib/utils';
-import { playUltimateBurstSound, playVairenUltimateSound } from '../../lib/sound';
+import { playUltimateBurstSound, playVairenUltimateSound, playHofmannitaUltimateSound, playSignatureCombatSound } from '../../lib/sound';
 
 export interface UltimateCutsceneData {
   charId: string;
@@ -13,7 +13,7 @@ export interface UltimateCutsceneData {
   duration?: number;
 }
 
-// 11 special characters + Fenris + fallbacks
+// Unique ultimate cutscene themes with a generic fallback for other characters.
 export const ULTIMATE_CHARACTER_CONFIGS: Record<string, { quote: string; title: string; subtitle: string; themeColor: string; bgTint: string; particleColor: string; accentColor: string }> = {
   volta: {
     title: 'ПЕРЕГРУЗКА ВОЛЬТА',
@@ -149,6 +149,69 @@ export const ULTIMATE_CHARACTER_CONFIGS: Record<string, { quote: string; title: 
     bgTint: 'from-purple-950/60 via-fuchsia-950/40 to-black/80',
     particleColor: 'rgba(192, 132, 252, 0.95)',
     accentColor: '#c084fc'
+  },
+  selva: {
+    title: 'РЕЖИМ БОГА',
+    subtitle: 'Аркадный разряд • рейтинг на максимуме',
+    quote: '«Секретный уровень разблокирован. Ну что, готовы к финальному боссу?»',
+    themeColor: 'text-fuchsia-200 border-fuchsia-400 [text-shadow:0_0_18px_rgba(232,121,249,0.95)]',
+    bgTint: 'from-fuchsia-950/60 via-violet-950/40 to-black/80',
+    particleColor: 'rgba(232, 121, 249, 0.95)',
+    accentColor: '#e879f9'
+  },
+  moyan: {
+    title: 'ОЖИВЛЕНИЕ РУКОПИСИ',
+    subtitle: 'Золотая печать • гео-чернила древнего контракта',
+    quote: '«Пусть каждая строка станет опорой, а каждый знак — защитой.»',
+    themeColor: 'text-amber-100 border-amber-400 [text-shadow:0_0_18px_rgba(251,191,36,0.95)]',
+    bgTint: 'from-amber-950/60 via-yellow-950/35 to-black/80',
+    particleColor: 'rgba(251, 191, 36, 0.95)',
+    accentColor: '#fbbf24'
+  },
+  neuron: {
+    title: 'НЕЙРОСЕТЕВОЙ СИНАПС',
+    subtitle: 'Квантовый контур • все связи активны',
+    quote: '«Связи найдены. Система синхронизирована. Запускаю каскадный импульс!»',
+    themeColor: 'text-indigo-100 border-indigo-400 [text-shadow:0_0_18px_rgba(129,140,248,0.95)]',
+    bgTint: 'from-indigo-950/60 via-blue-950/40 to-black/80',
+    particleColor: 'rgba(129, 140, 248, 0.95)',
+    accentColor: '#818cf8'
+  },
+  selina: {
+    title: 'АЛЫЙ ВАЛЬС РОЗ',
+    subtitle: 'Пламенный бутон • танец лепестков',
+    quote: '«Пусть каждый лепесток вспыхнет алым пламенем!»',
+    themeColor: 'text-rose-100 border-rose-400 [text-shadow:0_0_18px_rgba(251,113,133,0.95)]',
+    bgTint: 'from-rose-950/60 via-red-950/40 to-black/80',
+    particleColor: 'rgba(251, 113, 133, 0.95)',
+    accentColor: '#fb7185'
+  },
+  asher: {
+    title: 'СЕРДЦЕ ПЕЧИ',
+    subtitle: 'Тлеющая связь • корни несокрушимости',
+    quote: '«Пламя не погаснет, пока корни держат землю.»',
+    themeColor: 'text-emerald-100 border-emerald-400 [text-shadow:0_0_18px_rgba(52,211,153,0.95)]',
+    bgTint: 'from-emerald-950/60 via-lime-950/35 to-black/80',
+    particleColor: 'rgba(110, 231, 183, 0.95)',
+    accentColor: '#6ee7b7'
+  },
+  hofmannita: {
+    title: 'КЛУБ НА КРАЮ КЛАДБИЩА',
+    subtitle: 'MAIN STAGE • OVERDRIVE',
+    quote: '«На сцену! ХАЙП на пике — этот клуб не закроется!»',
+    themeColor: 'text-fuchsia-200 border-fuchsia-400 [text-shadow:0_0_18px_rgba(232,121,249,0.95)]',
+    bgTint: 'from-fuchsia-950/60 via-violet-950/50 to-black/80',
+    particleColor: 'rgba(232, 121, 249, 0.95)',
+    accentColor: '#e879f9'
+  },
+  cmh: {
+    title: 'CRAZY MEGA HELL',
+    subtitle: 'FULL RAVE • FINAL DROP',
+    quote: '«Громче! Этот бит разнесёт всю сцену!»',
+    themeColor: 'text-orange-100 border-red-400 [text-shadow:0_0_18px_rgba(249,115,22,0.95)]',
+    bgTint: 'from-red-950/70 via-orange-950/45 to-black/85',
+    particleColor: 'rgba(249, 115, 22, 0.95)',
+    accentColor: '#f97316'
   }
 };
 
@@ -186,7 +249,11 @@ export const UltimateCutsceneOverlay: React.FC<{
     setPhase('enter');
 
     // SFX
-    if (cutscene.charId === 'vairen') {
+    if (cutscene.charId === 'cmh' || cutscene.charId === 'iva' || cutscene.charId === 'nereus' || cutscene.charId === 'kairen' || cutscene.charId === 'aveline' || cutscene.charId === 'volta' || cutscene.charId === 'selina' || cutscene.charId === 'asher' || cutscene.charId === 'ineffa' || cutscene.charId === 'fenris' || cutscene.charId === 'zephyr' || cutscene.charId === 'aurum' || cutscene.charId === 'aelita' || cutscene.charId === 'maestro' || cutscene.charId === 'cyrus' || cutscene.charId === 'raven') {
+      playSignatureCombatSound(cutscene.charId, 'ultimate');
+    } else if (cutscene.charId === 'hofmannita') {
+      playHofmannitaUltimateSound();
+    } else if (cutscene.charId === 'vairen') {
       playVairenUltimateSound();
     } else {
       playUltimateBurstSound();
@@ -315,7 +382,7 @@ export const UltimateCutsceneOverlay: React.FC<{
                 />
               ) : (
                 <div className="w-full h-full rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-4xl">
-                  ⚔️
+                  {getCharEmoji(cutscene.charId)}
                 </div>
               )}
             </div>
@@ -355,6 +422,25 @@ export const UltimateCutsceneOverlay: React.FC<{
         {/* Battlefield-Spanning Fullscreen Vector VFX Layer (Optimized vector rendering without CPU filter drop-shadows) */}
         <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center overflow-hidden">
           
+          {cutscene.charId === 'hofmannita' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="anim-shockwave-ring absolute w-[min(78vw,520px)] aspect-square rounded-full border-2 border-fuchsia-300/80 shadow-[0_0_45px_rgba(232,121,249,0.5)]" />
+              <div className="anim-bloom-rotate absolute w-[min(62vw,410px)] aspect-square rounded-full border border-violet-300/70 border-dashed" />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <path d="M 0 300 L 170 300 L 205 245 L 250 360 L 300 180 L 345 420 L 390 275 L 430 300 L 1000 300" stroke="#e879f9" strokeWidth="5" opacity="0.8" className="anim-ice-slash" />
+                <path d="M 0 330 L 1000 330" stroke="#c4b5fd" strokeWidth="2" strokeDasharray="14 12" opacity="0.65" />
+              </svg>
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: [0.9, 1.05, 1], opacity: [0, 1, 0.85] }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className="absolute text-4xl sm:text-6xl font-black italic tracking-[0.25em] text-fuchsia-100 [text-shadow:0_0_20px_rgba(232,121,249,0.9)]"
+              >
+                DROP
+              </motion.div>
+            </div>
+          )}
+
           {/* 1. VOLTA */}
           {cutscene.charId === 'volta' && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -442,6 +528,49 @@ export const UltimateCutsceneOverlay: React.FC<{
             </div>
           )}
 
+          {cutscene.charId === 'selina' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="anim-shockwave-ring absolute w-[min(70vw,440px)] aspect-square rounded-full border-2 border-rose-300/70 shadow-[0_0_45px_rgba(244,63,94,0.4)]" />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <circle cx="500" cy="300" r="210" stroke="#fb7185" strokeWidth="2" strokeDasharray="12 9" className="anim-bloom-rotate" />
+                <circle cx="500" cy="300" r="160" stroke="#fde68a" strokeWidth="1.5" strokeDasharray="4 10" />
+                <path d="M500 430C455 368 380 333 402 267C419 220 469 237 500 280C531 237 581 220 598 267C620 333 545 368 500 430Z" fill="rgba(225,29,72,0.18)" stroke="#ffe4e6" strokeWidth="4" />
+                <path d="M500 429V520M495 476L455 453M505 492L547 463" stroke="#86efac" strokeWidth="5" strokeLinecap="round" />
+                <path d="M500 85V150M260 300H325M675 300H740M330 130L376 176M624 424L670 470M670 130L624 176M376 424L330 470" stroke="#fda4af" strokeWidth="3" strokeLinecap="round" />
+                <path d="M155 195C280 125 360 170 410 233M845 405C720 475 640 430 590 367" stroke="#fb7185" strokeWidth="3" strokeDasharray="8 10" />
+              </svg>
+              <motion.div
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: [0.8, 1.05, 1], opacity: [0, 0.9, 0.75] }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="absolute bottom-[18%] rounded-full border border-rose-200/50 bg-black/50 px-5 py-2 text-xs sm:text-sm font-black uppercase tracking-[0.25em] text-rose-100"
+              >
+                Petals ignite
+              </motion.div>
+            </div>
+          )}
+
+          {cutscene.charId === 'asher' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="anim-shockwave-ring absolute w-[min(70vw,440px)] aspect-square rounded-full border-2 border-emerald-300/70 shadow-[0_0_45px_rgba(16,185,129,0.4)]" />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <circle cx="500" cy="300" r="205" stroke="#6ee7b7" strokeWidth="2" strokeDasharray="10 8" className="anim-bloom-rotate" />
+                <path d="M500 470V175M500 365C390 365 338 285 360 215C439 218 492 278 500 365ZM500 298C605 298 665 213 637 145C555 154 505 216 500 298Z" fill="rgba(16,185,129,0.12)" stroke="#a7f3d0" strokeWidth="6" strokeLinecap="round" />
+                <path d="M250 420C340 380 390 380 455 415M750 420C660 380 610 380 545 415M300 190L375 245M700 190L625 245" stroke="#d9f99d" strokeWidth="4" strokeLinecap="round" />
+                <path d="M270 300C330 250 385 255 425 295M730 300C670 250 615 255 575 295" stroke="#34d399" strokeWidth="5" strokeDasharray="9 8" />
+                <circle cx="500" cy="300" r="26" fill="rgba(132,204,22,0.3)" stroke="#ecfccb" strokeWidth="3" />
+              </svg>
+              <motion.div
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: [0.8, 1.05, 1], opacity: [0, 0.9, 0.75] }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="absolute bottom-[18%] rounded-full border border-emerald-200/50 bg-black/50 px-5 py-2 text-xs sm:text-sm font-black uppercase tracking-[0.25em] text-emerald-100"
+              >
+                The hearth holds
+              </motion.div>
+            </div>
+          )}
+
           {/* 7. IVA */}
           {cutscene.charId === 'iva' && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -483,6 +612,65 @@ export const UltimateCutsceneOverlay: React.FC<{
                 <circle cx="500" cy="300" r="130" stroke="#e879f9" strokeWidth="2.5" strokeDasharray="14 7" className="anim-bloom-rotate" />
               </svg>
               <div className="absolute text-3xl top-1/4 right-1/4">🎼</div>
+            </div>
+          )}
+
+          {cutscene.charId === 'selva' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: [0.85, 1.08, 1], opacity: [0, 1, 0.9] }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className="absolute rounded-2xl border-2 border-fuchsia-300/70 bg-fuchsia-950/20 shadow-[0_0_45px_rgba(217,70,239,0.5)] w-[min(78vw,500px)] aspect-square"
+              />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <path d="M100 100H300V220H430V100H650V240H870V120H960M100 500H240V380H500V500H700V360H900V500" stroke="#e879f9" strokeWidth="5" strokeDasharray="12 10" className="anim-ice-slash" />
+                <path d="M500 40L530 250L700 180L585 315L790 365L570 390L640 560L500 440L360 560L430 390L210 365L415 315L300 180L470 250Z" stroke="#f5d0fe" strokeWidth="3" fill="rgba(192,38,211,0.16)" className="anim-bloom-rotate" />
+                <rect x="450" y="250" width="100" height="100" rx="10" stroke="#ffffff" strokeWidth="3" fill="rgba(217,70,239,0.25)" />
+                <path d="M475 275H495V295H475ZM505 305H525V325H505Z" fill="#fdf4ff" />
+              </svg>
+              <div className="absolute text-4xl sm:text-6xl font-black italic tracking-[0.2em] text-fuchsia-100 [text-shadow:0_0_24px_rgba(232,121,249,1)]">MAX COMBO</div>
+            </div>
+          )}
+
+          {cutscene.charId === 'moyan' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="anim-shockwave-ring absolute w-[min(72vw,460px)] aspect-square rounded-full border-2 border-amber-300/80 shadow-[0_0_40px_rgba(245,158,11,0.5)]" />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <path d="M230 115H770V485H230Z" stroke="#fbbf24" strokeWidth="3" strokeDasharray="15 8" className="anim-bloom-rotate" />
+                <path d="M330 190C405 150 465 155 525 195M330 260C420 220 500 225 625 265M330 330C420 290 525 300 665 335M350 400C430 365 540 365 640 410" stroke="#fef3c7" strokeWidth="7" strokeLinecap="round" />
+                <path d="M500 135L545 300L500 465L455 300Z" fill="rgba(217,119,6,0.2)" stroke="#fde68a" strokeWidth="3" />
+                <circle cx="500" cy="300" r="22" fill="#b45309" stroke="#fff7ed" strokeWidth="3" />
+              </svg>
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: [0, 1, 0.9], y: 0 }}
+                transition={{ duration: 0.7 }}
+                className="absolute bottom-[18%] rounded-full border border-amber-200/50 bg-black/60 px-5 py-2 text-xs sm:text-sm font-black uppercase tracking-[0.28em] text-amber-100"
+              >
+                The contract is sealed
+              </motion.div>
+            </div>
+          )}
+
+          {cutscene.charId === 'neuron' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="anim-shockwave-ring absolute w-[min(72vw,460px)] aspect-square rounded-full border-2 border-indigo-300/80 shadow-[0_0_42px_rgba(99,102,241,0.55)]" />
+              <svg className="absolute w-full h-full" viewBox="0 0 1000 600" fill="none" preserveAspectRatio="none">
+                <circle cx="500" cy="300" r="190" stroke="#818cf8" strokeWidth="2" strokeDasharray="10 8" className="anim-bloom-rotate" />
+                <circle cx="500" cy="300" r="125" stroke="#c7d2fe" strokeWidth="2" strokeDasharray="4 7" />
+                <path d="M170 180L340 250L500 130L660 250L830 180M170 420L340 350L500 470L660 350L830 420M340 250L340 350M660 250L660 350M340 250L500 300L660 250M340 350L500 300L660 350" stroke="#a5b4fc" strokeWidth="3" strokeLinecap="round" />
+                <path d="M490 220L455 305H490L470 385L545 280H505L530 220Z" fill="#6366f1" stroke="#e0e7ff" strokeWidth="3" strokeLinejoin="round" />
+                {[170, 340, 500, 660, 830].map((x, index) => (
+                  <circle key={x} cx={x} cy={index % 2 === 0 ? 180 : 250} r="11" fill="#312e81" stroke="#c7d2fe" strokeWidth="3" />
+                ))}
+                {[170, 340, 500, 660, 830].map((x, index) => (
+                  <circle key={`lower-${x}`} cx={x} cy={index % 2 === 0 ? 420 : 350} r="9" fill="#4338ca" stroke="#e0e7ff" strokeWidth="2" />
+                ))}
+              </svg>
+              <div className="absolute rounded-full border border-indigo-200/40 bg-[#080b25]/80 px-5 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-indigo-100 shadow-[0_0_24px_rgba(99,102,241,0.6)]">
+                Neural link established
+              </div>
             </div>
           )}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { SkipForward, Sparkles } from 'lucide-react';
-import { playWishMeteorSound, playWishImpactSound } from '../lib/sound';
+import { Music2, SkipForward, Sparkles } from 'lucide-react';
+import { playRiftGachaImpact, playRiftGachaMusic, playWishMeteorSound, playWishImpactSound } from '../lib/sound';
 
 export type CometTheme = 'DISTORTION' | 'GOLD' | 'PURPLE' | 'BLUE';
 
@@ -9,6 +9,8 @@ interface CosmicCometProps {
   theme: CometTheme;
   isMulti?: boolean;
   subtitle?: string;
+  eventGacha?: boolean;
+  featuredHit?: boolean;
   onImpact?: () => void;
   onSkip?: () => void;
 }
@@ -17,6 +19,8 @@ export const CosmicComet: React.FC<CosmicCometProps> = ({
   theme,
   isMulti = false,
   subtitle,
+  eventGacha = false,
+  featuredHit = false,
   onImpact,
   onSkip
 }) => {
@@ -94,14 +98,24 @@ export const CosmicComet: React.FC<CosmicCometProps> = ({
 
   // Audio trigger on mount
   useEffect(() => {
-    playWishMeteorSound(colors.soundRarity);
+    let stopRiftMusic = () => {};
+    if (eventGacha) {
+      stopRiftMusic = playRiftGachaMusic(featuredHit);
+      playWishMeteorSound(featuredHit ? 'S' : 'A');
+    } else {
+      playWishMeteorSound(colors.soundRarity);
+    }
     const impactTimer = setTimeout(() => {
-      playWishImpactSound(colors.soundRarity);
+      if (eventGacha) playRiftGachaImpact(featuredHit);
+      else playWishImpactSound(colors.soundRarity);
       if (onImpact) onImpact();
     }, 2400);
 
-    return () => clearTimeout(impactTimer);
-  }, [colors.soundRarity, onImpact]);
+    return () => {
+      clearTimeout(impactTimer);
+      stopRiftMusic();
+    };
+  }, [colors.soundRarity, eventGacha, featuredHit, onImpact]);
 
   // Multi-comet sub-stars for 10-pull (lightweight positions)
   const subComets = useMemo(() => {
@@ -166,6 +180,33 @@ export const CosmicComet: React.FC<CosmicCometProps> = ({
       {/* 1. Deep Cosmic Nebula & Starlight Glow (Fast native radial gradients, no filters) */}
       <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${colors.nebula1} pointer-events-none`}></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(0,0,0,0.95)_0%,_rgba(0,0,0,0.6)_50%,_transparent_100%)] pointer-events-none"></div>
+
+      {eventGacha && (
+        <motion.div
+          initial={{ opacity: 0, y: 10, x: '-50%' }}
+          animate={{ opacity: [0, 0.9, 0.75], y: 0, x: '-50%' }}
+          transition={{ duration: 2.16, ease: 'easeOut' }}
+          className="absolute top-[22%] left-1/2 z-10 flex flex-col items-center gap-2 pointer-events-none"
+          aria-hidden="true"
+        >
+          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.28em]" style={{ color: colors.ray }}>
+            <Music2 className="h-3.5 w-3.5" />
+            {featuredHit ? 'Разломный припев' : 'Ритм разлома'}
+          </div>
+          <div className="flex h-8 items-center gap-1.5 rounded-full border px-4" style={{ borderColor: `${colors.primary}66`, backgroundColor: 'rgba(4,5,10,0.72)' }}>
+            {Array.from({ length: 8 }, (_, index) => (
+              <motion.span
+                key={index}
+                initial={{ scaleY: 0.25, opacity: 0.35 }}
+                animate={{ scaleY: [0.25, index % 3 === 0 ? 1 : 0.72, 0.25], opacity: [0.35, 1, 0.4] }}
+                transition={{ duration: 0.27, delay: index * 0.27, ease: 'easeInOut' }}
+                className="h-4 w-1 origin-center rounded-full"
+                style={{ backgroundColor: colors.primary }}
+              />
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* 2. Hyperspace Warp Speed Streaks (Lightweight CSS-only SVG starfield, 0 JS RAF loops) */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40 overflow-hidden" xmlns="http://www.w3.org/2000/svg">
@@ -382,5 +423,3 @@ export const CosmicComet: React.FC<CosmicCometProps> = ({
     </div>
   );
 };
-
-

@@ -29,6 +29,7 @@ export interface Combatant {
   uid: string; // Instance ID
   isEnemy: boolean;
   isBoss?: boolean;
+  isTrainingDummy?: boolean;
   image?: string;
   name: string;
   element: Element;
@@ -101,6 +102,27 @@ export interface Combatant {
     vairenDarkFruitStacks?: number;
     vairenEternalBloomStacks?: number;
     vairenQUsedLastTurn?: boolean;
+    cmhBits?: number;
+    cmhSharpBeats?: number;
+    cmhRhythmTurns?: number;
+    cmhFullRaveTurns?: number;
+    cmhOverbeatTurns?: number;
+    cmhFinalDropTurns?: number;
+    cmhEncoreTurns?: number;
+    cmhEncoreTriggered?: boolean;
+    cmhEnergyRechargeTurns?: number;
+    cmhBitsGainedThisTurn?: number;
+    cmhBitsTotalGainedThisTurn?: number;
+    cmhRhythmBitsThisTurn?: number;
+    cmhSharpDropsThisRave?: boolean;
+    cmhSharpActionIds?: Record<string, boolean>;
+    cmhC3HitActors?: Record<string, boolean>;
+    cmhFinalDropHitCount?: number;
+    cmhFinalDropCount?: number;
+    cmhC1DropReady?: boolean;
+    cmhExtraActionPending?: boolean;
+    cmhBassTurns?: number;
+    cmhBassResDown?: number;
     [key: string]: any;
   };
 }
@@ -114,13 +136,19 @@ export interface BattleState {
   isSubDmg?: boolean;
   logs: string[];
   damageDealt: Record<string, number>; // uid -> total damage
+  hofmannitaSceneDamage?: boolean;
+  cmhDropDamage?: boolean;
+  cmhRhythmDamage?: boolean;
+  cmhFinalDropDamage?: boolean;
+  cmhOverbeatDamage?: boolean;
+  cmhActionId?: string;
 }
 
-export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | 'DISTORTION' | { type: 'DISTORTION_BATTLE', stage: number, distortionBuffIds: string[], teamSlots: { charId: string; usePlayerBuild: boolean }[] } | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string };
+export type GameRoute = 'HUB' | 'BATTLE' | 'VICTORY' | 'DEFEAT' | 'ROSTER' | 'GACHA' | 'EVENT_GACHA' | 'BP' | 'ABYSS' | 'DUNGEON' | 'META' | 'ARTIFACT_DUNGEON_SELECTOR' | 'STORY' | 'MAP' | 'BOSS_RUSH_MENU' | 'DISTORTION' | 'TRAINING_SETUP' | { type: 'TRAINING_BATTLE', teamIds: string[], aura: Element | null, attacksEnabled: boolean, attackPower: number, attackSpeed: number } | { type: 'DISTORTION_BATTLE', stage: number, distortionBuffIds: string[], teamSlots: { charId: string; usePlayerBuild: boolean }[] } | { type: 'BOSS_RUSH_BATTLE', stage: number, teams: string[][] } | { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } | { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, rewardEventCurrency?: number, team?: string[], isTestRun?: boolean, testId?: string };
 
 export type ArtifactSlot = "flower" | "plume" | "sands" | "goblet" | "circlet";
 export type StatType = "hp" | "atk" | "def" | "spd" | "critRate" | "critDamage";
-export type Rarity = "S" | "A" | "B";
+export type Rarity = "G" | "S" | "A" | "B";
 
 export interface ArtifactSubStat {
   type: StatType;
@@ -225,6 +253,7 @@ export interface PlayerProfile {
   bossRushSeason2Claimed?: boolean; // Legacy
   bossRushSeason3Claimed?: boolean; // Legacy Season 3 (Update 1.3)
   bossRushSeason4Claimed?: boolean; // Rewards for Boss Rush Season 4 (Update 1.4)
+  bossRushSeason5Claimed?: boolean; // Rewards for Boss Rush Season 5 (Update 1.5)
   lunarAbyssClaimed: number[]; // floors 9-12
   lunarAbyssResetTime: number; 
   achievements: Record<string, boolean>; // id -> claimed
@@ -233,6 +262,8 @@ export interface PlayerProfile {
   gachaPityS?: number;
   gachaPityA?: number;
   gachaGuaranteed?: boolean;
+  gachaPityG?: number;
+  gachaPityGCMH?: number;
   distortionProgress?: {
     level: number;
     currentExp: number;

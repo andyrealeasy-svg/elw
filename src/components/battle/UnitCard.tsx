@@ -66,6 +66,7 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
   return (
     <div 
       onClick={handleClick}
+      data-unit-uid={unit.uid}
       style={{ 
         transform: isAttacking 
           ? (isPlayer ? 'translateY(-30px) translateX(15px) rotate(4deg) scale(1.08)' : 'translateY(30px) translateX(-15px) rotate(-4deg) scale(1.08)')
@@ -126,12 +127,45 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl bg-[#1a1a1a]">
-            ⚔️
+          <div className="w-full h-full flex items-center justify-center text-4xl bg-[#1a1a1a]">
+            {unit.id === "cmh" ? "🔥" : unit.id === "hofmannita" ? "🎤" : "⚔️"}
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/40 via-transparent to-transparent" />
         {unit.name.includes("БОСС") && <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay animate-pulse" />}
+        {unit.id === "hofmannita" && (unit.buffs.hofmannitaMainStageTurns || 0) > 0 && (
+          <div className="absolute inset-1 rounded-t-lg border border-fuchsia-300/70 shadow-[inset_0_0_24px_rgba(232,121,249,0.35)] animate-pulse pointer-events-none" />
+        )}
+        {unit.id === "cmh" && !isDead && ((unit.buffs.cmhFullRaveTurns || 0) > 0 || (unit.buffs.cmhOverbeatTurns || 0) > 0) && (
+          <div className="absolute inset-1 rounded-t-lg border border-orange-300/70 shadow-[inset_0_0_24px_rgba(249,115,22,0.4)] animate-pulse pointer-events-none" />
+        )}
+        {unit.id === "hofmannita" && !isDead && (
+          (unit.buffs.hofmannitaNeonSceneTurns || 0) > 0 ||
+          (unit.buffs.hofmannitaMainStageTurns || 0) > 0 ||
+          (unit.buffs.hofmannitaOverdriveTurns || 0) > 0
+        ) && (
+          <div className="absolute inset-0 z-20 overflow-hidden pointer-events-none">
+            <div className={cn(
+              "absolute inset-x-1 top-1 h-1 rounded-full blur-[1px]",
+              (unit.buffs.hofmannitaOverdriveTurns || 0) > 0
+                ? "bg-fuchsia-100 shadow-[0_0_12px_rgba(255,255,255,0.9)]"
+                : "bg-fuchsia-400/80 shadow-[0_0_10px_rgba(232,121,249,0.8)]"
+            )} />
+            <div className="absolute -right-5 top-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-fuchsia-200/70 border-dashed anim-bloom-rotate" />
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex h-5 items-end gap-0.5 opacity-90">
+              {[7, 13, 9, 17, 11, 15, 6].map((height, index) => (
+                <span
+                  key={index}
+                  className="w-1 rounded-t-sm bg-fuchsia-200 shadow-[0_0_5px_rgba(232,121,249,0.9)] animate-pulse"
+                  style={{ height: `${height}px`, animationDelay: `${index * 70}ms` }}
+                />
+              ))}
+            </div>
+            {(unit.buffs.hofmannitaOverdriveTurns || 0) > 0 && (
+              <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-500/15 via-transparent to-violet-400/10 animate-pulse" />
+            )}
+          </div>
+        )}
 
         {/* Buff Icons & Aura inside Splashart Wrapper for clean layout */}
         <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-end z-30">
@@ -152,6 +186,19 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
           )}
            
           <div className="flex gap-0.5 flex-wrap justify-end max-w-[40px]">
+            {unit.id === "hofmannita" && <div className="text-[7px] bg-fuchsia-900 text-fuchsia-100 font-black rounded-sm px-0.5 border border-fuchsia-300/70" title="ХАЙП">🎤{unit.buffs.hofmannitaHype || 0}</div>}
+            {unit.id === "cmh" && <div className="text-[7px] bg-red-950 text-orange-100 font-black rounded-sm px-0.5 border border-orange-400/70" title="БИТЫ">🎧{unit.buffs.cmhBits || 0}/{unit.constellation >= 1 ? 8 : 6}</div>}
+            {(unit.buffs.cmhRhythmTurns ?? 0) > 0 && <div className="text-[7px] bg-orange-950 text-orange-200 font-bold rounded-sm px-0.5 border border-orange-400/50" title="РИТМ">🎚️{unit.buffs.cmhRhythmTurns}</div>}
+            {(unit.buffs.cmhFullRaveTurns ?? 0) > 0 && <div className="text-[7px] bg-red-700 text-white font-black rounded-sm px-0.5 border border-orange-200 animate-pulse" title="FULL RAVE">🔥RAVE:{unit.buffs.cmhFullRaveTurns}</div>}
+            {(unit.buffs.cmhOverbeatTurns ?? 0) > 0 && <div className="text-[7px] bg-orange-700 text-white font-black rounded-sm px-0.5 border border-orange-200 animate-pulse" title="OVERBEAT">💥OB:{unit.buffs.cmhOverbeatTurns}</div>}
+            {(unit.buffs.cmhFinalDropTurns ?? 0) > 0 && <div className="text-[7px] bg-red-950 text-orange-100 font-black rounded-sm px-0.5 border border-red-300 animate-pulse" title="FINAL DROP">🔥FD:{unit.buffs.cmhFinalDropTurns}</div>}
+            {(unit.buffs.cmhEncoreTurns ?? 0) > 0 && <div className="text-[7px] bg-amber-700 text-white font-black rounded-sm px-0.5 border border-amber-200" title="ENCORE">🎤ENC</div>}
+            {(unit.buffs.cmhBassTurns ?? 0) > 0 && <div className="text-[7px] bg-red-950 text-orange-200 font-bold rounded-sm px-0.5 border border-orange-400/60" title="Оглушающий бас: Pyro RES -15%">🔊-{unit.buffs.cmhBassResDown || 15}%</div>}
+            {(unit.buffs.hofmannitaNeonSceneTurns ?? 0) > 0 && <div className="text-[7px] bg-violet-950 text-fuchsia-200 font-bold rounded-sm px-0.5 border border-fuchsia-400/50" title="Неоновая сцена">🎤{unit.buffs.hofmannitaNeonSceneTurns}</div>}
+            {(unit.buffs.hofmannitaMainStageTurns ?? 0) > 0 && <div className="text-[7px] bg-fuchsia-700 text-white font-black rounded-sm px-0.5 border border-fuchsia-200 animate-pulse" title="MAIN STAGE">🎵{unit.buffs.hofmannitaMainStageTurns}</div>}
+            {(unit.buffs.hofmannitaOverdriveTurns ?? 0) > 0 && <div className="text-[7px] bg-fuchsia-100 text-fuchsia-950 font-black rounded-sm px-0.5 border border-white animate-pulse" title="OVERDRIVE">⚡OD:{unit.buffs.hofmannitaOverdriveTurns}</div>}
+            {(unit.buffs.hofmannitaVipTurns ?? 0) > 0 && <div className="text-[7px] bg-fuchsia-600 text-white font-bold rounded-sm px-0.5 border border-fuchsia-200" title="VIP">⭐VIP</div>}
+            {(unit.buffs.hofmannitaBrokenRhythmTurns ?? 0) > 0 && <div className="text-[7px] bg-fuchsia-950 text-fuchsia-200 font-bold rounded-sm px-0.5 border border-fuchsia-400/60" title="Разбитый ритм: -15% Электро-сопротивления">🎵{unit.buffs.hofmannitaBrokenRhythmTurns}</div>}
             {unit.buffs.duelMark > 0 && <div className="text-[7px] bg-red-950 text-red-200 font-bold rounded-sm px-0.5 border border-red-500/60 shadow-sm" title="Метка дуэли">ДУЭЛЬ</div>}
             {unit.buffs.shield > 0 && <Shield className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-emerald-300 shadow-sm" />}
             {unit.buffs.puppets > 0 && <div className="text-[7px] bg-red-700 text-white rounded-sm px-0.5 border border-white/20 font-bold">🎭{unit.buffs.puppets}</div>}
@@ -239,7 +286,9 @@ export const UnitCard: React.FC<UnitCardProps> = React.memo(({
         <div className="flex justify-between items-center text-[8px] sm:text-[10px] font-black text-white uppercase leading-none mt-0.5">
            <span className="text-white/50">HP</span>
            <span className="tabular-nums tracking-tight">
-             {unit.stats.maxHp >= 10000000 
+             {unit.isTrainingDummy
+               ? '∞'
+               : unit.stats.maxHp >= 10000000
                ? `${(unit.stats.hp / 1000000).toFixed(1)}M / ${(unit.stats.maxHp / 1000000).toFixed(1)}M`
                : `${Math.round(unit.stats.hp)} / ${Math.round(unit.stats.maxHp)}`
              }

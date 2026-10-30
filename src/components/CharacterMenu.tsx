@@ -251,6 +251,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                        <span>{preview.name}</span>
                        <span className={cn(
                          "text-[9px] font-black px-1 rounded",
+                         (charRarity[id] || "B") === "G" ? "text-fuchsia-300 bg-fuchsia-500/10" :
                          (charRarity[id] || "B") === "S" ? "text-amber-400 bg-amber-500/10" :
                          (charRarity[id] || "B") === "A" ? "text-purple-400 bg-purple-500/10" :
                          "text-white/50 bg-slate-500/10"
@@ -331,6 +332,7 @@ export default function CharacterMenu({ profile, updateProfile, onBack }: Props)
                          return (
                            <span className={cn(
                              "px-2.5 py-1 rounded text-xs font-black tracking-wider border bg-[#111111]/80",
+                             tier === "G" ? "text-fuchsia-300 border-fuchsia-400/40 shadow-[0_0_10px_rgba(232,121,249,0.15)]" :
                              tier === "S" ? "text-amber-400 border-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.1)]" :
                              tier === "A" ? "text-purple-400 border-purple-500/25" :
                              "text-white/50 border-slate-500/25"

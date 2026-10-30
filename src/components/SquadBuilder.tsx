@@ -294,6 +294,7 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                           return (
                             <span className={cn(
                               "px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider border",
+                              tier === "G" ? "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-400/40" :
                               tier === "S" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" :
                               tier === "A" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" :
                               "bg-slate-500/10 text-white/50 border-slate-500/30"
@@ -407,6 +408,7 @@ export const SquadBuilder: React.FC<SquadBuilderProps> = ({ profile, updateProfi
                       return (
                         <span className={cn(
                           "px-1 py-0.5 rounded text-[8px] font-black border",
+                          tier === "G" ? "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-400/40" :
                           tier === "S" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" :
                           tier === "A" ? "bg-purple-500/10 text-purple-400 border-purple-500/30" :
                           "bg-slate-500/10 text-white/50 border-slate-500/30"

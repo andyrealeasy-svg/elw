@@ -151,7 +151,9 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
       { id: 'selina', c: 2 },
       { id: 'fenris', c: 2 },
       { id: 'selva', c: 6 },
-      { id: 'neuron', c: 2 }
+      { id: 'neuron', c: 2 },
+      { id: 'hofmannita' },
+      { id: 'cmh', }
     ],
     'T0.5': [
       { id: 'kern' },
@@ -217,6 +219,18 @@ export const MetaGuide: React.FC<MetaGuideProps> = ({ onBack }) => {
   };
 
   const recommendedTeams: TeamComposition[] = [
+    {
+      name: "ХАЙПовый БИТ в каноне",
+      description: "Одна из самых простых команд в сборке в Перегрузку. Способна выдавать большой урон.",
+      members: ['hofmannita', 'cmh', 'gotka', 'volta'],
+      tags: ["ELECTRO", "PYRO", "OVERLOAD", "T0"]
+    },
+    {
+      name: "ХАЙПовый БИТ в Отражении",
+      description: "Певучее дуо Хофманниты и CMH, но уже при поддержке Зефира и Аурума, чтобы вызывать реакцию Отражения. В определенных условиях команда способа выдавать большой урон.",
+      members: ['hofmannita', 'cmh', 'zephyr', 'aurum'],
+      tags: ["ELECTRO", "PYRO", "REFLECTION", "T0"]
+    },
     {
       name: "Дикая Охота и Цветущий Мрак",
       description: "Ультимативный Бутонизационный отряд. Вайрен генерирует и раскрывает Цветы мрака от реакций с Гидро, Фенрис обрушивает серии совместных звериных атак, Нереус активирует «Сад вечного моря» для непрерывных спавнов Морских цветов, а Авелин баффает урон и исцеляет отряд.",

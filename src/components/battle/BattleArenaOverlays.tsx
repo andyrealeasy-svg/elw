@@ -55,6 +55,9 @@ interface ArenaOverlaysProps {
   aurumShield?: number;
   // Zephyr
   isZephyrInParty?: boolean;
+  cmhFullRaveTurns?: number;
+  cmhOverbeatTurns?: number;
+  cmhFinalDropTurns?: number;
 }
 
 export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
@@ -95,7 +98,10 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
   isKronaInParty = false,
   isAurumInParty = false,
   aurumShield = 0,
-  isZephyrInParty = false
+  isZephyrInParty = false,
+  cmhFullRaveTurns = 0,
+  cmhOverbeatTurns = 0,
+  cmhFinalDropTurns = 0
 }) => {
   const isCircuitActive = circuitTurns > 0;
   const isAzureGardenActive = gardenTurns > 0;
@@ -103,9 +109,35 @@ export const BattleArenaOverlays: React.FC<ArenaOverlaysProps> = React.memo(({
   const isNereusGardenActive = nereusGardenTurns > 0;
   const isIvaFloraActive = ivaFloralBondTurns > 0 || ivaBloomTurns > 0;
   const isKernOverloadActive = kernOverloadTurns > 0 || kernCritOverloadActive;
+  const isCMHRaveActive = cmhFullRaveTurns > 0 || cmhOverbeatTurns > 0;
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-15">
+      <AnimatePresence>
+        {isCMHRaveActive && (
+          <motion.div
+            key="cmh-rave-arena"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-red-950/35 via-orange-950/10 to-red-950/20" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(transparent_94%,rgba(251,146,60,0.17)_95%),linear-gradient(90deg,transparent_94%,rgba(251,146,60,0.17)_95%)] bg-[length:44px_44px] [mask-image:linear-gradient(to_top,black,transparent)]" />
+            <motion.div
+              animate={{ scaleX: [0.8, 1.15, 0.8], opacity: [0.45, 0.85, 0.45] }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute bottom-5 left-1/2 h-24 w-[min(80vw,900px)] -translate-x-1/2 rounded-[50%] border-2 border-orange-400/60 shadow-[0_0_30px_rgba(249,115,22,0.35)]"
+            />
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 rounded-full border border-orange-400/30 bg-red-950/50 px-3 py-1 text-[9px] font-black tracking-[0.28em] text-orange-200/70">
+              {(cmhOverbeatTurns || 0) > 0 ? "OVERBEAT" : "FULL RAVE"}
+              {(cmhFinalDropTurns || 0) > 0 && " • FINAL DROP"}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 1. Volta Bioelectric Circuit Arena Overlay */}
       <AnimatePresence>
         {isCircuitActive && (

@@ -13,6 +13,7 @@ import { MetaGuide } from './components/MetaGuide';
 import StoryMenu from './components/StoryMenu';
 import { BossRushMenu } from './components/BossRushMenu';
 import { DistortionMenu } from './components/DistortionMenu';
+import TrainingGroundMenu from './components/TrainingGroundMenu';
 import { 
   createDistortionCombatant, 
   applyDistortionBuffsToParty, 
@@ -23,7 +24,7 @@ import {
   addDistortionExpToProgression,
   saveDistortionProgression
 } from './data/distortionData';
-import { characterBlueprints, createBasicEnemy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES, getAdaptiveStoryStageLevel } from './data';
+import { characterBlueprints, createBasicEnemy, createTrainingDummy, generateArtifact, ARTIFACT_DUNGEONS, STORY_CHAPTERS, generateAbyssWaves, createBossRushEnemy, generateBossRushWave, createGlitchSectorEnemy, createTrialEnemy, getCharSplash, formatStatName, formatStatValue, CHARACTER_PREFERENCES, getAdaptiveStoryStageLevel } from './data';
 import { Combatant, PlayerProfile, GameRoute, Artifact, StoryStage, ArtifactSlot } from './types';
 import { createGodArtifact, createMediumArtifact } from './components/BattlePassCheatMenu';
 import ArtifactDungeon from './components/ArtifactDungeon';
@@ -69,16 +70,21 @@ const defaultProfile: PlayerProfile = {
   bossRushSeason2Claimed: false,
   bossRushSeason3Claimed: false,
   bossRushSeason4Claimed: false,
+  bossRushSeason5Claimed: false,
   achievements: {},
   expeditions: [],
   events: {
     loginStreak: 0,
     lastLoginDay: 0,
     completedTestRuns: [],
-    completedTrials: []
+    completedTrials: [],
+    event15Tickets: 0,
+    event15StoryCompleted: []
   },
   gachaPityS: 0,
   gachaPityA: 0,
+  gachaPityG: 0,
+  gachaPityGCMH: 0,
   gachaGuaranteed: false,
   storyProgress: {
     unlockedChapters: ['chap1'],
@@ -345,7 +351,7 @@ export default function App() {
     { type: 'ABYSS_FLOOR', level: number, floorId: number } |
     { type: 'STORY_STAGE', stage: StoryStage, chapterId?: string } |
     { type: 'GLITCH_BATTLE', sectorId: number, level: number, name: string, rewardGems: number, rewardGold: number } |
-    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, team?: string[], isTestRun?: boolean, testId?: string }
+    { type: 'TRIAL_BATTLE', trialId: number, title: string, rewardGems: number, rewardGold: number, rewardEventCurrency?: number, team?: string[], isTestRun?: boolean, testId?: string }
   >('HUB');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -355,9 +361,10 @@ export default function App() {
   const [profile, setProfile] = useState<PlayerProfile>(() => {
     return JSON.parse(JSON.stringify(defaultProfile));
   });
-  const [lastDrops, setLastDrops] = useState<{exp: number, gold: number, gems: number, artifacts: Artifact[]} | null>(null);
+  const [lastDrops, setLastDrops] = useState<{exp: number, gold: number, gems: number, eventCurrency?: number, artifacts: Artifact[]} | null>(null);
   const [lastDamageDealt, setLastDamageDealt] = useState<Record<string, number> | null>(null);
   const [lastBattleParty, setLastBattleParty] = useState<Combatant[]>([]);
+  const [lastTrainingResult, setLastTrainingResult] = useState(false);
   const [bossRushResults, setBossRushResults] = useState<BossRushStageResult[] | null>(null);
   const [bossRushTab, setBossRushTab] = useState<'all' | number>('all');
   const [lastStoryStage, setLastStoryStage] = useState<StoryStage | null>(null);
@@ -844,6 +851,18 @@ export default function App() {
   };
 
   const handleVictory = (stats: Record<string, number>, finalParty?: Combatant[]) => {
+    if (typeof route === 'object' && route.type === 'TRAINING_BATTLE') {
+      setLastTrainingResult(true);
+      setLastBattleParty(finalParty && finalParty.length > 0 ? finalParty : getPartyFromIds(route.teamIds));
+      setLastDamageDealt(stats);
+      setLastDrops(null);
+      setLastAbyssFloorResult(null);
+      setLastStoryStage(null);
+      setBossRushResults(null);
+      setRoute('VICTORY');
+      return;
+    }
+    setLastTrainingResult(false);
     // Prevent duplicate victory triggers (e.g. from backgrounded Telegram Mini App, WebView sleep/wake, or race conditions)
     if (isVictoryProcessingRef.current || typeof route !== 'object') {
       return;
@@ -853,9 +872,9 @@ export default function App() {
     if (typeof route === 'object' && route.type === 'BOSS_RUSH_BATTLE') {
       const stageParty = (finalParty && finalParty.length > 0) ? finalParty : getPartyFromIds(route.teams[route.stage]);
       const bossConfig = [
-        { name: '«Магистр Теней»', element: 'Physical', title: 'Этап 1: «Магистр Теней» (Physical)' },
-        { name: '«Сверхпроводящий Колосс»', element: 'Electro', title: 'Этап 2: «Сверхпроводящий Колосс» (Electro)' },
-        { name: '«Абсолютный Ноль»', element: 'Cryo', title: 'Этап 3: «Абсолютный Ноль» (Cryo)' }
+        { name: '«Реакторный Титан»', element: 'Pyro', title: 'Этап 1: «Реакторный Титан» (Pyro)' },
+        { name: '«Призматический Титан»', element: 'Pyro', title: 'Этап 2: «Призматический Титан» (Pyro)' },
+        { name: '«Владыка Ледяного Прилива»', element: 'Cryo', title: 'Этап 3: «Владыка Ледяного Прилива» (Cryo)' }
       ][route.stage] || { name: 'Босс', element: 'Electro', title: `Этап ${route.stage + 1}` };
 
       const totalDmg = stageParty.reduce((sum, p) => sum + (stats[p.uid] || 0), 0);
@@ -886,7 +905,7 @@ export default function App() {
       setLastDamageDealt(stats);
       setLastBattleParty(stageParty);
 
-      const alreadyClaimed = !!profile.bossRushSeason4Claimed;
+      const alreadyClaimed = !!profile.bossRushSeason5Claimed;
       const expReward = alreadyClaimed ? 6000 : 30000;
       const goldReward = alreadyClaimed ? 20000 : 150000;
       const gemsDrop = alreadyClaimed ? 0 : 1500;
@@ -897,7 +916,7 @@ export default function App() {
       
       setProfile(p => ({
          ...p,
-         bossRushSeason4Claimed: true,
+         bossRushSeason5Claimed: true,
          gems: p.gems + gemsDrop,
          gold: p.gold + goldReward,
          heroExp: p.heroExp + expReward,
@@ -956,6 +975,7 @@ export default function App() {
       // Gems and gold rewards are granted ONLY on the FIRST successful completion
       const actualGems = alreadyCompleted ? 0 : (route.rewardGems || 0);
       const actualGold = alreadyCompleted ? 0 : (route.rewardGold || 0);
+      const actualEventCurrency = alreadyCompleted ? 0 : (route.rewardEventCurrency || 0);
 
       setProfile(p => {
         const events = p.events || {};
@@ -980,6 +1000,7 @@ export default function App() {
           gold: p.gold + actualGold,
           events: {
             ...events,
+            event15Tickets: (events.event15Tickets || 0) + actualEventCurrency,
             completedTestRuns: newCompletedTestRuns,
             wildGroveCombat: newWildGroveCombat,
             completedTrials: newCompletedTrials
@@ -988,7 +1009,7 @@ export default function App() {
         };
       });
 
-      setLastDrops({ exp: 0, gold: actualGold, gems: actualGems, artifacts: [] });
+      setLastDrops({ exp: 0, gold: actualGold, gems: actualGems, eventCurrency: actualEventCurrency, artifacts: [] });
       setLastDamageDealt(stats);
       setRoute('VICTORY');
       return;
@@ -1352,6 +1373,7 @@ export default function App() {
   };
 
   const handleDefeat = (stats: Record<string, number>, finalParty?: Combatant[]) => {
+    setLastTrainingResult(false);
     isVictoryProcessingRef.current = false;
     if (typeof route === 'object' && route.type === 'DISTORTION_BATTLE') {
       setLastBattleParty((finalParty && finalParty.length > 0) ? finalParty : route.teamSlots.map((slot, idx) => createDistortionCombatant(slot.charId, slot.usePlayerBuild, profile, idx)));
@@ -1376,6 +1398,10 @@ export default function App() {
     isVictoryProcessingRef.current = false;
     setLastAbyssFloorResult(null);
     if (typeof route === 'object') {
+      if (route.type === 'TRAINING_BATTLE') {
+        setRoute('TRAINING_SETUP');
+        return;
+      }
       if (route.type === 'DISTORTION_BATTLE') {
         setRoute('DISTORTION');
         return;
@@ -1463,6 +1489,9 @@ export default function App() {
       {currentRouteName === 'GACHA' && (
         <Gacha profile={profile} updateProfile={setProfile} onBack={() => setRoute('HUB')} />
       )}
+      {currentRouteName === 'EVENT_GACHA' && (
+        <Gacha profile={profile} updateProfile={setProfile} onBack={() => setRoute('HUB')} isEventGacha />
+      )}
 
       {currentRouteName === 'BP' && (
         <BattlePass profile={profile} updateProfile={setProfile} onBack={() => setRoute('HUB')} />
@@ -1484,10 +1513,30 @@ export default function App() {
         />
       )}
 
-      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || currentRouteName === 'GLITCH_BATTLE' || currentRouteName === 'TRIAL_BATTLE' || currentRouteName === 'DISTORTION_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
+      {currentRouteName === 'TRAINING_SETUP' && (
+        <TrainingGroundMenu
+          profile={profile}
+          onBack={() => setRoute('HUB')}
+          onStartBattle={({ teamIds, aura, attacksEnabled, attackPower, attackSpeed }) => {
+            setLastTrainingResult(false);
+            setRoute({
+              type: 'TRAINING_BATTLE',
+              teamIds,
+              aura,
+              attacksEnabled,
+              attackPower,
+              attackSpeed
+            });
+          }}
+        />
+      )}
+
+      {(currentRouteName === 'DUNGEON' || currentRouteName === 'ABYSS_FLOOR' || currentRouteName === 'BOSS_RUSH_BATTLE' || currentRouteName === 'GLITCH_BATTLE' || currentRouteName === 'TRIAL_BATTLE' || currentRouteName === 'DISTORTION_BATTLE' || currentRouteName === 'TRAINING_BATTLE' || (typeof route === 'object' && route.type === 'STORY_STAGE' && route.stage.type === 'BATTLE')) && typeof route === 'object' && (
         <BattleScreen 
           key={
-            route.type === 'DISTORTION_BATTLE'
+            route.type === 'TRAINING_BATTLE'
+              ? `training_${route.teamIds.join('_')}_${route.aura || 'none'}`
+              : route.type === 'DISTORTION_BATTLE'
               ? `distortion_stage_${route.stage}_${route.distortionBuffIds.length}`
               : route.type === 'BOSS_RUSH_BATTLE'
               ? `boss_rush_stage_${route.stage}`
@@ -1502,7 +1551,9 @@ export default function App() {
                       : `story_stage_${(route as any).stage?.id || 'stage'}`
           }
           playerParty={
-            route.type === 'DISTORTION_BATTLE'
+            route.type === 'TRAINING_BATTLE'
+              ? getPartyFromIds(route.teamIds)
+              : route.type === 'DISTORTION_BATTLE'
               ? applyDistortionBuffsToParty(
                   route.teamSlots.map((slot, idx) => createDistortionCombatant(slot.charId, slot.usePlayerBuild, profile, idx)),
                   route.distortionBuffIds
@@ -1514,10 +1565,12 @@ export default function App() {
                 : playerParty
           }
           stageTitle={
-            route.type === 'DISTORTION_BATTLE'
+            route.type === 'TRAINING_BATTLE'
+              ? 'ТЕСТ ОТРЯДА • МАНЕКЕН'
+              : route.type === 'DISTORTION_BATTLE'
               ? `ИСКАЖЕНИЕ • ЭТАП ${route.stage} / 10${route.stage === 5 ? ' • [МИД-БОСС]' : route.stage === 10 ? ' • [ФИНАЛЬНЫЙ БОСС]' : ''}`
               : route.type === 'BOSS_RUSH_BATTLE'
-              ? `ТЕНЕВОЙ НАТИСК • ЭТАП ${route.stage + 1} / 3`
+              ? `ТЕНЕВОЙ НАТИСК • СЕЗОН 5 • ЭТАП ${route.stage + 1} / 3`
               : route.type === 'STORY_STAGE'
                 ? `СЮЖЕТ: ${route.stage.name.toUpperCase()} (УР. ${getAdaptiveStoryStageLevel(route.stage, (route as any).chapterId || 'chap1', profile)})${route.stage.isBoss ? ' • [БОСС]' : ''}`
                 : route.type === 'GLITCH_BATTLE'
@@ -1527,10 +1580,14 @@ export default function App() {
                     : undefined
           }
           isDistortionMode={route.type === 'DISTORTION_BATTLE'}
+          isTrainingMode={route.type === 'TRAINING_BATTLE'}
+          trainingDurationSeconds={route.type === 'TRAINING_BATTLE' ? 60 : undefined}
           distortionBuffIds={route.type === 'DISTORTION_BATTLE' ? route.distortionBuffIds : undefined}
           battleBuff={route.type === 'ABYSS_FLOOR' ? currentBlessing : undefined}
           enemyWaves={
-            route.type === 'DISTORTION_BATTLE'
+            route.type === 'TRAINING_BATTLE'
+              ? [[createTrainingDummy(route.aura, route.attacksEnabled, route.attackPower, route.attackSpeed)]]
+              : route.type === 'DISTORTION_BATTLE'
               ? generateDistortionWave(route.stage)
               : route.type === 'ABYSS_FLOOR' 
               ? generateAbyssWaves(route.floorId, route.level)
@@ -1551,7 +1608,13 @@ export default function App() {
                         ]
                       : route.isTestRun
                         ? [
-                            route.testId === 'test_vairen'
+                            route.testId === 'event15_dd_1'
+                              ? [createBasicEnemy(65, 'spark'), createBasicEnemy(65, 'glacier'), createBasicEnemy(65, undefined, false, true)]
+                              : route.testId === 'event15_dd_2'
+                              ? [createBasicEnemy(80, 'pulse'), createBasicEnemy(80, 'blaze', false, true)]
+                              : route.testId === 'event15_dd_3'
+                              ? [createBasicEnemy(95, 'gaia', false, true)]
+                              : route.testId === 'test_vairen'
                               ? [createBasicEnemy(75, 'tide'), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
                               : route.testId === 'test_zephyr'
                               ? [createBasicEnemy(75, 'blaze'), createBasicEnemy(75), createBasicEnemy(75, undefined, false, true)]
@@ -1595,7 +1658,7 @@ export default function App() {
           onDefeat={handleDefeat} 
           onVictory={handleVictory}
           onExit={handleExitBattle}
-          onSkillUse={() => setProfile(p => ({ ...p, dailies: { ...p.dailies, skillsUsed: p.dailies.skillsUsed + 1 } }))}
+          onSkillUse={route.type === 'TRAINING_BATTLE' ? undefined : () => setProfile(p => ({ ...p, dailies: { ...p.dailies, skillsUsed: p.dailies.skillsUsed + 1 } }))}
         />
       )}
 
@@ -1944,7 +2007,7 @@ export default function App() {
                 </h2>
                 <div className="h-0.5 w-12 bg-white/20 mx-auto rounded-full" />
                 <p className="text-white/40 font-mono text-[10px] sm:text-xs tracking-widest uppercase mt-2">
-                  Боевая задача выполнена. Награды распределены.
+                  {lastTrainingResult ? 'Время тестирования истекло. Награды не предусмотрены.' : 'Боевая задача выполнена. Награды распределены.'}
                 </p>
               </div>
 
@@ -1956,7 +2019,7 @@ export default function App() {
                       <Package className="w-4 h-4 text-white/50" /> Контейнер ресурсов
                     </h3>
                     
-                    {lastDrops.gems === 0 && lastDrops.gold === 0 && lastDrops.exp === 0 ? (
+                    {lastDrops.gems === 0 && lastDrops.gold === 0 && lastDrops.exp === 0 && !lastDrops.eventCurrency ? (
                       <div className="text-center py-4 px-4 bg-[#0a0a0a] rounded-2xl border border-white/5 flex flex-col items-center gap-1.5">
                         {lastDistortionStageResult ? (
                           lastDistortionStageResult.clearedStage < 10 ? (
@@ -2015,6 +2078,15 @@ export default function App() {
                              <span className="font-black text-pink-400 text-lg flex items-center justify-center gap-1">
                                +{lastDrops.gems}
                                <Gem className="w-4 h-4 text-pink-400" />
+                             </span>
+                          </div>
+                        )}
+                        {(lastDrops.eventCurrency || 0) > 0 && (
+                          <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center">
+                             <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-1.5">Билеты Разлома</span>
+                             <span className="font-black text-cyan-300 text-lg flex items-center justify-center gap-1">
+                               +{lastDrops.eventCurrency}
+                               <Sparkles className="w-4 h-4 text-cyan-300" />
                              </span>
                           </div>
                         )}
@@ -2213,6 +2285,31 @@ export default function App() {
               <button 
                 onClick={() => { setRoute('HUB'); setLastDamageDealt(null); setLastDrops(null); setLastAbyssFloorResult(null); }}
                 className="w-full sm:w-1/2 px-6 py-4 bg-[#111111] hover:bg-white/10 text-white/70 hover:text-white font-bold rounded-full font-mono uppercase tracking-widest transition-all border border-white/10 hover:border-white/20 hover:scale-[1.02] active:scale-95 text-xs cursor-pointer"
+              >
+                В Хаб
+              </button>
+            </div>
+          ) : lastTrainingResult ? (
+            <div className="flex w-full max-w-lg flex-col items-center justify-center gap-3 sm:flex-row">
+              <button
+                onClick={() => {
+                  setRoute('TRAINING_SETUP');
+                  setLastTrainingResult(false);
+                  setLastDamageDealt(null);
+                  setLastDrops(null);
+                }}
+                className="w-full px-6 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-black rounded-full font-mono uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 text-xs"
+              >
+                Вернуться к настройкам
+              </button>
+              <button
+                onClick={() => {
+                  setRoute('HUB');
+                  setLastTrainingResult(false);
+                  setLastDamageDealt(null);
+                  setLastDrops(null);
+                }}
+                className="w-full px-6 py-4 bg-[#111111] hover:bg-white/10 text-white/70 hover:text-white font-bold rounded-full font-mono uppercase tracking-widest transition-all border border-white/10 hover:border-white/20 hover:scale-[1.02] active:scale-95 text-xs"
               >
                 В Хаб
               </button>

@@ -56,7 +56,7 @@ const createSoftGain = (ctx: AudioContext, targetVol: number, startTime: number,
 /* CORE COMBAT SFX (SOOTHING, VELVETY, LOW-PASSED, WARM)                      */
 /* ========================================================================== */
 
-// 1. Normal Attack SFX: Soft, muffled organic swoosh + warm thud (zero harsh hiss)
+// 1. Normal Attack SFX: quiet, rounded impact with a subdued low-pass swoosh
 export const playNormalAttackSound = () => {
   if (isMuted) return;
   const ctx = getAudioContext();
@@ -70,11 +70,11 @@ export const playNormalAttackSound = () => {
   
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(450, now);
-  filter.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+  filter.frequency.setValueAtTime(280, now);
+  filter.frequency.exponentialRampToValueAtTime(100, now + 0.14);
   
-  const noiseGain = createSoftGain(ctx, 0.08, now, 0.015);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+  const noiseGain = createSoftGain(ctx, 0.025, now, 0.025);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
   
   noise.connect(filter);
   filter.connect(noiseGain);
@@ -82,21 +82,21 @@ export const playNormalAttackSound = () => {
   
   // Soft wooden / blunt impact thud
   const osc = ctx.createOscillator();
-  const oscGain = createSoftGain(ctx, 0.09, now, 0.01);
+  const oscGain = createSoftGain(ctx, 0.035, now, 0.02);
   
   osc.type = 'triangle';
-  osc.frequency.setValueAtTime(120, now);
-  osc.frequency.exponentialRampToValueAtTime(45, now + 0.11);
+  osc.frequency.setValueAtTime(95, now);
+  osc.frequency.exponentialRampToValueAtTime(38, now + 0.14);
   
-  oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+  oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
   
   osc.connect(oscGain);
   oscGain.connect(ctx.destination);
   
   noise.start(now);
-  noise.stop(now + 0.15);
+  noise.stop(now + 0.17);
   osc.start(now);
-  osc.stop(now + 0.15);
+  osc.stop(now + 0.17);
 };
 
 // 2. Elemental Skill (Skill1) SFX: Warm, harmonic dual chime (lowpass-filtered)
@@ -209,7 +209,7 @@ export const playUltimateBurstSound = () => {
   rumble.stop(explosionTime + 0.45);
 };
 
-// 4. Critical Hit SFX: Sweet crystal celesta / vibraphone chime (zero piercing 2400Hz screech)
+// 4. Critical Hit SFX: soft lower-register chime with a muted impact
 export const playCritSound = () => {
   if (isMuted) return;
   const ctx = getAudioContext();
@@ -217,19 +217,19 @@ export const playCritSound = () => {
 
   const now = ctx.currentTime;
 
-  // Sweet, warm vibraphone chimes: A5 (880Hz) & C6 (1046.5Hz) pure sines
+  // Lower sine tones keep critical hits distinct without a sharp high-frequency spike.
   const chime1 = ctx.createOscillator();
   const chime2 = ctx.createOscillator();
-  const chimeGain1 = createSoftGain(ctx, 0.08, now, 0.008);
-  const chimeGain2 = createSoftGain(ctx, 0.05, now, 0.008);
+  const chimeGain1 = createSoftGain(ctx, 0.026, now, 0.02);
+  const chimeGain2 = createSoftGain(ctx, 0.016, now, 0.02);
   
   chime1.type = 'sine';
-  chime1.frequency.setValueAtTime(880, now);
-  chime1.frequency.exponentialRampToValueAtTime(860, now + 0.22);
+  chime1.frequency.setValueAtTime(587.33, now);
+  chime1.frequency.exponentialRampToValueAtTime(575, now + 0.22);
   
   chime2.type = 'sine';
-  chime2.frequency.setValueAtTime(1046.5, now);
-  chime2.frequency.exponentialRampToValueAtTime(1020, now + 0.22);
+  chime2.frequency.setValueAtTime(739.99, now);
+  chime2.frequency.exponentialRampToValueAtTime(725, now + 0.22);
 
   chimeGain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
   chimeGain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
@@ -246,10 +246,10 @@ export const playCritSound = () => {
 
   // Soft wooden knock underpinning the crit
   const knock = ctx.createOscillator();
-  const knockGain = createSoftGain(ctx, 0.05, now, 0.005);
+  const knockGain = createSoftGain(ctx, 0.022, now, 0.02);
   knock.type = 'triangle';
-  knock.frequency.setValueAtTime(180, now);
-  knock.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+  knock.frequency.setValueAtTime(120, now);
+  knock.frequency.exponentialRampToValueAtTime(48, now + 0.1);
 
   knockGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
 
@@ -421,6 +421,63 @@ export const playWishImpactSound = (rarity: 'S' | 'A' | 'B' = 'B') => {
     o.start(now);
     o.stop(now + 0.7);
   });
+};
+
+export const playRiftGachaMusic = (featuredHit: boolean): (() => void) => {
+  if (isMuted) return () => {};
+  const ctx = getAudioContext();
+  if (!ctx) return () => {};
+
+  const now = ctx.currentTime;
+  const scheduled: { oscillator: OscillatorNode; endsAt: number }[] = [];
+  const notes = featuredHit
+    ? [392, 523.25, 659.25, 783.99, 659.25, 1046.5, 783.99, 1046.5]
+    : [261.63, 329.63, 392, 523.25, 392, 523.25, 659.25, 523.25];
+  const beat = 0.27;
+
+  notes.forEach((frequency, index) => {
+    const start = now + index * beat;
+    const oscillator = ctx.createOscillator();
+    const gain = createSoftGain(ctx, index % 2 === 0 ? 0.055 : 0.04, start, 0.025);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(featuredHit ? 1500 : 1100, start);
+    oscillator.type = index % 3 === 0 ? 'triangle' : 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.27);
+    scheduled.push({ oscillator, endsAt: start + 0.27 });
+  });
+
+  [130.81, 196, 261.63].forEach((frequency, index) => {
+    const start = now + index * beat * 2;
+    const oscillator = ctx.createOscillator();
+    const gain = createSoftGain(ctx, 0.035, start, 0.04);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.48);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.5);
+    scheduled.push({ oscillator, endsAt: start + 0.5 });
+  });
+
+  return () => {
+    const stopAt = ctx.currentTime;
+    scheduled.forEach(({ oscillator, endsAt }) => {
+      if (stopAt < endsAt) oscillator.stop(stopAt);
+    });
+  };
+};
+
+export const playRiftGachaImpact = (featuredHit: boolean) => {
+  if (isMuted) return;
+  playWishImpactSound(featuredHit ? 'S' : 'A');
 };
 
 /* ========================================================================== */
@@ -749,4 +806,381 @@ export const playVairenGrandBloomSound = () => {
     osc.start(playT);
     osc.stop(playT + 0.55);
   });
+};
+
+const playHofmannitaTone = (
+  ctx: AudioContext,
+  frequency: number,
+  startTime: number,
+  duration: number,
+  volume: number,
+  waveform: OscillatorType = 'sine',
+  endFrequency = frequency,
+  destination: AudioNode = ctx.destination,
+) => {
+  const oscillator = ctx.createOscillator();
+  const gain = createSoftGain(ctx, volume, startTime, 0.012);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(1800, startTime);
+  filter.frequency.exponentialRampToValueAtTime(650, startTime + duration);
+  oscillator.type = waveform;
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  if (endFrequency !== frequency) {
+    oscillator.frequency.exponentialRampToValueAtTime(endFrequency, startTime + duration);
+  }
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(filter);
+  filter.connect(gain);
+  gain.connect(destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.03);
+};
+
+type SignatureCombatCharacter = 'cmh' | 'iva' | 'nereus' | 'kairen' | 'aveline' | 'volta' | 'selina' | 'asher' | 'ineffa' | 'fenris' | 'zephyr' | 'aurum' | 'aelita' | 'maestro' | 'cyrus' | 'raven';
+type SignatureCombatAction = 'attack' | 'skill' | 'ultimate';
+
+const playSignatureNoise = (
+  ctx: AudioContext,
+  startTime: number,
+  duration: number,
+  volume: number,
+  startCutoff: number,
+  endCutoff: number,
+) => {
+  const noise = ctx.createBufferSource();
+  noise.buffer = getNoiseBuffer(ctx);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(startCutoff, startTime);
+  filter.frequency.exponentialRampToValueAtTime(endCutoff, startTime + duration);
+  const gain = createSoftGain(ctx, volume, startTime, 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  noise.start(startTime);
+  noise.stop(startTime + duration + 0.02);
+};
+
+export const playSignatureCombatSound = (
+  character: SignatureCombatCharacter,
+  action: SignatureCombatAction,
+) => {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  const ultimate = action === 'ultimate';
+  const skill = action === 'skill';
+  const length = (attack: number, skillLength: number, ultimateLength: number) =>
+    ultimate ? ultimateLength : skill ? skillLength : attack;
+
+  if (character === 'cmh') {
+    const beatCount = ultimate ? 4 : skill ? 2 : 1;
+    for (let beat = 0; beat < beatCount; beat++) {
+      const at = now + beat * (ultimate ? 0.12 : 0.075);
+      playHofmannitaTone(ctx, ultimate ? 65.41 : 82.41, at, 0.12, ultimate ? 0.045 : 0.032, 'sine', 43.65);
+      playHofmannitaTone(ctx, [220, 329.63, 440, 659.25][beat], at, length(0.09, 0.13, 0.18), 0.035, 'triangle');
+    }
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.5 : 0.24, 0.018, 900, 180);
+    return;
+  }
+
+  if (character === 'iva') {
+    playSignatureNoise(ctx, now, length(0.13, 0.3, 0.55), ultimate ? 0.035 : 0.026, 650, 140);
+    const notes = ultimate ? [329.63, 392, 493.88, 659.25, 783.99] : skill ? [392, 493.88, 587.33] : [493.88];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.085 : 0.06);
+      playHofmannitaTone(ctx, frequency, at, length(0.18, 0.28, 0.48), 0.032 / (index > 2 ? 1.5 : 1), 'sine', frequency * (index % 2 ? 1.015 : 0.995));
+    });
+    return;
+  }
+
+  if (character === 'nereus') {
+    playSignatureNoise(ctx, now, length(0.2, 0.42, 0.72), ultimate ? 0.04 : 0.032, 1200, 100);
+    const notes = ultimate ? [293.66, 220, 164.81, 220] : skill ? [329.63, 246.94, 196] : [392, 293.66];
+    notes.forEach((frequency, index) => {
+      playHofmannitaTone(ctx, frequency, now + index * (ultimate ? 0.12 : 0.07), length(0.2, 0.3, 0.52), 0.033, 'sine', frequency * 0.78);
+    });
+    return;
+  }
+
+  if (character === 'kairen') {
+    const notes = ultimate ? [174.61, 261.63, 349.23, 523.25, 698.46] : skill ? [349.23, 523.25, 698.46] : [523.25, 698.46];
+    if (ultimate) playHofmannitaTone(ctx, 87.31, now, 0.5, 0.045, 'sine', 65.41);
+    notes.forEach((frequency, index) => {
+      playHofmannitaTone(ctx, frequency, now + index * (ultimate ? 0.085 : 0.06), length(0.2, 0.34, 0.58), 0.028, index === 0 ? 'triangle' : 'sine');
+    });
+    return;
+  }
+
+  if (character === 'aveline') {
+    const notes = ultimate ? [220, 329.63, 440, 659.25, 880] : skill ? [440, 554.37, 659.25] : [659.25, 880];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.1 : 0.06);
+      playHofmannitaTone(ctx, frequency, at, length(0.24, 0.38, 0.62), 0.026, index % 2 ? 'sine' : 'triangle');
+      if (index < (ultimate ? 4 : skill ? 2 : 1)) {
+        playHofmannitaTone(ctx, frequency * 1.5, at + 0.025, length(0.2, 0.3, 0.48), 0.012, 'sine');
+      }
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.65 : 0.36, 0.015, 1100, 260);
+    return;
+  }
+
+  if (character === 'selina') {
+    const notes = ultimate
+      ? [261.63, 349.23, 440, 523.25, 698.46]
+      : skill ? [349.23, 440, 523.25] : [523.25, 698.46];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.085 : 0.055);
+      playHofmannitaTone(ctx, frequency, at, length(0.11, 0.22, 0.38), 0.03, index % 2 ? 'sine' : 'triangle', frequency * (ultimate ? 1.01 : 1.025));
+      if (ultimate || (skill && index === 1)) {
+        playHofmannitaTone(ctx, frequency * 2, at + 0.025, length(0.05, 0.09, 0.15), 0.012, 'sine');
+      }
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.42 : 0.22, 0.012, 1700, 420);
+    return;
+  }
+
+  if (character === 'asher') {
+    const notes = ultimate ? [73.42, 110, 146.83, 220] : skill ? [110, 146.83, 196] : [146.83, 196];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.11 : 0.065);
+      playHofmannitaTone(ctx, frequency, at, length(0.1, 0.2, 0.36), ultimate ? 0.04 : 0.032, 'triangle', frequency * 0.94);
+      playHofmannitaTone(ctx, frequency * 1.5, at + 0.018, length(0.045, 0.07, 0.12), 0.01, 'sine');
+    });
+    playSignatureNoise(ctx, now, ultimate ? 0.48 : skill ? 0.26 : 0.12, ultimate ? 0.02 : 0.013, 480, 90);
+    return;
+  }
+
+  if (character === 'ineffa') {
+    const notes = ultimate ? [196, 293.66, 392, 587.33, 783.99] : skill ? [293.66, 392, 587.33] : [392, 587.33];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.09 : 0.055);
+      playHofmannitaTone(ctx, frequency, at, length(0.12, 0.22, 0.4), 0.03, 'sine', frequency * 1.008);
+      playHofmannitaTone(ctx, frequency * 2.01, at + 0.02, length(0.055, 0.09, 0.16), 0.012, 'triangle');
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.44 : 0.24, 0.014, 2400, 500);
+    return;
+  }
+
+  if (character === 'fenris') {
+    const notes = ultimate ? [110, 146.83, 220, 293.66] : skill ? [146.83, 196, 246.94] : [196, 246.94];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.12 : 0.07);
+      playHofmannitaTone(ctx, frequency, at, length(0.1, 0.18, 0.34), 0.035, 'triangle', frequency * 0.86);
+      playHofmannitaTone(ctx, frequency * 2, at + 0.025, length(0.045, 0.07, 0.12), 0.009, 'sine');
+    });
+    playSignatureNoise(ctx, now, ultimate ? 0.4 : skill ? 0.23 : 0.13, 0.016, 720, 140);
+    return;
+  }
+
+  if (character === 'zephyr') {
+    const notes = ultimate ? [261.63, 392, 587.33, 783.99, 1046.5] : skill ? [392, 587.33, 783.99] : [587.33, 783.99];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.075 : 0.05);
+      playHofmannitaTone(ctx, frequency, at, length(0.1, 0.2, 0.38), 0.026, 'sine', frequency * 1.035);
+      playHofmannitaTone(ctx, frequency * 1.5, at + 0.018, length(0.06, 0.1, 0.16), 0.01, 'triangle');
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.38 : 0.2, 0.014, 3200, 800);
+    return;
+  }
+
+  if (character === 'aurum') {
+    const notes = ultimate ? [130.81, 196, 261.63, 392, 523.25] : skill ? [196, 261.63, 329.63] : [261.63, 392];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.1 : 0.065);
+      playHofmannitaTone(ctx, frequency, at, length(0.16, 0.28, 0.5), 0.032, 'triangle', frequency * 1.01);
+      if (index < (ultimate ? 4 : skill ? 2 : 1)) {
+        playHofmannitaTone(ctx, frequency * 2, at + 0.035, length(0.08, 0.12, 0.2), 0.013, 'sine');
+      }
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.42 : 0.22, 0.012, 900, 240);
+    return;
+  }
+
+  if (character === 'aelita') {
+    const notes = ultimate ? [164.81, 246.94, 329.63, 392, 493.88] : skill ? [246.94, 329.63, 392] : [329.63, 493.88];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.095 : 0.06);
+      playHofmannitaTone(ctx, frequency, at, length(0.14, 0.24, 0.44), 0.028, 'sine', frequency * 0.995);
+      if (skill || ultimate) {
+        playHofmannitaTone(ctx, frequency * 1.5, at + 0.03, length(0.05, 0.08, 0.14), 0.01, 'triangle');
+      }
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.4 : 0.22, 0.012, 780, 180);
+    return;
+  }
+
+  if (character === 'maestro') {
+    const notes = ultimate ? [196, 246.94, 293.66, 392, 493.88, 587.33] : skill ? [293.66, 369.99, 440] : [440, 587.33];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.085 : 0.055);
+      playHofmannitaTone(ctx, frequency, at, length(0.11, 0.22, 0.42), 0.03, index % 2 ? 'sine' : 'triangle');
+      if (ultimate || (skill && index === 1)) {
+        playHofmannitaTone(ctx, frequency * 2, at + 0.025, length(0.05, 0.08, 0.14), 0.011, 'sine');
+      }
+    });
+    if (ultimate) playSignatureNoise(ctx, now, 0.36, 0.01, 1600, 600);
+    return;
+  }
+
+  if (character === 'cyrus') {
+    const notes = ultimate ? [98, 146.83, 196, 293.66] : skill ? [146.83, 220, 293.66] : [220, 293.66];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.1 : 0.06);
+      playHofmannitaTone(ctx, frequency, at, length(0.09, 0.16, 0.3), 0.034, 'triangle', frequency * 0.9);
+      playHofmannitaTone(ctx, frequency * 3, at + 0.012, length(0.035, 0.055, 0.09), 0.012, 'sawtooth', frequency * 2.8);
+    });
+    playSignatureNoise(ctx, now, ultimate ? 0.34 : skill ? 0.18 : 0.1, 0.014, 2100, 260);
+    return;
+  }
+
+  if (character === 'raven') {
+    const notes = ultimate ? [155.56, 233.08, 311.13, 466.16, 622.25] : skill ? [233.08, 311.13, 466.16] : [311.13, 466.16];
+    notes.forEach((frequency, index) => {
+      const at = now + index * (ultimate ? 0.08 : 0.05);
+      playHofmannitaTone(ctx, frequency, at, length(0.1, 0.19, 0.36), 0.027, 'sine', frequency * 0.97);
+      playHofmannitaTone(ctx, frequency * 2.02, at + 0.015, length(0.045, 0.075, 0.13), 0.01, 'triangle');
+    });
+    if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.38 : 0.2, 0.015, 1900, 320);
+    return;
+  }
+
+  const pulses = ultimate ? [65.41, 92.5, 130.81, 185] : skill ? [92.5, 130.81, 185] : [130.81, 185];
+  pulses.forEach((frequency, index) => {
+    const at = now + index * (ultimate ? 0.07 : 0.045);
+    playHofmannitaTone(ctx, frequency, at, length(0.08, 0.1, 0.14), ultimate ? 0.034 : 0.028, 'triangle', frequency * 1.08);
+    playHofmannitaTone(ctx, frequency * 2, at + 0.015, length(0.06, 0.08, 0.1), 0.012, 'sawtooth', frequency * 2.15);
+  });
+  if (skill || ultimate) playSignatureNoise(ctx, now, ultimate ? 0.32 : 0.18, 0.014, 1500, 220);
+};
+
+export const playSignatureSkillSound = (
+  characterId: string,
+  skillType: 'Attack' | 'Skill1' | 'Skill2',
+  playUltimateImmediately: boolean,
+): boolean => {
+  switch (characterId) {
+    case 'cmh':
+    case 'iva':
+    case 'nereus':
+    case 'kairen':
+    case 'aveline':
+    case 'volta':
+    case 'selina':
+    case 'asher':
+    case 'ineffa':
+    case 'fenris':
+    case 'zephyr':
+    case 'aurum':
+    case 'aelita':
+    case 'maestro':
+    case 'cyrus':
+    case 'raven':
+      if (skillType === 'Attack') playSignatureCombatSound(characterId, 'attack');
+      else if (skillType === 'Skill1') playSignatureCombatSound(characterId, 'skill');
+      else if (playUltimateImmediately) playSignatureCombatSound(characterId, 'ultimate');
+      return true;
+    default:
+      return false;
+  }
+};
+
+export const playHofmannitaAttackSound = () => {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  playHofmannitaTone(ctx, 196, now, 0.13, 0.055, 'triangle', 110);
+  playHofmannitaTone(ctx, 587.33, now + 0.025, 0.18, 0.035, 'sine');
+  playHofmannitaTone(ctx, 783.99, now + 0.07, 0.16, 0.022, 'sine');
+};
+
+export const playHofmannitaStageSound = () => {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  playHofmannitaTone(ctx, 73.42, now, 0.38, 0.075, 'sine', 55);
+  [293.66, 369.99, 440, 587.33].forEach((frequency, index) => {
+    playHofmannitaTone(ctx, frequency, now + 0.05 + index * 0.055, 0.38, 0.028, 'triangle');
+  });
+  playHofmannitaTone(ctx, 1174.66, now + 0.18, 0.24, 0.018, 'sine');
+};
+
+export const playHofmannitaUltimateSound = () => {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  playHofmannitaTone(ctx, 65.41, now, 0.58, 0.11, 'sine', 32.7);
+  playHofmannitaTone(ctx, 130.81, now + 0.04, 0.42, 0.055, 'triangle', 196);
+  [392, 493.88, 587.33, 783.99, 1174.66].forEach((frequency, index) => {
+    playHofmannitaTone(ctx, frequency, now + 0.18 + index * 0.07, 0.62, 0.026, 'triangle');
+  });
+  playHofmannitaTone(ctx, 1567.98, now + 0.48, 0.45, 0.016, 'sine');
+};
+
+export const playHofmannitaDropSound = () => {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  playHofmannitaTone(ctx, 110, now, 0.24, 0.09, 'sine', 41.2);
+  playHofmannitaTone(ctx, 659.25, now + 0.045, 0.22, 0.04, 'triangle');
+  playHofmannitaTone(ctx, 987.77, now + 0.09, 0.2, 0.028, 'sine');
+};
+
+export const startHofmannitaStageMusic = (): (() => void) => {
+  if (isMuted) return () => {};
+  const ctx = getAudioContext();
+  if (!ctx) return () => {};
+
+  const master = ctx.createGain();
+  const now = ctx.currentTime;
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.linearRampToValueAtTime(0.16, now + 0.35);
+  master.connect(ctx.destination);
+
+  let stopped = false;
+  let phraseTimer: ReturnType<typeof setInterval> | null = null;
+  const phraseLength = 2.16;
+  const melody = [659.25, 783.99, 987.77, 783.99, 587.33, 659.25, 1174.66, 987.77];
+  const bass = [110, 130.81, 98, 146.83];
+
+  const playPhrase = () => {
+    if (stopped || ctx.state === 'closed') return;
+    const phraseStart = ctx.currentTime + 0.035;
+    melody.forEach((frequency, index) => {
+      const noteTime = phraseStart + index * 0.27;
+      playHofmannitaTone(ctx, frequency, noteTime, 0.19, 0.025, 'triangle', frequency * 0.985, master);
+      if (index % 2 === 0) {
+        playHofmannitaTone(ctx, bass[index / 2], noteTime, 0.42, 0.045, 'sine', bass[index / 2] * 0.72, master);
+        playHofmannitaTone(ctx, 82.41, noteTime, 0.16, 0.035, 'sine', 43.65, master);
+      }
+    });
+  };
+
+  playPhrase();
+  phraseTimer = setInterval(playPhrase, phraseLength * 1000);
+
+  return () => {
+    if (stopped) return;
+    stopped = true;
+    if (phraseTimer !== null) clearInterval(phraseTimer);
+    const stopTime = ctx.currentTime;
+    master.gain.cancelScheduledValues(stopTime);
+    master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), stopTime);
+    master.gain.exponentialRampToValueAtTime(0.0001, stopTime + 0.18);
+    setTimeout(() => {
+      master.disconnect();
+    }, 250);
+  };
 };

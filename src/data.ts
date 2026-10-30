@@ -1,5 +1,5 @@
 import { Combatant, Skill, Element, Artifact, ArtifactSlot, StatType, BattleState, Rarity, ArtifactSet, Dungeon, ArtifactSubStat, PlayerProfile } from "./types";
-import { playCritSound, playVairenFlowerBloomSound, playVairenSeedAbsorbSound, playVairenGrandBloomSound } from "./lib/sound";
+import { playCritSound, playVairenFlowerBloomSound, playVairenSeedAbsorbSound, playVairenGrandBloomSound, playHofmannitaDropSound } from "./lib/sound";
 import { SPLASH_IMAGES } from "./lib/images";
 
 
@@ -414,12 +414,26 @@ export const handleVairenBloomReaction = (
   }
 };
 
-export const dealDamage = (source: Combatant, target: Combatant, multiplier: number, element: Element, log: (msg: string) => void, floatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void, hits: number = 1, state?: BattleState, defIgnore: number = 0, ignoreShields: boolean = false, guaranteedCrit: boolean = false) => {
+export const dealDamage = (source: Combatant, target: Combatant, multiplier: number, element: Element, log: (msg: string) => void, floatText?: (targetUid: string, text: string, color: string) => void, playEffect?: (targetUid: string, effectType: string) => void, hits: number = 1, state?: BattleState, defIgnore: number = 0, ignoreShields: boolean = false, guaranteedCrit: boolean = false, onHit?: () => void) => {
   const hitDelay = 200;
+  const hofmannitaAtCall = state?.playerParty.find(p => p.id === "hofmannita" && p.stats.hp > 0);
+  const hofmannitaMainStageAtCall = (hofmannitaAtCall?.buffs.hofmannitaMainStageTurns || 0) > 0;
+  const hofmannitaNeonSceneAtCall = (hofmannitaAtCall?.buffs.hofmannitaNeonSceneTurns || 0) > 0;
+  const sourceVipAtCall = (source.buffs.hofmannitaVipTurns || 0) > 0;
+  const cmhAtCall = state?.playerParty.find(p => p.id === "cmh" && p.stats.hp > 0);
+  const cmhBitsAtCall = cmhAtCall?.buffs.cmhBits || 0;
+  const cmhFullRaveAtCall = (cmhAtCall?.buffs.cmhFullRaveTurns || 0) > 0;
+  const cmhOverbeatAtCall = (cmhAtCall?.buffs.cmhOverbeatTurns || 0) > 0 || state?.cmhOverbeatDamage === true;
+  const cmhFinalDropAtCall = (cmhAtCall?.buffs.cmhFinalDropTurns || 0) > 0 || state?.cmhFinalDropDamage === true;
+  const cmhEncoreAtCall = (cmhAtCall?.buffs.cmhEncoreTurns || 0) > 0;
+  const cmhBassAtCall = (target.buffs.cmhBassTurns || 0) > 0;
+  const cmhBassResDownAtCall = target.buffs.cmhBassResDown || 0;
+  const cmhActionId = state?.cmhActionId ?? `${source.uid}-${Date.now()}-${Math.random()}`;
 
   for (let i = 0; i < hits; i++) {
     setTimeout(() => {
       if (target.stats.hp <= 0 && i > 0) return; 
+      const previousHp = target.stats.hp;
       
       let baseCritRate = source.stats.critRate ?? 5;
       let critChance = (baseCritRate + (source.buffs.critChance || 0)) / 100;
@@ -442,6 +456,28 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       
       let actualDefIgnore = defIgnore;
       let actualDmgBoost = 1 + (source.buffs.dmgBoost || 0) / 100;
+      if (sourceVipAtCall) actualDmgBoost += 0.15;
+      if (source.id === "hofmannita") {
+        if ((source.buffs.hofmannitaHype || 0) >= 2) actualDmgBoost += 0.10;
+        if (element === "Electro" && hofmannitaMainStageAtCall) actualDmgBoost += 0.10;
+      }
+      if (cmhAtCall) {
+        if (cmhFullRaveAtCall) actualDmgBoost += 0.03;
+        if (cmhOverbeatAtCall) actualDmgBoost += 0.05;
+        if (cmhFinalDropAtCall) actualDmgBoost += 0.12;
+        if (source.id === "cmh") {
+          actualDmgBoost += cmhBitsAtCall * 0.02;
+          if (element === "Pyro" && cmhFullRaveAtCall) actualDmgBoost += 0.12;
+          if (element === "Pyro" && cmhOverbeatAtCall) actualDmgBoost += 0.22;
+          if (cmhEncoreAtCall) actualDmgBoost += 0.25;
+        }
+      }
+      if (element === "Pyro" && cmhBassAtCall) {
+        actualDmgBoost += cmhBassResDownAtCall / 100;
+      }
+      if (element === "Electro" && (target.buffs.hofmannitaBrokenRhythmTurns || 0) > 0) {
+        actualDmgBoost += 0.15;
+      }
 
       if (target.buffs.frostbite && target.buffs.frostbite > 0) {
         actualDmgBoost += 0.15;
@@ -605,6 +641,21 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       }
 
       
+      if (reactionMsg && state && !source.isEnemy && !state.hofmannitaSceneDamage && i === 0) {
+        const hofmannita = state.playerParty.find(p => p.id === "hofmannita" && p.stats.hp > 0);
+        if (hofmannita) {
+          addHofmannitaHype(hofmannita, 1, state, floatText, log);
+          if (
+            hofmannitaMainStageAtCall &&
+            (hofmannita.buffs.hofmannitaReactionHypeThisTurn || 0) < 2
+          ) {
+            hofmannita.buffs.hofmannitaReactionHypeThisTurn =
+              (hofmannita.buffs.hofmannitaReactionHypeThisTurn || 0) + 1;
+            addHofmannitaHype(hofmannita, 1, state, floatText, log);
+          }
+        }
+      }
+
       if (reactionMsg && state && !source.isEnemy && !state.isSubDmg && i === 0) {
          const farina = state.playerParty.find(p => p.id === 'farina');
          if (farina) {
@@ -759,9 +810,89 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
           if (floatText) floatText(target.uid, "✨ ПРИЛИВ (+50% ATK, +30 SPD)", "text-fuchsia-300 font-bold text-xs");
         }
       } else {
-        target.stats.hp -= dmg;
-        if (target.stats.hp < 0) target.stats.hp = 0;
-        target.stats.hp = Math.round(target.stats.hp);
+        if (
+          target.id === "hofmannita" &&
+          target.stats.hp - dmg <= 0 &&
+          (target.buffs.hofmannitaHype || 0) >= 6 &&
+          !target.buffs.hofmannitaDollSaveUsed
+        ) {
+          target.stats.hp = 1;
+          target.buffs.hofmannitaDollSaveUsed = true;
+          target.buffs.hofmannitaHype = 4;
+          target.buffs.hofmannitaC1DropReady = false;
+          if (floatText) floatText(target.uid, "🎭 КУКЛА: 1 HP", "text-fuchsia-200 font-black");
+          if (log) log(`Пассивная способность «Кукла» спасает Хофманниту! ХАЙП становится равен 4.`);
+          if (playEffect) playEffect(target.uid, "hofmannita_stage");
+        } else {
+          target.stats.hp -= dmg;
+          if (target.stats.hp < 0) target.stats.hp = 0;
+          target.stats.hp = Math.round(target.stats.hp);
+        }
+      }
+      if (target.stats.hp > 0) onHit?.();
+
+      if (dmg > 0 && !source.isEnemy && state) {
+        const hofmannita = state.playerParty.find(p => p.id === "hofmannita" && p.stats.hp > 0);
+        if (hofmannita) {
+          if (source.id === "hofmannita" && element === "Electro") {
+            addHofmannitaHype(hofmannita, 1, state, floatText, log);
+          }
+
+          if (element !== "Physical" && source.uid !== hofmannita.uid) {
+            const isVip = sourceVipAtCall;
+            if (isVip && hofmannita.constellation >= 3 && (hofmannita.buffs.hofmannitaVipHypeThisTurn || 0) < 2) {
+              hofmannita.buffs.hofmannitaVipHypeThisTurn =
+                (hofmannita.buffs.hofmannitaVipHypeThisTurn || 0) + 1;
+              addHofmannitaHype(hofmannita, 1, state, floatText, log);
+            }
+          }
+
+          const sceneActionIds = hofmannita.buffs.hofmannitaSceneActionIds || {};
+          if (
+            element !== "Physical" &&
+            !state.hofmannitaSceneDamage &&
+            hofmannitaNeonSceneAtCall &&
+            !sceneActionIds[cmhActionId]
+          ) {
+            sceneActionIds[cmhActionId] = true;
+            hofmannita.buffs.hofmannitaSceneActionIds = sceneActionIds;
+            if (target.stats.hp > 0) {
+              if (playEffect) playEffect(target.uid, "hofmannita_impulse");
+              dealDamage(
+                hofmannita,
+                target,
+                0.2,
+                "Electro",
+                log,
+                floatText,
+                playEffect,
+                1,
+                { ...state, isSubDmg: true, hofmannitaSceneDamage: true },
+              );
+            }
+          }
+        }
+      }
+
+      if (
+        target.isEnemy &&
+        previousHp / target.stats.maxHp >= 0.30 &&
+        target.stats.hp / target.stats.maxHp < 0.30 &&
+        state
+      ) {
+        const hofmannita = state.playerParty.find(p =>
+          p.id === "hofmannita" &&
+          p.stats.hp > 0 &&
+          p.constellation >= 5 &&
+          !p.buffs.hofmannitaC5TriggeredThisTurn,
+        );
+        if (hofmannita) {
+          hofmannita.buffs.hofmannitaC5TriggeredThisTurn = true;
+          hofmannita.buffs.hofmannitaEncoreTurns = 1;
+          hofmannita.buffs.hofmannitaEncoreFresh = state.activeUnit?.uid === hofmannita.uid;
+          if (floatText) floatText(hofmannita.uid, "🎤 ENCORE", "text-fuchsia-200 font-black");
+          if (log) log(`C5 Хофманниты активирует ENCORE! Следующий DROP усилен.`);
+        }
       }
 
       // Aetheric Leech (Lifesteal)
@@ -820,6 +951,23 @@ export const dealDamage = (source: Combatant, target: Combatant, multiplier: num
       // Track Damage
       if (state && state.damageDealt) {
         state.damageDealt[source.uid] = (state.damageDealt[source.uid] || 0) + dmg;
+      }
+      if (dmg > 0 && target.isEnemy && state && !state.isSubDmg && !state.cmhDropDamage) {
+        recordCMHHit(
+          source,
+          target,
+          previousHp,
+          element,
+          reactionMsg,
+          state,
+          log,
+          floatText,
+          playEffect,
+          cmhFullRaveAtCall,
+          cmhOverbeatAtCall,
+          cmhFinalDropAtCall,
+          cmhActionId,
+        );
       }
 
       if (floatText) {
@@ -1238,6 +1386,8 @@ export const CHARACTER_PREFERENCES: Record<string, { main: string[], sub: string
   gaia: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["voltage_circuit"] },
   fenris: { main: ["atk", "spd", "critDamage", "critRate"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["wild_hunt", "gladiator", "wolf_instinct"] },
   farina: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["noblesse", "frozen_time", "shattered_winter"] },
+  hofmannita: { main: ["atk", "critRate", "critDamage", "spd"], sub: ["atk", "critRate", "critDamage", "spd"], sets: ["gladiator", "ashes_of_forge"] },
+  cmh: { main: ["atk", "critRate", "critDamage", "spd"], sub: ["atk", "critRate", "critDamage", "spd"], sets: ["ashes_of_forge", "gladiator"] },
   kairen: { main: ["atk", "spd", "critRate", "critDamage"], sub: ["atk", "spd", "critRate", "critDamage"], sets: ["shattered_winter", "gladiator"] },
   aveline: { main: ["hp", "spd", "def"], sub: ["hp", "spd", "def"], sets: ["ocean_song", "voltage_circuit"] },
   nereus: { main: ["hp", "critDamage", "critRate", "spd"], sub: ["hp", "critDamage", "critRate", "spd"], sets: ["coral_tide", "ocean_song", "voltage_circuit"] },
@@ -1715,6 +1865,8 @@ export const scaleStats = (baseHp: number, baseAtk: number, baseDef: number, bas
 };
 
 export const charRarity: Record<string, Rarity> = {
+  hofmannita: 'G',
+  cmh: 'G',
   kern: 'A',
   iva: 'S',
   nereus: 'S',
@@ -1760,6 +1912,8 @@ export const charRarity: Record<string, Rarity> = {
 export const getCharEmoji = (id: string): string => {
   switch (id) {
     case 'vairen': return '🥀';
+    case 'hofmannita': return '🎤';
+    case 'cmh': return '🔥';
     case 'kern': return '⛏️';
     case 'iva': return '🌿';
     case 'nereus': return '🪸';
@@ -1816,6 +1970,489 @@ export const getCharSplash = (id: string): string | null => {
   return SPLASH_IMAGES[id] || null;
 };
 
+const getHofmannitaMaxHype = (hofmannita: Combatant): number =>
+  hofmannita.constellation >= 1 ? 10 : 8;
+
+const activateHofmannitaMainStage = (
+  hofmannita: Combatant,
+  state: BattleState | undefined,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  hofmannita.buffs.hofmannitaMainStageTurns = 3;
+  hofmannita.buffs.hofmannitaStageAttackCount = 0;
+  if (floatText) floatText(hofmannita.uid, "🎤 MAIN STAGE", "text-fuchsia-200 font-black");
+  if (log) log(`${hofmannita.name} выходит на MAIN STAGE на 3 хода!`);
+  const cmh = state?.playerParty.find(ally => ally.id === "cmh" && ally.stats.hp > 0);
+  if (cmh) addCMHBits(cmh, 1, state!, floatText, log);
+
+  if (hofmannita.constellation >= 3 && state) {
+    const allies = state.playerParty.filter(ally => ally.stats.hp > 0);
+    const vip = allies[Math.floor(Math.random() * allies.length)];
+    if (vip) {
+      vip.buffs.hofmannitaVipTurns = 4;
+      if (floatText) floatText(vip.uid, "⭐ VIP", "text-fuchsia-200 font-black");
+      if (log) log(`${vip.name} получает статус VIP!`);
+    }
+  }
+};
+
+const activateHofmannitaOverdrive = (
+  hofmannita: Combatant,
+  state: BattleState | undefined,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  hofmannita.buffs.hofmannitaOverdriveTurns = 3;
+  hofmannita.buffs.hofmannitaMainStageTurns = 4;
+  hofmannita.buffs.hofmannitaStageAttackCount = 0;
+  if (floatText) floatText(hofmannita.uid, "⚡ OVERDRIVE", "text-fuchsia-200 font-black");
+  if (log) log(`${hofmannita.name} активирует OVERDRIVE на 3 хода!`);
+  const cmh = state?.playerParty.find(ally => ally.id === "cmh" && ally.stats.hp > 0);
+  if (cmh) addCMHBits(cmh, 1, state!, floatText, log);
+
+  if (hofmannita.constellation >= 3 && state) {
+    const allies = state.playerParty.filter(ally => ally.stats.hp > 0);
+    const vip = allies[Math.floor(Math.random() * allies.length)];
+    if (vip) {
+      vip.buffs.hofmannitaVipTurns = 4;
+      if (floatText) floatText(vip.uid, "⭐ VIP", "text-fuchsia-200 font-black");
+      if (log) log(`${vip.name} получает статус VIP!`);
+    }
+  }
+};
+
+const addHofmannitaHype = (
+  hofmannita: Combatant,
+  amount: number,
+  state?: BattleState,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  const previous = hofmannita.buffs.hofmannitaHype || 0;
+  const current = Math.min(getHofmannitaMaxHype(hofmannita), previous + amount);
+  hofmannita.buffs.hofmannitaHype = current;
+  if (current !== previous && floatText) {
+    floatText(hofmannita.uid, `🎤 ХАЙП ${current}/${getHofmannitaMaxHype(hofmannita)}`, "text-fuchsia-200 font-bold");
+  }
+  if (hofmannita.constellation >= 1 && current >= 10) {
+    hofmannita.buffs.hofmannitaC1DropReady = true;
+  }
+  if (
+    hofmannita.constellation >= 6 &&
+    previous < 10 &&
+    current >= 10 &&
+    !(hofmannita.buffs.hofmannitaOverdriveTurns > 0)
+  ) {
+    activateHofmannitaOverdrive(hofmannita, state, floatText, log);
+  }
+};
+
+const triggerHofmannitaDrop = (
+  hofmannita: Combatant,
+  state: BattleState,
+  log: (msg: string) => void,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  playEffect?: (targetUid: string, effectType: string) => void,
+  baseMultiplier = 0.45,
+) => {
+  const overdrive = (hofmannita.buffs.hofmannitaOverdriveTurns || 0) > 0;
+  const encore = (hofmannita.buffs.hofmannitaEncoreTurns || 0) > 0;
+  let multiplier = overdrive ? 0.65 : baseMultiplier;
+  if (overdrive && hofmannita.constellation >= 6) multiplier += 0.5;
+  if (encore) multiplier *= 2;
+
+  if (floatText) floatText(hofmannita.uid, "⚡ DROP", "text-fuchsia-200 font-black text-sm");
+  if (playEffect) playEffect(hofmannita.uid, "hofmannita_drop");
+  if (playEffect) playEffect(hofmannita.uid, "hofmannita_field_drop");
+  playHofmannitaDropSound();
+  if (log) log(`${hofmannita.name} активирует DROP!`);
+
+  state.enemyParty.forEach(enemy => {
+    if (enemy.stats.hp <= 0) return;
+    if (playEffect) playEffect(enemy.uid, "hofmannita_drop_impact");
+    dealDamage(
+      hofmannita,
+      enemy,
+      multiplier,
+      "Electro",
+      log,
+      floatText,
+      playEffect,
+      1,
+      { ...state, isSubDmg: true },
+      0,
+      false,
+      false,
+      hofmannita.constellation >= 2
+        ? () => {
+            enemy.buffs.hofmannitaBrokenRhythmTurns = 2;
+            if (floatText) floatText(enemy.uid, "РАЗБИТЫЙ РИТМ", "text-fuchsia-200 text-xs font-bold");
+          }
+        : undefined,
+    );
+  });
+
+  if (overdrive) addHofmannitaHype(hofmannita, 1, state, floatText, log);
+  if (encore) {
+    hofmannita.buffs.hofmannitaEncoreTurns = 0;
+    hofmannita.buffs.hofmannitaExtraActionPending = true;
+    if (floatText) floatText(hofmannita.uid, "🎤 ENCORE: ДОП. ДЕЙСТВИЕ", "text-fuchsia-200 font-black text-xs");
+    if (log) log(`${hofmannita.name} получает дополнительное действие от ENCORE!`);
+  }
+};
+
+export const startHofmannitaTurn = (
+  hofmannita: Combatant,
+  state: BattleState,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  hofmannita.buffs.hofmannitaSceneActionIds = {};
+  hofmannita.buffs.hofmannitaReactionHypeThisTurn = 0;
+  hofmannita.buffs.hofmannitaVipHypeThisTurn = 0;
+  hofmannita.buffs.hofmannitaC5TriggeredThisTurn = false;
+  if ((hofmannita.buffs.hofmannitaNeonSceneTurns || 0) > 0) {
+    addHofmannitaHype(hofmannita, 1, state, floatText, log);
+  }
+};
+
+export const advanceHofmannitaTurn = (
+  activeUnit: Combatant,
+  state: BattleState,
+  log: (msg: string) => void,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+) => {
+  if ((activeUnit.buffs.hofmannitaVipTurns || 0) > 0) {
+    activeUnit.buffs.hofmannitaVipTurns--;
+  }
+  if (activeUnit.id !== "hofmannita") return;
+
+  const sceneTurns = activeUnit.buffs.hofmannitaNeonSceneTurns || 0;
+  if (sceneTurns > 0) activeUnit.buffs.hofmannitaNeonSceneTurns = sceneTurns - 1;
+
+  const overdriveTurns = activeUnit.buffs.hofmannitaOverdriveTurns || 0;
+  if (overdriveTurns > 0) {
+    activeUnit.buffs.hofmannitaOverdriveTurns = overdriveTurns - 1;
+    if (activeUnit.buffs.hofmannitaOverdriveTurns === 0) {
+      activeUnit.buffs.hofmannitaMainStageTurns = 0;
+      activeUnit.buffs.hofmannitaHype = 0;
+      activeUnit.buffs.hofmannitaC1DropReady = false;
+      activeUnit.buffs.hofmannitaStageAttackCount = 0;
+      if (floatText) floatText(activeUnit.uid, "OVERDRIVE: ХАЙП 0", "text-fuchsia-200 font-bold");
+      log(`OVERDRIVE Хофманниты завершается: ХАЙП сбрасывается до 0.`);
+      return;
+    }
+  }
+
+  const stageTurns = activeUnit.buffs.hofmannitaMainStageTurns || 0;
+  if (stageTurns > 0) {
+    activeUnit.buffs.hofmannitaMainStageTurns = stageTurns - 1;
+    if (activeUnit.buffs.hofmannitaMainStageTurns === 0) {
+      activeUnit.buffs.hofmannitaStageAttackCount = 0;
+      if (activeUnit.constellation >= 4) {
+        activeUnit.buffs.hofmannitaHype = 4;
+        if (floatText) floatText(activeUnit.uid, "🎤 ХАЙП 4", "text-fuchsia-200 font-bold");
+        log(`C4 Хофманниты сохраняет 4 ХАЙП после MAIN STAGE.`);
+        if ((activeUnit.buffs.hofmannitaNeonSceneTurns || 0) > 0) {
+          activeUnit.buffs.hofmannitaNeonSceneTurns++;
+          if (floatText) floatText(activeUnit.uid, "СЦЕНА +1 ХОД", "text-fuchsia-200 text-xs");
+        }
+      }
+      log(`MAIN STAGE Хофманниты завершается.`);
+    }
+  }
+
+  if (sceneTurns > 0 && (activeUnit.buffs.hofmannitaNeonSceneTurns || 0) === 0) {
+    log(`Неоновая сцена Хофманниты гаснет.`);
+  }
+
+  if ((activeUnit.buffs.hofmannitaEncoreTurns || 0) > 0) {
+    if (activeUnit.buffs.hofmannitaEncoreFresh) {
+      activeUnit.buffs.hofmannitaEncoreFresh = false;
+    } else {
+      activeUnit.buffs.hofmannitaEncoreTurns--;
+    }
+  }
+};
+
+const getCMHBitCap = (cmh: Combatant) => cmh.constellation >= 1 ? 8 : 6;
+
+const activateCMHFullRave = (
+  cmh: Combatant,
+  state: BattleState,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  cmh.buffs.cmhFullRaveTurns = 2;
+  cmh.buffs.cmhSharpDropsThisRave = false;
+  cmh.buffs.cmhSharpActionIds = {};
+  cmh.buffs.cmhC3HitActors = {};
+  if (floatText) floatText(cmh.uid, "🔥 FULL RAVE", "text-red-200 font-black");
+  if (log) log(`${cmh.name} активирует FULL RAVE на 2 хода!`);
+
+  if (cmh.constellation >= 2) {
+    state.enemyParty.forEach(enemy => {
+      if (enemy.stats.hp <= 0) return;
+      enemy.buffs.cmhBassTurns = 2;
+      enemy.buffs.cmhBassResDown = 15;
+      if (floatText) floatText(enemy.uid, "ОГЛУШАЮЩИЙ БАС: Pyro RES −15%", "text-orange-300 font-bold text-xs");
+    });
+  }
+
+  const hofmannita = state.playerParty.find(p => p.id === "hofmannita" && p.stats.hp > 0);
+  if (hofmannita) addHofmannitaHype(hofmannita, 1, state, floatText, log);
+};
+
+const activateCMHOverbeat = (
+  cmh: Combatant,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  const wasFullRave = (cmh.buffs.cmhFullRaveTurns || 0) > 0;
+  const earnedExtraAction = cmh.constellation >= 4 && (cmh.buffs.cmhSharpDropsThisRave || false);
+  cmh.buffs.cmhFullRaveTurns = 0;
+  if (wasFullRave) {
+    cmh.buffs.cmhBits = cmh.constellation >= 4 ? 3 : 0;
+    cmh.buffs.cmhSharpDropsThisRave = false;
+    if (earnedExtraAction) cmh.buffs.cmhExtraActionPending = true;
+    if (log) log(`FULL RAVE ${cmh.name} завершается${cmh.constellation >= 4 ? ", сохраняя 3 БИТА" : ""}.`);
+  }
+  cmh.buffs.cmhOverbeatTurns = 3;
+  cmh.buffs.cmhSharpBeats = 0;
+  cmh.buffs.cmhSharpActionIds = {};
+  cmh.buffs.cmhFinalDropTurns = cmh.constellation >= 6 ? 3 : 0;
+  cmh.buffs.cmhFinalDropHitCount = 0;
+  cmh.buffs.cmhFinalDropCount = 0;
+  if (floatText) floatText(cmh.uid, "💥 OVERBEAT", "text-red-100 font-black");
+  if (cmh.constellation >= 6 && floatText) floatText(cmh.uid, "🔥 FINAL DROP", "text-orange-100 font-black");
+  if (log) log(`${cmh.name} активирует OVERBEAT на 3 хода!`);
+};
+
+const addCMHBits = (
+  cmh: Combatant,
+  amount: number,
+  state: BattleState,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  log?: (msg: string) => void,
+) => {
+  const before = cmh.buffs.cmhBits || 0;
+  const after = Math.min(getCMHBitCap(cmh), before + amount);
+  cmh.buffs.cmhBits = after;
+  const gained = after - before;
+  const totalGained = (cmh.buffs.cmhBitsTotalGainedThisTurn || 0) + gained;
+  cmh.buffs.cmhBitsTotalGainedThisTurn = totalGained;
+  if (totalGained >= 3 && (cmh.buffs.cmhEnergyRechargeTurns || 0) <= 0) {
+    cmh.buffs.cmhEnergyRechargeTurns = 2;
+    if (floatText) floatText(cmh.uid, "⚡ +10% СКОРОСТИ ВОССТАНОВЛЕНИЯ ATB", "text-orange-200 font-bold text-xs");
+  }
+  if (cmh.constellation >= 1 && after >= 8) cmh.buffs.cmhC1DropReady = true;
+  if (after > before && floatText) floatText(cmh.uid, `🎧 БИТЫ ${after}/${getCMHBitCap(cmh)}`, "text-orange-200 font-bold");
+  if (before < 6 && after >= 6 && (cmh.buffs.cmhFullRaveTurns || 0) <= 0) {
+    activateCMHFullRave(cmh, state, floatText, log);
+  }
+};
+
+const triggerCMHDrop = (
+  cmh: Combatant,
+  state: BattleState,
+  log: (msg: string) => void,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  playEffect?: (targetUid: string, effectType: string) => void,
+  fullRaveAtHit = (cmh.buffs.cmhFullRaveTurns || 0) > 0,
+  overbeatAtHit = (cmh.buffs.cmhOverbeatTurns || 0) > 0,
+  finalDropAtHit = (cmh.buffs.cmhFinalDropTurns || 0) > 0,
+) => {
+  const isFinalDrop = finalDropAtHit;
+  const c1Bonus = cmh.buffs.cmhC1DropReady === true;
+  const c5Bonus = (cmh.buffs.cmhEncoreTurns || 0) > 0 && cmh.constellation >= 5;
+  const multiplier = 0.5 * (1 + (c1Bonus ? 0.5 : 0) + (c5Bonus ? 0.5 : 0));
+  if (fullRaveAtHit) cmh.buffs.cmhSharpDropsThisRave = true;
+  cmh.buffs.cmhSharpBeats = c5Bonus ? 1 : 0;
+  cmh.buffs.cmhC1DropReady = false;
+  if (floatText) floatText(cmh.uid, isFinalDrop ? "🔥 FINAL DROP" : "💥 DROP", "text-orange-100 font-black");
+  if (playEffect) {
+    playEffect(cmh.uid, "cmh_drop");
+    playEffect(cmh.uid, "cmh_field_drop");
+  }
+  log(`${cmh.name} активирует ${isFinalDrop ? "FINAL DROP" : "DROP"}!`);
+  state.enemyParty.forEach(enemy => {
+    if (enemy.stats.hp <= 0) return;
+    dealDamage(
+      cmh,
+      enemy,
+      multiplier,
+      "Pyro",
+      log,
+      floatText,
+      playEffect,
+      1,
+      {
+        ...state,
+        isSubDmg: true,
+        cmhDropDamage: true,
+        cmhFinalDropDamage: isFinalDrop,
+        cmhOverbeatDamage: overbeatAtHit,
+      },
+    );
+    if (isFinalDrop) {
+      dealDamage(cmh, enemy, 0.8, "Pyro", log, floatText, playEffect, 1, {
+        ...state,
+        isSubDmg: true,
+        cmhDropDamage: true,
+        cmhFinalDropDamage: true,
+        cmhOverbeatDamage: overbeatAtHit,
+      });
+    }
+  });
+
+  if (isFinalDrop) {
+    cmh.buffs.cmhFinalDropCount = (cmh.buffs.cmhFinalDropCount || 0) + 1;
+    if ((cmh.buffs.cmhFinalDropCount || 0) % 2 === 0) cmh.buffs.cmhExtraActionPending = true;
+  }
+  if (c5Bonus) cmh.buffs.cmhEncoreTurns = 0;
+};
+
+const recordCMHHit = (
+  source: Combatant,
+  target: Combatant,
+  previousHp: number,
+  element: Element,
+  reactionMsg: string,
+  state: BattleState,
+  log: (msg: string) => void,
+  floatText?: (targetUid: string, text: string, color: string) => void,
+  playEffect?: (targetUid: string, effectType: string) => void,
+  fullRaveAtHit = false,
+  overbeatAtHit = false,
+  finalDropAtHit = false,
+  actionId = `${source.uid}-${Date.now()}-${Math.random()}`,
+) => {
+  const cmh = state.playerParty.find(p => p.id === "cmh" && p.stats.hp > 0);
+  if (!cmh || source.isEnemy) return;
+  const gained = cmh.buffs.cmhBitsGainedThisTurn || 0;
+  if (gained < 3) {
+    addCMHBits(cmh, 1, state, floatText, log);
+    cmh.buffs.cmhBitsGainedThisTurn = gained + 1;
+  }
+
+  if (source.id !== "cmh" && (cmh.buffs.cmhRhythmTurns || 0) > 0) {
+    const rhythmGains = cmh.buffs.cmhRhythmBitsThisTurn || 0;
+    if (rhythmGains < 2 && (cmh.buffs.cmhBitsGainedThisTurn || 0) < 3) {
+      addCMHBits(cmh, 1, state, floatText, log);
+      cmh.buffs.cmhBitsGainedThisTurn = (cmh.buffs.cmhBitsGainedThisTurn || 0) + 1;
+      cmh.buffs.cmhRhythmBitsThisTurn = rhythmGains + 1;
+    }
+    if (reactionMsg && !state.cmhRhythmDamage) {
+      if (playEffect) playEffect(cmh.uid, "cmh_rhythm");
+      dealDamage(cmh, target, 0.35, "Pyro", log, floatText, playEffect, 1, {
+        ...state,
+        isSubDmg: true,
+        cmhRhythmDamage: true,
+      });
+    }
+  }
+
+  if (fullRaveAtHit) {
+    if (cmh.constellation >= 3 && source.uid !== cmh.uid) {
+      const actors = cmh.buffs.cmhC3HitActors || {};
+      if (!actors[source.uid]) {
+        actors[source.uid] = true;
+        cmh.buffs.cmhC3HitActors = actors;
+        if ((cmh.buffs.cmhBitsGainedThisTurn || 0) < 3) {
+          addCMHBits(cmh, 1, state, floatText, log);
+          cmh.buffs.cmhBitsGainedThisTurn = (cmh.buffs.cmhBitsGainedThisTurn || 0) + 1;
+        }
+      }
+    }
+    if (source.id !== "cmh") {
+      const actionIds = cmh.buffs.cmhSharpActionIds || {};
+      if (!actionIds[actionId]) {
+        actionIds[actionId] = true;
+        cmh.buffs.cmhSharpActionIds = actionIds;
+        cmh.buffs.cmhSharpBeats = (cmh.buffs.cmhSharpBeats || 0) + 1;
+        if ((cmh.buffs.cmhSharpBeats || 0) >= 7) {
+          cmh.buffs.cmhSharpBeats = 0;
+          triggerCMHDrop(cmh, state, log, floatText, playEffect, true, false, false);
+          if ((cmh.buffs.cmhFullRaveTurns || 0) <= 0) {
+            cmh.buffs.cmhBits = cmh.constellation >= 4 ? 3 : 0;
+            cmh.buffs.cmhSharpDropsThisRave = false;
+            if (cmh.constellation >= 4) cmh.buffs.cmhExtraActionPending = true;
+          }
+        }
+      }
+    }
+  } else if (overbeatAtHit) {
+    if (source.id !== "cmh") {
+      const actionIds = cmh.buffs.cmhSharpActionIds || {};
+      if (!actionIds[actionId]) {
+        actionIds[actionId] = true;
+        cmh.buffs.cmhSharpActionIds = actionIds;
+        cmh.buffs.cmhSharpBeats = (cmh.buffs.cmhSharpBeats || 0) + 1;
+        if (finalDropAtHit) {
+          cmh.buffs.cmhFinalDropHitCount = (cmh.buffs.cmhFinalDropHitCount || 0) + 1;
+          if ((cmh.buffs.cmhFinalDropHitCount || 0) >= 6) {
+            cmh.buffs.cmhFinalDropHitCount = 0;
+            cmh.buffs.cmhSharpBeats = 0;
+            triggerCMHDrop(cmh, state, log, floatText, playEffect, false, true, finalDropAtHit);
+            addCMHBits(cmh, 1, state, floatText, log);
+            if ((cmh.buffs.cmhFinalDropTurns || 0) <= 0) cmh.buffs.cmhBits = 0;
+          }
+        } else if ((cmh.buffs.cmhSharpBeats || 0) >= 6) {
+          cmh.buffs.cmhSharpBeats = 0;
+          triggerCMHDrop(cmh, state, log, floatText, playEffect, false, true, false);
+        }
+      }
+    }
+  }
+
+  if (
+    cmh.constellation >= 5 &&
+    target.isEnemy &&
+    previousHp / target.stats.maxHp >= 0.25 &&
+    target.stats.hp / target.stats.maxHp < 0.25 &&
+    !cmh.buffs.cmhEncoreTriggered
+  ) {
+    cmh.buffs.cmhEncoreTriggered = true;
+    cmh.buffs.cmhEncoreTurns = 2;
+    if (floatText) floatText(cmh.uid, "🎤 ENCORE", "text-orange-100 font-black");
+    log(`C5 ${cmh.name}: ENCORE активен 2 хода!`);
+  }
+};
+
+export const startCMHTurn = (cmh: Combatant, state: BattleState, floatText?: (targetUid: string, text: string, color: string) => void, log?: (msg: string) => void) => {
+  cmh.buffs.cmhBitsGainedThisTurn = 0;
+  cmh.buffs.cmhBitsTotalGainedThisTurn = 0;
+  cmh.buffs.cmhRhythmBitsThisTurn = 0;
+  cmh.buffs.cmhC3HitActors = {};
+  if ((cmh.buffs.cmhRhythmTurns || 0) > 0) addCMHBits(cmh, 1, state, floatText, log);
+};
+
+export const advanceCMHTurn = (cmh: Combatant, log: (msg: string) => void) => {
+  const rhythm = cmh.buffs.cmhRhythmTurns || 0;
+  if (rhythm > 0) {
+    cmh.buffs.cmhRhythmTurns = rhythm - 1;
+    if (cmh.buffs.cmhRhythmTurns === 0) log(`РИТМ ${cmh.name} завершается.`);
+  }
+  const fullRaveTurns = cmh.buffs.cmhFullRaveTurns || 0;
+  const finalDropTurns = cmh.buffs.cmhFinalDropTurns || 0;
+  for (const key of ["cmhFullRaveTurns", "cmhOverbeatTurns", "cmhFinalDropTurns", "cmhEncoreTurns", "cmhEnergyRechargeTurns"] as const) {
+    const turns = cmh.buffs[key] || 0;
+    if (turns > 0) cmh.buffs[key] = turns - 1;
+  }
+  if (fullRaveTurns > 0 && (cmh.buffs.cmhFullRaveTurns || 0) === 0) {
+    cmh.buffs.cmhBits = cmh.constellation >= 4 ? 3 : 0;
+    const earnedExtraAction = cmh.constellation >= 4 && (cmh.buffs.cmhSharpDropsThisRave || false);
+    cmh.buffs.cmhSharpDropsThisRave = false;
+    if (earnedExtraAction) cmh.buffs.cmhExtraActionPending = true;
+    log(`FULL RAVE ${cmh.name} завершается${cmh.constellation >= 4 ? ", сохраняя 3 БИТА" : ""}.`);
+  }
+  if (finalDropTurns > 0 && (cmh.buffs.cmhFinalDropTurns || 0) === 0) {
+    cmh.buffs.cmhBits = 0;
+    cmh.buffs.cmhSharpBeats = 0;
+  }
+};
+
 export const applySnezhanaOvercool = (source: Combatant, target: Combatant, state: BattleState, ft: any, log: any) => {
   if (target.buffs.critOvercool && target.buffs.critOvercool > 0) {
     if (source.constellation >= 1) {
@@ -1866,6 +2503,239 @@ export const applySnezhanaOvercool = (source: Combatant, target: Combatant, stat
 };
 
 export const characterBlueprints: Record<string, (uid: string, level: number, c: number, arts?: Artifact[]) => Combatant> = {
+
+  hofmannita: (uid, l, c, arts = []) => ({
+    id: "hofmannita",
+    uid,
+    isEnemy: false,
+    name: "Хофманнита",
+    element: "Electro",
+    color: "bg-fuchsia-900 text-fuchsia-100 border-fuchsia-400",
+    level: l,
+    constellation: c,
+    image: getCharSplash("hofmannita") || undefined,
+    stats: scaleStats(1350, 230, 65, 52, l, c, arts),
+    atb: 0,
+    cooldowns: {},
+    buffs: {
+      hofmannitaHype: 0,
+      hofmannitaNeonSceneTurns: 0,
+      hofmannitaMainStageTurns: 0,
+      hofmannitaOverdriveTurns: 0,
+      hofmannitaStageAttackCount: 0,
+      hofmannitaSceneActionIds: {},
+      hofmannitaReactionHypeThisTurn: 0,
+      hofmannitaVipHypeThisTurn: 0,
+      hofmannitaDollSaveUsed: false,
+      hofmannitaC1DropReady: false,
+      hofmannitaC5TriggeredThisTurn: false,
+      hofmannitaEncoreTurns: 0,
+      hofmannitaEncoreFresh: false,
+      hofmannitaExtraActionPending: false,
+    },
+    skills: [
+      {
+        id: "hofmannita_atk",
+        name: "Хочу!",
+        type: "Attack",
+        cost: 0,
+        target: "SingleEnemy",
+        description: "Ударяет противника микрофоном. При 4+ ХАЙП наносит дополнительный Электро-урон; с 6+ ХАЙП обычные атаки также вызывают электрический импульс. MAIN STAGE наделяет атаку Электро-инфузией.",
+        statsText: "Урон: 100% АТК\nДоп. Электро-урон при 4+ ХАЙП: 20% АТК\nЭлектрический импульс при 6+ ХАЙП: 30% АТК всем врагам",
+        execute: (s, t, state, log, ft, pl) => {
+          const target = t[0];
+          if (!target || target.stats.hp <= 0) return;
+
+          const hypeBefore = s.buffs.hofmannitaHype || 0;
+          const inMainStage = (s.buffs.hofmannitaMainStageTurns || 0) > 0;
+          const c1DropWasReady = c >= 1 && s.buffs.hofmannitaC1DropReady;
+          const infused = inMainStage;
+          if (pl) pl(target.uid, "hofmannita_attack");
+          dealDamage(s, target, 1, infused ? "Electro" : "Physical", log, ft, pl, 1, state);
+          addHofmannitaHype(s, 1, state, ft, log);
+
+          if (hypeBefore >= 4) {
+            dealDamage(s, target, 0.2, "Electro", log, ft, pl, 1, state);
+          }
+
+          if ((s.buffs.hofmannitaHype || 0) >= 6) {
+            if (ft) ft(s.uid, "⚡ ЭЛЕКТРИЧЕСКИЙ ИМПУЛЬС", "text-fuchsia-200 font-black text-xs");
+            state.enemyParty.forEach(enemy => {
+              if (enemy.stats.hp > 0) {
+                if (pl) pl(enemy.uid, "hofmannita_impulse");
+                dealDamage(s, enemy, 0.3, "Electro", log, ft, pl, 1, { ...state, isSubDmg: true });
+              }
+            });
+            if (pl) pl(s.uid, "hofmannita_field_impulse");
+          }
+
+          s.buffs.hofmannitaStageAttackCount = (s.buffs.hofmannitaStageAttackCount || 0) + 1;
+          const overdrive = (s.buffs.hofmannitaOverdriveTurns || 0) > 0;
+          const dropEvery = overdrive ? 2 : 3;
+          const stageDrop =
+            (s.buffs.hofmannitaMainStageTurns || 0) > 0 &&
+            s.buffs.hofmannitaStageAttackCount % dropEvery === 0;
+          const constellationDrop = c1DropWasReady;
+          if (stageDrop || constellationDrop) {
+            s.buffs.hofmannitaStageAttackCount = 0;
+            if (constellationDrop) s.buffs.hofmannitaC1DropReady = false;
+            triggerHofmannitaDrop(s, state, log, ft, pl);
+          }
+        },
+      },
+      {
+        id: "hofmannita_e",
+        name: "На сцену!",
+        type: "Skill1",
+        cost: 3,
+        target: "Self",
+        description: "Создаёт Неоновую сцену на 4 хода. В начале хода Хофманниты сцена даёт 1 ХАЙП; элементальный урон союзников вызывает не более одного Электро-импульса за действие. Получает 2 ХАЙП. При 8 ХАЙП активирует MAIN STAGE.",
+        statsText: "Урон сцены: 20% АТК Электро за действие\nДлительность сцены: 4 хода\nПолучение ХАЙПа: +2 при создании",
+        execute: (s, _t, state, log, ft, pl) => {
+          s.buffs.hofmannitaNeonSceneTurns = 4;
+          s.buffs.hofmannitaSceneActionIds = {};
+          addHofmannitaHype(s, 2, state, ft, log);
+          if (ft) ft(s.uid, "🎤 НЕОНОВАЯ СЦЕНА", "text-fuchsia-200 font-black");
+          if (pl) pl(s.uid, "hofmannita_stage");
+          if (pl) pl(s.uid, "hofmannita_field_stage");
+          if (log) log(`${s.name} создаёт Неоновую сцену!`);
+
+          if (
+            (s.buffs.hofmannitaHype || 0) >= 8 &&
+            (s.buffs.hofmannitaMainStageTurns || 0) <= 0
+          ) {
+            activateHofmannitaMainStage(s, state, ft, log);
+          }
+        },
+      },
+      {
+        id: "hofmannita_q",
+        name: "Клуб на краю кладбища",
+        type: "Skill2",
+        cost: 6,
+        target: "AllEnemies",
+        description: "Наносит Электро-урон всем врагам и получает 4 ХАЙП. Активирует MAIN STAGE на 3 хода; если до ультимейта было 8+ ХАЙП — вместо этого входит в OVERDRIVE на 3 хода.",
+        statsText: "Урон: 175% АТК Электро\nMAIN STAGE: 3 хода\nOVERDRIVE: 3 хода",
+        execute: (s, t, state, log, ft, pl) => {
+          const hypeBefore = s.buffs.hofmannitaHype || 0;
+          t.forEach(enemy => {
+            if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.75, "Electro", log, ft, pl, 1, state);
+          });
+
+          if (hypeBefore >= 8) {
+            activateHofmannitaOverdrive(s, state, ft, log);
+          } else {
+            addHofmannitaHype(s, 4, state, ft, log);
+            if ((s.buffs.hofmannitaOverdriveTurns || 0) <= 0) {
+              activateHofmannitaMainStage(s, state, ft, log);
+            }
+          }
+          if (pl) pl(s.uid, "hofmannita_ultimate");
+        },
+      },
+    ],
+  }),
+
+  cmh: (uid, l, c, arts = []) => ({
+    id: "cmh",
+    uid,
+    isEnemy: false,
+    name: "CMH",
+    element: "Pyro",
+    color: "bg-red-950 text-orange-100 border-orange-400",
+    level: l,
+    constellation: c,
+    image: getCharSplash("cmh") || undefined,
+    stats: scaleStats(1280, 205, 68, 53, l, c, arts),
+    atb: 0,
+    cooldowns: {},
+    buffs: {
+      cmhBits: 0,
+      cmhSharpBeats: 0,
+      cmhRhythmTurns: 0,
+      cmhFullRaveTurns: 0,
+      cmhOverbeatTurns: 0,
+      cmhFinalDropTurns: 0,
+      cmhEncoreTurns: 0,
+      cmhEncoreTriggered: false,
+      cmhEnergyRechargeTurns: 0,
+      cmhBitsGainedThisTurn: 0,
+      cmhBitsTotalGainedThisTurn: 0,
+      cmhRhythmBitsThisTurn: 0,
+      cmhSharpDropsThisRave: false,
+      cmhC3HitActors: {},
+      cmhFinalDropHitCount: 0,
+      cmhFinalDropCount: 0,
+      cmhC1DropReady: false,
+      cmhExtraActionPending: false,
+    },
+    skills: [
+      {
+        id: "cmh_atk",
+        name: "CMH",
+        type: "Attack",
+        cost: 0,
+        target: "SingleEnemy",
+        description: "Наносит физический и Pyro-удары; при 3+ БИТах второй удар задевает ближайшего врага. В начале боя получает 1 БИТ (+1, если в отряде Хофманнита). Урон CMH и союзников даёт БИТЫ (до 3 за ход); каждый БИТ повышает урон CMH на 2%, а при 6 автоматически начинается FULL RAVE.",
+        statsText: "Урон: 100% АТК Physical + 45% АТК Pyro\nПри 3+ БИТ: второй удар задевает ближайшего врага",
+        execute: (s, targets, state, log, ft, pl) => {
+          const target = targets[0];
+          if (!target || target.stats.hp <= 0) return;
+          if (pl) pl(target.uid, "cmh_attack");
+          dealDamage(s, target, 1, "Physical", log, ft, pl, 1, state);
+          dealDamage(s, target, 0.45, "Pyro", log, ft, pl, 1, state);
+          if ((s.buffs.cmhBits || 0) >= 3) {
+            const nearby = state.enemyParty.find(enemy => enemy.uid !== target.uid && enemy.stats.hp > 0);
+            if (nearby) dealDamage(s, nearby, 0.45, "Pyro", log, ft, pl, 1, state);
+          }
+          addCMHBits(s, 1, state, ft, log);
+        },
+      },
+      {
+        id: "cmh_e",
+        name: "БЭЙСЛАЙН",
+        type: "Skill1",
+        cost: 3,
+        target: "Self",
+        description: "Устанавливает РИТМ на 4 хода: CMH получает 1 БИТ в начале своего хода; действия союзников дают до 2 дополнительных БИТ за ход, а их реакции вызывают Pyro-атаку по врагу. Сразу получает 2 БИТА. Получение 3 БИТ за ход даёт +10% скорости восстановления ATB на 2 хода; MAIN STAGE Хофманниты даёт CMH 1 БИТ.",
+        statsText: "РИТМ: 4 хода\nПри активации: +2 БИТА\nАтака-ответ на реакцию союзника: 60% АТК Pyro",
+        execute: (s, _targets, state, log, ft, pl) => {
+          s.buffs.cmhRhythmTurns = 4;
+          s.buffs.cmhRhythmBitsThisTurn = 0;
+          addCMHBits(s, 2, state, ft, log);
+          if (ft) ft(s.uid, "🎚️ РИТМ", "text-orange-200 font-black");
+          if (pl) {
+            pl(s.uid, "cmh_rhythm");
+            pl(s.uid, "cmh_field_rhythm");
+          }
+          log(`${s.name} устанавливает РИТМ на 4 хода.`);
+        },
+      },
+      {
+        id: "cmh_q",
+        name: "CRAZY MEGA HELL",
+        type: "Skill2",
+        cost: 6,
+        target: "AllEnemies",
+        description: "Наносит мощный Pyro-урон всем врагам, продлевает РИТМ на 2 хода и получает 6 БИТ. FULL RAVE длится 2 хода: CMH получает +12% Pyro DMG, отряд +3%, а каждые 7 действий союзников вызывают DROP (50% АТК Pyro); удары самого CMH не увеличивают этот счётчик. При активном FULL RAVE ульта включает OVERBEAT вместо него. OVERBEAT: CMH +22% Pyro DMG, отряд +5%; DROP срабатывает каждые 6 действий союзников. FULL RAVE также даёт Хофманните 1 ХАЙП.",
+        statsText: "Урон: 200% АТК Pyro всем врагам\nFULL RAVE: 2 хода, CMH +12% Pyro DMG, отряд +3%\nDROP: 50% АТК Pyro после 7 действий союзников\nOVERBEAT: CMH +22% Pyro DMG, отряд +5%; DROP после 6 действий союзников",
+        execute: (s, targets, state, log, ft, pl) => {
+          const raveWasActive = (s.buffs.cmhFullRaveTurns || 0) > 0;
+          targets.forEach(enemy => {
+            if (enemy.stats.hp > 0) dealDamage(s, enemy, 2, "Pyro", log, ft, pl, 1, state);
+          });
+          s.buffs.cmhRhythmTurns = (s.buffs.cmhRhythmTurns || 0) + 2;
+          if (raveWasActive) {
+            activateCMHOverbeat(s, ft, log);
+            if (pl) pl(s.uid, "cmh_overbeat");
+          } else {
+            addCMHBits(s, 6, state, ft, log);
+          }
+          if (pl) pl(s.uid, "cmh_ultimate");
+        },
+      },
+    ],
+  }),
 
   farina: (uid, l, c, arts = []) => ({
     id: 'farina', uid, isEnemy: false, name: 'Фарина', element: 'Cryo', color: 'bg-cyan-600 text-white', level: l, constellation: c,
@@ -2096,6 +2966,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Нереус наносит выбранному врагу 100% ATK Hydro DMG.',
         statsText: "Урон: 100% ATK (Hydro)",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "nereus_tide_touch");
           if (pl) pl(t[0].uid, 'heal');
           dealDamage(s, t[0], 1.0, 'Hydro', log, ft, pl, 1, state);
         }
@@ -2105,6 +2976,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Создаёт Морской цветок на выбранном враге на 2 хода (до 2 ударов). При каждом ударе по цели цветок наносит 25% Max HP (35% на C3) Hydro DMG. При элементальной реакции цветок взрывается (+15% Max HP Hydro DMG) и распространяет Hydro на всех врагов.',
         statsText: "Морской цветок: 2 хода (2 удара)\nУрон цветка: 25% Max HP (35% C3)\nВзрыв: 15% Max HP Hydro + Hydro всем",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "nereus_sea_flower");
           if (pl) pl(t[0].uid, 'heal');
           t[0].aura = 'Hydro';
           t[0].buffs.nereusFlower = {
@@ -2122,6 +2994,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Создаёт Сад вечного моря на 2 хода. Наносит 30% Max HP Hydro DMG всем врагам, накладывает Hydro и даёт +1 удар существующим Морским цветам. В начале хода каждого врага наносит 17% Max HP Hydro DMG и накладывает Hydro. При окончании сада: Последнее цветение (10% Max HP Hydro DMG + Hydro всем).',
         statsText: "AoE урон: 30% Max HP Hydro\nСад: 2 хода (17% Max HP в ход врага)\nЦветы: +1 удар\nФинал сада: 10% Max HP Hydro всем",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "nereus_eternal_garden");
           if (pl) pl(s.uid, 'heal');
           s.buffs.nereusGardenTurns = 3; // +1 for turn-end tick
           if (ft) ft(s.uid, '🌊 САД ВЕЧНОГО МОРЯ', 'text-cyan-400 font-black text-sm');
@@ -2163,6 +3036,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Ива выполняет серию из 5 атак, не наносящих урона.",
         statsText: "Удары: 5 ударов\nУрон: 0% АТК\nСтоимость: 0",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "iva_sprouts");
           if (pl) pl(t[0].uid, "heal");
           dealDamage(s, t[0], 0, "Dendro", log, ft, pl, 5, state);
           if (log) log(`${s.name} использует «Первые ростки» (5 атак, 0 урона).`);
@@ -2173,6 +3047,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Ива создаёт Флоральную связь на 2 хода. Пока действует связь: Dendro и Cryo RES всех врагов снижены на 20% (25% на C2); каждая 2-я атака союзника дополнительно создаёт 1 Шип (до 2 раз за ход).",
         statsText: "Длительность: 2 хода\nСнижение RES: -20% (Dendro/Cryo, -25% C2)\nШипы: каждые 2 атаки союзника (до 2/ход)\nСтоимость: 3",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "iva_floral_bond");
           if (pl) pl(s.uid, "heal");
           s.buffs.ivaFloralBondTurns = 3; // 2 full turns
           s.buffs.ivaThornsGeneratedThisTurn = 0;
@@ -2187,6 +3062,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Ива призывает силу природы, нанося всем врагам 200% ATK Dendro DMG и восстанавливая всему отряду 20% HP. Создаёт эффект «Цветение» на 2 хода: каждый раз, когда союзник получает Шип, он восстанавливает 5% HP (6% на C5, до 2 раз за ход, 3 на C5).",
         statsText: "Урон: 200% ATK Dendro всем\nЛечение: 20% HP отряду\nЦветение: 2 хода (5% HP за Шип, до 2/ход)\nСтоимость: 6",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "iva_primordial_bloom");
           if (pl) pl(s.uid, "heal");
           t.forEach(enemy => {
             if (enemy.stats.hp > 0) {
@@ -2230,6 +3106,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Керн выполняет серию из 5 атак, наносящих Geo DMG: 70% / 80% / 90% / 100% / 120% DEF. Обычные атаки являются основным источником урона Керна.",
         statsText: "Удары: 5 ударов (70%/80%/90%/100%/120% ЗАЩ)\nСуммарно: 460% ЗАЩ Geo DMG\nСтоимость: 0",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(t[0].uid, "kern_stone_rush");
           const isOverload = (s.buffs.kernOverloadTurns ?? 0) > 0;
           const isQBonus = (s.buffs.kernQBonusTurns ?? 0) > 0;
           const isC1 = c >= 1 && (s.stats.hp / s.stats.maxHp) < 0.70;
@@ -2278,6 +3155,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Керн высвобождает Гео-энергию, нанося всем врагам 80% DEF Geo DMG. После атаки Керн теряет 15% текущего HP и получает эффект «Перенапряжение» на 2 хода (+10% урон обычных атак). При повторном применении длительность обновляется.",
         statsText: "Урон: 80% ЗАЩ Geo всем\nСамоурон: 15% текущего HP\nПеренапряжение: +10% урон обычных атак (2 хода)\nСтоимость: 3",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "kern_core_rift");
           if (pl) pl(s.uid, "Geo");
           t.forEach(enemy => {
             if (enemy.stats.hp > 0) {
@@ -2320,6 +3198,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: "Керн высвобождает мощную Гео-энергию, нанося всем врагам 140% DEF Geo DMG. После атаки теряет 20% текущего HP и усиливает «Перенапряжение»: урон обычных атак увеличивается ещё на 15% на 2 хода (+25% суммарно).",
         statsText: "Урон: 140% ЗАЩ Geo всем\nСамоурон: 20% текущего HP\nБонус к атакам: +15% (итого +25% с E)\nC4: +10% исцеление и +15% урон атак\nСтоимость: 5",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "kern_undercore_catastrophe");
           if (pl) pl(s.uid, "Geo");
           t.forEach(enemy => {
             if (enemy.stats.hp > 0) {
@@ -2837,11 +3716,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1100, 210, 75, 38, l, c, arts), atb: 0, cooldowns: {}, buffs: { frenzyStacks: 0 },
     skills: [
       { id: "k_atk", name: "Атака копьем", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удары Дендро копьем.',
-        statsText: "Урон: 120% АТК\nЛечение: 20% HP", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = Math.round(s.stats.atk * 0.2); s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
+        statsText: "Урон: 120% АТК\nЛечение: 20% HP", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "kopro_spear"); dealDamage(s, t[0], 1.2, "Dendro", log, ft, pl, 3, state); if (c >= 6) { const heal = Math.round(s.stats.atk * 0.2); s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + heal); if(ft) ft(s.uid, `+${Math.floor(heal)}`, 'text-green-400'); } } },
       { id: "k_e", name: "Приступ истерики", type: "Skill1", cost: c >= 1 ? 1 : 3, target: "Self", description: 'Входит в Безумие, повышая скорость и силу.',
-        statsText: "Бафф: +40 АТК, +15 СКОР", execute: (s, t, state, log, ft, pl) => { s.buffs.frenzyStacks = Math.min((s.buffs.frenzyStacks || 0) + 2, 5); s.buffs.spd = (s.buffs.spd || 0) + 15; s.buffs.atk = (s.buffs.atk || 0) + 40; if(ft) ft(s.uid, 'БЕЗУМИЕ!', 'text-green-500'); if(pl) pl(s.uid, 'buff'); } },
+        statsText: "Бафф: +40 АТК, +15 СКОР", execute: (s, t, state, log, ft, pl) => { s.buffs.frenzyStacks = Math.min((s.buffs.frenzyStacks || 0) + 2, 5); s.buffs.spd = (s.buffs.spd || 0) + 15; s.buffs.atk = (s.buffs.atk || 0) + 40; if(ft) ft(s.uid, 'БЕЗУМИЕ!', 'text-green-500'); if(pl) { pl(s.uid, "kopro_frenzy"); pl(s.uid, 'buff'); } } },
       { id: "k_q", name: "Время дендродов!", type: "Skill2", cost: c >= 1 ? 4 : 6, target: "AllEnemies", description: 'Дендро-взрыв, тратит Безумие.',
-        statsText: "Урон: 100% АТК (растёт от стаков ловушек)", execute: (s, t, state, log, ft, pl) => { const stacks = s.buffs.frenzyStacks || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.0 + (stacks * 0.8), "Dendro", log, ft, pl, 5, state); }); s.buffs.frenzyStacks = 0; } }
+        statsText: "Урон: 100% АТК (растёт от стаков ловушек)", execute: (s, t, state, log, ft, pl) => { if (pl) pl(s.uid, "kopro_dendroburst"); const stacks = s.buffs.frenzyStacks || 0; t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.0 + (stacks * 0.8), "Dendro", log, ft, pl, 5, state); }); s.buffs.frenzyStacks = 0; } }
     ]
   }),
   selva: (uid, l, c, arts = []) => ({
@@ -2850,11 +3729,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1000, 220, 70, 45, l, c, arts), atb: 0, cooldowns: {}, buffs: { joyStacks: 0 },
     skills: [
       { id: "s_atk", name: "Панч!", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Электро удар из-под земли.',
-        statsText: "Урон: 110% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.1, "Electro", log, ft, pl, 1, state); } },
+        statsText: "Урон: 110% АТК", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "selva_punch"); dealDamage(s, t[0], 1.1, "Electro", log, ft, pl, 1, state); } },
       { id: "s_e", name: "Любитель пострелять", type: "Skill1", cost: 2, target: "AllEnemies", description: 'AoE Электро урон, дает Срытый рейтинг.',
-        statsText: "Урон: 120% АТК\nБафф: +5 СКОР", execute: (s, t, state, log, ft, pl) => { t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 4, state); }); s.buffs.joyStacks = Math.min((s.buffs.joyStacks || 0) + 1, c >= 2 ? 15 : 10); if (c >= 1) s.buffs.spd = (s.buffs.spd || 0) + 5; if(ft) ft(s.uid, '+Рейтинг', 'text-yellow-300'); if(pl) pl(s.uid, 'buff'); } },
+        statsText: "Урон: 120% АТК\nБафф: +5 СКОР", execute: (s, t, state, log, ft, pl) => { if (pl) pl(s.uid, "selva_arcade_blast"); t.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 1.2, "Electro", log, ft, pl, 4, state); }); s.buffs.joyStacks = Math.min((s.buffs.joyStacks || 0) + 1, c >= 2 ? 15 : 10); if (c >= 1) s.buffs.spd = (s.buffs.spd || 0) + 5; if(ft) ft(s.uid, '+Рейтинг', 'text-yellow-300'); if(pl) pl(s.uid, 'buff'); } },
       { id: "s_q", name: "Режим Бога!", type: "Skill2", cost: 6, target: "AllEnemies", description: 'Тратит Радость на мега-атаки.',
-        statsText: "Урон: 200% АТК (Базово)", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, Math.round(s.stats.hp + (s.stats.maxHp * 0.02))); } } }); s.buffs.joyStacks = 0; } }
+        statsText: "Урон: 200% АТК (Базово)", execute: (s, t, state, log, ft, pl) => { const joy = s.buffs.joyStacks || 0; if(joy === 0) { if(ft) ft(s.uid, 'Нет рейтинга', 'text-gray-400'); return; } if (pl) pl(s.uid, "selva_god_mode"); t.forEach(enemy => { if(enemy.stats.hp > 0) { dealDamage(s, enemy, 2.0 + (joy * 0.5), "Electro", log, ft, pl, 6, state); if (c >= 6) { s.stats.hp = Math.min(s.stats.maxHp, Math.round(s.stats.hp + (s.stats.maxHp * 0.02))); } } }); s.buffs.joyStacks = 0; } }
     ]
   }),
   moyan: (uid, l, c, arts = []) => ({
@@ -2863,11 +3742,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1500, 120, 150, 30, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
       { id: "m_atk", name: "Взмах чернилами", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Гео урон чернилами.',
-        statsText: "Урон: 80% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 0.8, "Geo", log, ft, pl, 2, state); if (c >= 2 && Math.random() < 0.5) { s.atb += 15; if(ft) ft(s.uid, 'C2: ATB UP', 'text-yellow-400'); } } },
+        statsText: "Урон: 80% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "moyan_inkstroke"); dealDamage(s, t[0], 0.8, "Geo", log, ft, pl, 2, state); if (c >= 2 && Math.random() < 0.5) { s.atb += 15; if(ft) ft(s.uid, 'C2: ATB UP', 'text-yellow-400'); } } },
       { id: "m_e", name: "Запись Контракта", type: "Skill1", cost: 4, target: "AllAllies", description: 'Щит на всех союзников.',
-        statsText: "Щит: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { const shieldMult = c >= 4 ? 1.3 : 1.0; ally.buffs.shield = (ally.buffs.shield || 0) + 400 * (1 + l * 0.05) * shieldMult; if(ft) ft(ally.uid, '+Щит', 'text-yellow-500'); if(pl) pl(ally.uid, 'shield'); }); } },
+        statsText: "Щит: 15% HP", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { const shieldMult = c >= 4 ? 1.3 : 1.0; ally.buffs.shield = (ally.buffs.shield || 0) + 400 * (1 + l * 0.05) * shieldMult; if(ft) ft(ally.uid, '+Щит', 'text-yellow-500'); if(pl) { pl(ally.uid, "moyan_contract"); pl(ally.uid, 'shield'); } }); } },
       { id: "m_q", name: "Оживление рукописи", type: "Skill2", cost: 6, target: "AllAllies", description: 'Лечит отряд и наносит AoE Гео урон врагам.',
-        statsText: "Урон: 250% АТК\nЛечение: 500 (базово)\nПродвижение хода: 40%", execute: (s, t, state, log, ft, pl) => { t.forEach(ally => { if(ally.stats.hp > 0) { const heal = Math.round(500 * (1 + l * 0.05)); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
+        statsText: "Урон: 250% АТК\nЛечение: 500 (базово)\nПродвижение хода: 40%", execute: (s, t, state, log, ft, pl) => { if (pl) pl(s.uid, "moyan_ink_revelation"); t.forEach(ally => { if(ally.stats.hp > 0) { const heal = Math.round(500 * (1 + l * 0.05)); ally.stats.hp = Math.min(ally.stats.maxHp, ally.stats.hp + heal); if(ft) ft(ally.uid, `+${Math.floor(heal)}`, 'text-green-500'); } }); if (c >= 6) { s.atb += 40; if(ft) ft(s.uid, 'C6: RECOVER', 'text-yellow-400'); } state.enemyParty.forEach(enemy => { if(enemy.stats.hp > 0) dealDamage(s, enemy, 2.5, "Geo", log, ft, pl, 3, state); }); if(pl) state.playerParty.forEach(ally => pl(ally.uid, 'heal')); } }
     ]
   }),
   aelita: (uid, l, c, arts = []) => ({
@@ -2924,7 +3803,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     atb: 0, buffs: { shield: 0 }, cooldowns: {},
     skills: [
       { id: "sm_atk", name: "Молот Тления", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Дендро урон, вешает Дендро ауру.',
-        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 1, state); } },
+        statsText: "Урон: 100% АТК", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "asher_mallet"); dealDamage(s, t[0], 1.0, "Dendro", log, ft, pl, 1, state); } },
       { id: "sm_e", name: "Цепи Тлеющего Угля", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Связывает союзника. Селина получает 3 стака вместо 1. Крит. Урон по Горящим врагам +50%.',
         statsText: "Стаки: 3 стака/ов", execute: (s, t, state, log, ft, pl) => { 
         t[0].buffs.smolderLink = 3; 
@@ -2941,7 +3820,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           if(ft) ft(ally.uid, "🛡️ СТАБИЛИЗАЦИЯ ОЗ", "text-orange-300 font-bold text-[10px]");
         });
         if(pl) {
-          pl(s.uid, "asher_nature");
+          pl(s.uid, "asher_heart");
           pl(s.uid, "ultimate_aoe");
         }
         if (c >= 6) {
@@ -2968,7 +3847,10 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const stackInc = s.buffs.smolderLink || 1;
           s.buffs.roseEmbers = Math.min((s.buffs.roseEmbers || 0) + stackInc, 5); 
           if (ft) ft(s.uid, `+${stackInc} Угли Розы`, 'text-rose-400'); 
-          if (pl) pl(s.uid, 'buff');
+          if (pl) {
+            pl(t[0].uid, 'selina_thrust');
+            pl(s.uid, 'buff');
+          }
         } 
       },
       { 
@@ -2982,6 +3864,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         execute: (s, t, state, log, ft, pl) => { 
           const embers = s.buffs.roseEmbers || 0;
           const multiplier = 1.3 + (embers * 0.3);
+          if (pl) pl(s.uid, "selina_bloom");
           t.forEach(enemy => { 
             if (enemy.stats.hp > 0) {
               dealDamage(s, enemy, multiplier, "Pyro", log, ft, pl, 3, state); 
@@ -3010,7 +3893,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         statsText: "Урон: 220% АТК\nЩит: 20% HP", 
         execute: (s, t, state, log, ft, pl) => { 
           if(pl) {
-            pl(s.uid, "selina_rose");
+            pl(s.uid, "selina_waltz");
             pl(s.uid, "ultimate_aoe");
           }
           t.forEach(ally => { 
@@ -3064,6 +3947,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const hasAura = !!target.aura;
           const hasDebuff = (target.buffs.spd || 0) < 0 || (target.buffs.thorns || 0) > 0;
           const mult = (hasAura || hasDebuff) ? 2.5 : 0.6;
+          if (pl) pl(target.uid, "neuron_synaptic_click");
           dealDamage(s, target, mult, "Electro", log, ft, pl, 2, state);
           if ((hasAura || hasDebuff) && ft) {
              setTimeout(() => ft(target.uid, "🎯 СИНАПС-ТРИГГЕР!", "text-yellow-400 font-extrabold"), 300);
@@ -3083,6 +3967,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
           const hasAura = !!target.aura;
           const hasDebuff = (target.buffs.spd || 0) < 0 || (target.buffs.thorns || 0) > 0;
           const mult = (hasAura || hasDebuff) ? 3.5 : 1.0;
+          if (pl) pl(target.uid, "neuron_catalytic_burst");
           dealDamage(s, target, mult, "Electro", log, ft, pl, 3, state);
           if (hasAura || hasDebuff) {
              target.aura = null; // Consume status
@@ -3105,6 +3990,7 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
         description: 'Грандиозный запуск импульсов по всем врагам. Урон по целям со статусами увеличивается в 3 раза (коэфф. 3.3). Дает Нейрону +25% силы атаки за каждый триггер.',
         statsText: "Урон: 330% АТК / 110% АТК",
         execute: (s, t, state, log, ft, pl) => {
+          if (pl) pl(s.uid, "neuron_network_synapse");
           let triggersCount = 0;
           t.forEach(enemy => {
             if (enemy.stats.hp > 0) {
@@ -3694,11 +4580,11 @@ export const characterBlueprints: Record<string, (uid: string, level: number, c:
     stats: scaleStats(1050, 170, 70, 50, l, c, arts), atb: 0, cooldowns: {}, buffs: {},
     skills: [
       { id: "pu_atk", name: "Импульс", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Электро урон, дает ATB.',
-        statsText: "Урон: 90% АТК / 120% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { let mult = 0.9; if (c >= 6 && s.stats.hp > s.stats.maxHp * 0.8) mult = 1.2; dealDamage(s, t[0], mult, "Electro", log, ft, pl, 2, state); s.atb += 15; } },
+        statsText: "Урон: 90% АТК / 120% АТК\nПродвижение хода: 15%", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "pulse_arc"); let mult = 0.9; if (c >= 6 && s.stats.hp > s.stats.maxHp * 0.8) mult = 1.2; dealDamage(s, t[0], mult, "Electro", log, ft, pl, 2, state); s.atb += 15; } },
       { id: "pu_e", name: "Подзарядка", type: "Skill1", cost: 3, target: "SingleAlly", description: 'Дает 50 ATB союзнику.',
-        statsText: "Продвижение хода: 50%", execute: (s, t, state, log, ft, pl) => { t[0].atb = Math.min(100, t[0].atb + 50); if(ft) ft(t[0].uid, 'ATB +50', 'text-yellow-400'); } },
+        statsText: "Продвижение хода: 50%", execute: (s, t, state, log, ft, pl) => { if (pl) pl(t[0].uid, "pulse_charge"); t[0].atb = Math.min(100, t[0].atb + 50); if(ft) ft(t[0].uid, 'ATB +50', 'text-yellow-400'); } },
       { id: "pu_q", name: "Тотальный разряд", type: "Skill2", cost: 5, target: "AllAllies", description: 'Дает ATB всему отряду.',
-        statsText: "Продвижение хода: 30%", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { if(a.stats.hp > 0) a.atb = Math.min(100, a.atb + 30); }); } }
+        statsText: "Продвижение хода: 30%", execute: (s, t, state, log, ft, pl) => { t.forEach(a => { if(a.stats.hp > 0) { if (pl) pl(a.uid, "pulse_overdrive"); a.atb = Math.min(100, a.atb + 30); } }); } }
     ]
   }),
   gaia: (uid, l, c, arts = []) => ({
@@ -4338,6 +5224,38 @@ export const createBasicEnemy = (level: number = 1, blueprintId?: string, isAbys
       { id: "e_atk", name: "Пакетная атака", type: "Attack", cost: 0, target: "SingleEnemy", description: 'Удар данными.', execute: (s, t, state, log, ft, pl) => { dealDamage(s, t[0], isBoss ? 2.0 : 1.2, "Physical", log, ft, pl, isBoss ? 4 : 1, state); } }
     ]
   };
+
+};
+
+export const createTrainingDummy = (
+  aura: Element | null,
+  attacksEnabled: boolean,
+  attackPower: number,
+  attackSpeed: number
+): Combatant => {
+  const dummy = createBasicEnemy(60);
+  dummy.id = 'training_dummy';
+  dummy.uid = `training_dummy_${Math.random()}`;
+  dummy.name = 'Тренировочный манекен';
+  dummy.isTrainingDummy = true;
+  dummy.element = 'Physical';
+  dummy.aura = aura;
+  dummy.stats.hp = Number.MAX_SAFE_INTEGER;
+  dummy.stats.maxHp = Number.MAX_SAFE_INTEGER;
+  dummy.stats.def = 0;
+  dummy.stats.atk = attacksEnabled ? Math.round(100 * attackPower / 100) : 0;
+  dummy.stats.spd = attacksEnabled ? attackSpeed : 0;
+  dummy.skills = [{
+    ...dummy.skills[0],
+    id: 'training_dummy_attack',
+    name: 'Тренировочный удар',
+    description: 'Настраиваемая базовая атака манекена.',
+    execute: (source, targets, state, log, floatText, playEffect) => {
+      const target = targets[0];
+      if (target) dealDamage(source, target, 1.2, 'Physical', log, floatText, playEffect, 1, state);
+    }
+  }];
+  return dummy;
 };
 
 export const generateAbyssWaves = (floorId: number, level: number): Combatant[][] => {
@@ -4609,17 +5527,16 @@ export const generateBossRushWave = (stage: number): Combatant[] => {
   const wave = [boss];
   
   if (stage === 0) {
-    // Stage 0: Designed for Krona (Chrono / Ice probes that try to speed up the boss)
-    wave.push(createBasicEnemy(82, 'glacier'));
-    wave.push(createBasicEnemy(82, 'glacier'));
+    wave.push(createBasicEnemy(84, 'spark'));
+    wave.push(createBasicEnemy(84, 'pulse'));
   } else if (stage === 1) {
     // Stage 1: Designed for Ineffa + Zephyr + Aurum + Rix (Overload / Prism Resonators)
     wave.push(createBasicEnemy(88, 'pulse'));
     wave.push(createBasicEnemy(88, 'spark'));
   } else if (stage === 2) {
-    // Stage 2: Designed for Vairen + Nereus (Abyssal Spores that feed Bloom chain reactions)
+    // Stage 2: Frost adds reinforce the ice-tide boss.
     wave.push(createBasicEnemy(94, 'tide'));
-    wave.push(createBasicEnemy(94, 'gaia'));
+    wave.push(createBasicEnemy(94, 'glacier'));
   }
   
   return wave;
@@ -4628,90 +5545,87 @@ export const generateBossRushWave = (stage: number): Combatant[] => {
 export const createBossRushEnemy = (stage: number): Combatant => {
   const configs = [
     {
-      id: "boss_tachyon_sentinel",
-      name: "«ТАХИОННЫЙ ЧАСОВОЙ»",
-      element: "Cryo" as Element,
-      color: "bg-cyan-950 border-cyan-500",
-      level: 85,
-      hp: 620000,
-      atk: 1250,
-      def: 550,
-      spd: 110,
-      critRate: 25,
-      critDamage: 55,
-      image: getCharSplash('boss_frost_giant') || undefined,
+      id: "boss_reactor_titan",
+      name: "«РЕАКТОРНЫЙ ТИТАН»",
+      element: "Pyro" as Element,
+      color: "bg-amber-950 border-amber-500",
+      level: 88,
+      hp: 720000,
+      atk: 1320,
+      def: 620,
+      spd: 106,
+      critRate: 22,
+      critDamage: 52,
+      image: getCharSplash('boss_colossus') || undefined,
       skills: [
         {
-          id: "br_tachyon_slash",
-          name: "Векторный Разрез",
+          id: "br_reactor_pulse",
+          name: "Импульс реактора",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Крио урон (1.1x). Пытается ускорить себя на +20 ATB. Если босс был замедлен или его ATB отброшено назад (Крона), он теряет 75 000 HP от темпорального сбоя!',
-          statsText: "Урон: 110% АТК\nУязвимость: Откат ATB",
+          description: 'Наносит Пиро урон (1.1x). Если у Вольты накоплен заряд или активен Проводящий контур, разряд замыкается на реакторе: босс теряет 55 000 HP и 10 ATB.',
+          statsText: "Урон: 110% АТК\nКонтрразряд Вольты",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            const isDelayed = s.atb < 40 || (s.buffs.spd || 0) < 0;
-            if (isDelayed) {
-              const recoil = 75000;
+            const volta = state.playerParty.find(hero => hero.id === 'volta' && hero.stats.hp > 0);
+            if (volta && ((volta.buffs.voltage || 0) > 0 || (volta.buffs.conductionCircuit || 0) > 0)) {
+              const recoil = 55000;
               s.stats.hp = Math.max(1, s.stats.hp - recoil);
-              if (ft) ft(s.uid, `ТЕМПОРАЛЬНЫЙ СБОЙ: -${recoil}`, "text-cyan-300 font-black");
-              if (log) log(`Задержка хода Кроны вызывает Темпоральный Сбой Часового на ${recoil} урона!`);
+              s.atb = Math.max(0, s.atb - 10);
+              if (ft) ft(s.uid, `КОНТРРАЗРЯД: -${recoil}`, "text-cyan-300 font-black");
+              if (log) log(`Вольтаж Вольты замыкает импульс Реакторного Титана и наносит ему ${recoil} урона!`);
             } else {
-              s.atb = Math.min(100, s.atb + 20);
+              dealDamage(s, t[0], 1.1, "Pyro", log, ft, pl, 2, state);
             }
-            dealDamage(s, t[0], 1.1, "Cryo", log, ft, pl, 2, state);
           }
         },
         {
-          id: "br_tachyon_accel",
-          name: "Тахионный Разгон",
+          id: "br_reactor_overload",
+          name: "Перегрузка контура",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Крио урон (1.3x). Если на боссе висит дебафф Скорости (навык «Крио-Застой» Кроны: -20 СКОР), босс оглушается, теряет 30 ATB, а союзники ускоряются на +20% ATB!',
-          statsText: "Урон: 130% АТК",
+          description: 'Наносит Пиро урон (1.3x). Проводящий контур Вольты поглощает перегрузку: босс теряет 85 000 HP, а отряд восстанавливает 5% HP.',
+          statsText: "Урон: 130% АТК\nКонтрразряд: -85 000 HP",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "krona_ice");
-            const hasSpdDebuff = (s.buffs.spd || 0) < 0;
-            if (hasSpdDebuff) {
-              s.atb = Math.max(0, s.atb - 30);
-              const shatterDmg = 90000;
-              s.stats.hp = Math.max(1, s.stats.hp - shatterDmg);
-              if (ft) ft(s.uid, `КРИО-ЗАСТОЙ: -${shatterDmg}`, "text-cyan-400 font-extrabold");
-              if (log) log(`Замедление Кроны парализует Тахионный Разгон босса на ${shatterDmg} урона!`);
-              if (state && state.playerParty) {
-                state.playerParty.forEach(p => {
-                  if (p.stats.hp > 0) p.atb = Math.min(100, p.atb + 20);
-                });
-              }
+            if (pl) pl(s.uid, "Pyro");
+            const volta = state.playerParty.find(hero => hero.id === 'volta' && hero.stats.hp > 0);
+            if (volta && (volta.buffs.conductionCircuit || 0) > 0) {
+              const recoil = 85000;
+              s.stats.hp = Math.max(1, s.stats.hp - recoil);
+              state.playerParty.forEach(hero => {
+                if (hero.stats.hp > 0) hero.stats.hp = Math.min(hero.stats.maxHp, hero.stats.hp + Math.floor(hero.stats.maxHp * 0.05));
+              });
+              if (ft) ft(s.uid, `КОНТУР ЗАМКНУТ: -${recoil}`, "text-cyan-300 font-black");
+              if (log) log(`Проводящий контур Вольты отводит перегрузку в Реакторный Титан: ${recoil} урона и лечение отряда!`);
               return;
             }
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.3, "Cryo", log, ft, pl, 2, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.3, "Pyro", log, ft, pl, 2, state);
             });
           }
         },
         {
-          id: "br_tachyon_collapse",
-          name: "Хроно-Коллапс",
+          id: "br_reactor_cataclysm",
+          name: "Критический разряд",
           type: "Skill2" as const,
           cost: 5,
           target: "AllEnemies" as const,
-          description: 'Смертоносный темпоральный удар (2.8x). Если отряд совершил продвижение хода (ульта Кроны «Темпоральное Ускорение»), поле времени схлопывается в босса, нанося 160 000 урона!',
-          statsText: "Урон: 280% АТК",
+          description: 'Смертоносный Пиро взрыв (2.8x). Если Вольта накопила 6 зарядов, её разрядка перехватывает взрыв: босс получает 180 000 урона и теряет весь ATB.',
+          statsText: "Урон: 280% АТК\nКонтрразряд при 6 Вольтаже",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            const partyHasAtbAdvantage = t.some(hero => hero.atb >= 70 || (hero.buffs.spd || 0) > 0);
-            if (partyHasAtbAdvantage) {
-              const collapseDmg = 160000;
-              s.stats.hp = Math.max(1, s.stats.hp - collapseDmg);
+            const volta = state.playerParty.find(hero => hero.id === 'volta' && hero.stats.hp > 0);
+            if (volta && (volta.buffs.voltage || 0) >= 6) {
+              const recoil = 180000;
+              s.stats.hp = Math.max(1, s.stats.hp - recoil);
               s.atb = 0;
-              if (ft) ft(s.uid, `ХРОНО-КОЛЛАПС РАЗРУШЕН: -${collapseDmg}`, "text-cyan-300 font-black");
-              if (log) log(`Ускорение времени Кроны разрушает Хроно-Коллапс босса на ${collapseDmg} урона!`);
+              if (ft) ft(s.uid, `РАЗРЯД ВОЛЬТАЖА: -${recoil}`, "text-cyan-300 font-black");
+              if (log) log(`Вольта перехватывает Критический разряд и поражает реактор на ${recoil} урона!`);
               return;
             }
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 2.8, "Cryo", log, ft, pl, 3, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 2.8, "Pyro", log, ft, pl, 3, state);
             });
           }
         }
@@ -4737,7 +5651,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Пиро урон (1.2x). Если на цели есть Гео-щит (Аурум), урон полностью отражается обратно в босса, повышая урон Отражения отряда!',
+          description: 'Наносит Пиро урон (1.2x). Щит Аурума отражает выстрел и усиливает отряд отражением.',
           statsText: "Урон: 120% АТК\nОтражение щитом",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             const hasGeoShield = (t[0].buffs.shield || 0) > 0;
@@ -4761,18 +5675,19 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Пиро-удар (1.4x). Если отряд использует Отражение (Инеффа + Зефир/Рикс), зеркальный барьер титана взрывается, нанося боссу 120 000 урона и снижая его защиту на 40%!',
+          description: 'AoE Пиро-удар (1.4x). Резонанс Инеффы, Зефира, Аурума и Рикса раскалывает зеркало: 120 000 урона боссу и -40% защиты.',
           statsText: "Урон: 140% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
             if (pl) pl(s.uid, "Pyro");
-            const hasReflectionSynergy = t.some(hero => (hero.buffs.reflectedForm || 0) > 0 || (hero.buffs.reflectionDmgBonus || 0) > 0);
+            const teamIds = new Set(state.playerParty.filter(hero => hero.stats.hp > 0).map(hero => hero.id));
+            const hasReflectionSynergy = ['ineffa', 'zephyr', 'aurum', 'rix'].every(id => teamIds.has(id));
             if (hasReflectionSynergy) {
               const shatterDmg = 120000;
               s.stats.hp = Math.max(1, s.stats.hp - shatterDmg);
               s.stats.def = Math.floor(s.stats.def * 0.6);
               if (ft) ft(s.uid, `РАСКОЛ ЗЕРКАЛА: -${shatterDmg}`, "text-rose-400 font-black");
               if (ft) ft(s.uid, "↓ ЗАЩИТА -40%", "text-amber-300 font-bold text-xs");
-              if (log) log(`Отражение Инеффы и Зефира разбивает призму Титана на ${shatterDmg} урона!`);
+              if (log) log(`Полный резонанс Инеффы, Зефира, Аурума и Рикса разбивает призму Титана на ${shatterDmg} урона!`);
               return;
             }
             t.forEach(enemy => {
@@ -4786,16 +5701,17 @@ export const createBossRushEnemy = (stage: number): Combatant => {
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Катастрофический огненный взрыв (2.9x). При наличии Электро-ускорения (Рикс/Зефир), Золотой Эгиды (Аурум) и формы Инеффы, сверхновая рассеивается и наносит боссу 200 000 чистого урона!',
+          description: 'Катастрофический огненный взрыв (2.9x). Полный отряд Инеффы, Зефира, Аурума и Рикса обращает сверхновую против босса: 200 000 урона и сброс ATB.',
           statsText: "Урон: 290% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            const hasFullTeamSynergy = t.some(hero => (hero.buffs.shield || 0) > 0) && t.some(hero => (hero.buffs.spd || 0) > 0 || (hero.buffs.reflectedForm || 0) > 0);
+            const teamIds = new Set(state.playerParty.filter(hero => hero.stats.hp > 0).map(hero => hero.id));
+            const hasFullTeamSynergy = ['ineffa', 'zephyr', 'aurum', 'rix'].every(id => teamIds.has(id));
             if (hasFullTeamSynergy) {
               const novaReflect = 200000;
               s.stats.hp = Math.max(1, s.stats.hp - novaReflect);
               s.atb = 0;
               if (ft) ft(s.uid, `ЗЕРКАЛЬНЫЙ РЕЗОНАНС: -${novaReflect}`, "text-yellow-300 font-black");
-              if (log) log(`Командное Отражение Инеффы, Зефира, Аурума и Рикса обращает Сверхновую против босса на ${novaReflect} урона!`);
+              if (log) log(`Полный резонанс Инеффы, Зефира, Аурума и Рикса обращает Сверхновую против босса на ${novaReflect} урона!`);
               return;
             }
             if (pl) pl(s.uid, "ultimate_aoe");
@@ -4807,10 +5723,10 @@ export const createBossRushEnemy = (stage: number): Combatant => {
       ]
     },
     {
-      id: "boss_abyssal_primordial",
-      name: "«ВЛАДЫКА ТОПИ И ПРИЛИВА»",
-      element: "Hydro" as Element,
-      color: "bg-teal-950 border-teal-500",
+      id: "boss_frost_tide_lord",
+      name: "«ВЛАДЫКА ЛЕДЯНОГО ПРИЛИВА»",
+      element: "Cryo" as Element,
+      color: "bg-cyan-950 border-cyan-500",
       level: 98,
       hp: 1250000,
       atk: 1650,
@@ -4818,24 +5734,26 @@ export const createBossRushEnemy = (stage: number): Combatant => {
       spd: 105,
       critRate: 20,
       critDamage: 55,
-      image: getCharSplash('boss_colossus') || undefined,
+      image: getCharSplash('boss_frost_giant') || undefined,
       skills: [
         {
-          id: "br_abyssal_lash",
-          name: "Пучинный Хлыст",
+          id: "br_frost_tide_lash",
+          name: "Ледяной хлыст",
           type: "Attack" as const,
           cost: 0,
           target: "SingleEnemy" as const,
-          description: 'Наносит Гидро урон (1.4x). Если на поле есть Тёмные Семена/Цветы (Вайрен) или активен Сад Вечного Моря (Нереус), босс получает 80 000 урона от бутонизации, а команда восстанавливает 10% HP!',
-          statsText: "Урон: 140% АТК\nРеакция Бутонизации",
+          description: 'Наносит Крио урон (1.4x). Отряд Кайрена, Нереуса и Авелин с Фариной или Снежаной вызывает ледяной откат: босс теряет 80 000 HP, а отряд восстанавливает 10% HP.',
+          statsText: "Урон: 140% АТК\nОткат ледяного прилива",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            const hasBloomFlora = t.some(hero => (hero.buffs.vairenDarkSeeds?.length || 0) > 0 || (hero.buffs.vairenDarkFlowers?.length || 0) > 0 || (hero.buffs.nereusGardenTurns || 0) > 0);
-            if (hasBloomFlora) {
+            const teamIds = new Set(state.playerParty.filter(hero => hero.stats.hp > 0).map(hero => hero.id));
+            const hasTideTeam = ['kairen', 'nereus', 'aveline'].every(id => teamIds.has(id)) &&
+              (teamIds.has('farina') || teamIds.has('snezhana'));
+            if (hasTideTeam) {
               const recoil = 80000;
               s.stats.hp = Math.max(1, s.stats.hp - recoil);
-              if (ft) ft(s.uid, `ВЗРЫВ БУТОНИЗАЦИИ: -${recoil}`, "text-emerald-400 font-black");
-              if (log) log(`Тёмные Цветы Вайрена и Сад Нереуса детонируют Бутонизацию на ${recoil} урона!`);
-              t.forEach(hero => {
+              if (ft) ft(s.uid, `ЛЕДЯНОЙ ОТКАТ: -${recoil}`, "text-cyan-300 font-black");
+              if (log) log(`Кайрен и Нереус замораживают прилив, а Авелин с поддержкой Фарины или Снежаны наносят боссу ${recoil} урона!`);
+              state.playerParty.forEach(hero => {
                 if (hero.stats.hp > 0) {
                   const heal = Math.floor(hero.stats.maxHp * 0.10);
                   hero.stats.hp = Math.min(hero.stats.maxHp, hero.stats.hp + heal);
@@ -4843,54 +5761,61 @@ export const createBossRushEnemy = (stage: number): Combatant => {
                 }
               });
             } else {
-              dealDamage(s, t[0], 1.4, "Hydro", log, ft, pl, 2, state);
+              dealDamage(s, t[0], 1.4, "Cryo", log, ft, pl, 2, state);
             }
           }
         },
         {
-          id: "br_abyssal_deluge",
-          name: "Прилив Забвения",
+          id: "br_frost_tide_surge",
+          name: "Ледяной прилив",
           type: "Skill1" as const,
           cost: 3,
           target: "AllEnemies" as const,
-          description: 'AoE Гидро волна (1.5x). При контакте с Дендро-флорой Вайрена и приливом Нереуса вызывает цепной взрыв лоз: наносит боссу 140 000 урона и ускоряет созревание цветов!',
-          statsText: "Урон: 150% АТК",
+          description: 'AoE Крио волна (1.5x). Водный резонанс Нереуса и Авелин сдерживает волну, а Кайрен и Фарина или Снежана наносят боссу 140 000 урона.',
+          statsText: "Урон: 150% АТК\nКонтрприлив: -140 000 HP",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            if (pl) pl(s.uid, "Hydro");
-            const hasVairenNereusSynergy = t.some(hero => hero.id === 'vairen' || hero.id === 'nereus' || (hero.buffs.vairenForestHeartTurns || 0) > 0);
-            if (hasVairenNereusSynergy) {
+            if (pl) pl(s.uid, "Cryo");
+            const teamIds = new Set(state.playerParty.filter(hero => hero.stats.hp > 0).map(hero => hero.id));
+            const hasTideTeam = ['kairen', 'nereus', 'aveline'].every(id => teamIds.has(id)) &&
+              (teamIds.has('farina') || teamIds.has('snezhana'));
+            if (hasTideTeam) {
               const chainDmg = 140000;
               s.stats.hp = Math.max(1, s.stats.hp - chainDmg);
-              if (ft) ft(s.uid, `ЦВЕТЕНИЕ ПРИЛИВА: -${chainDmg}`, "text-teal-300 font-black");
-              if (log) log(`Связка Вайрена и Нереуса поглощает волну и взрывает Древние Лозы на ${chainDmg} урона!`);
+              if (ft) ft(s.uid, `КРИО-ПРИЛИВ: -${chainDmg}`, "text-cyan-300 font-black");
+              if (log) log(`Команда Кайрена, Нереуса и Авелин обращает ледяную волну против босса: ${chainDmg} урона!`);
               return;
             }
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.5, "Hydro", log, ft, pl, 2, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 1.5, "Cryo", log, ft, pl, 2, state);
             });
           }
         },
         {
-          id: "br_abyssal_maelstrom",
-          name: "Водоворот Бездны",
+          id: "br_frost_tide_collapse",
+          name: "Коллапс ледяного моря",
           type: "Skill2" as const,
           cost: 6,
           target: "AllEnemies" as const,
-          description: 'Пожирающий омут бездны (3.2x). Если активен эффект «Сердце древнего леса» Вайрена или союзники обладают колоссальным здоровьем Нереуса, водоворот увядает: босс получает 220 000 урона и теряет 50% ATB!',
+          description: 'Смертоносный ледяной вихрь (3.2x). Полный рекомендуемый отряд разрушает его связанной комбинацией: 220 000 урона боссу, сброс его ATB и лечение союзников.',
           statsText: "Урон: 320% АТК",
           execute: (s: Combatant, t: Combatant[], state: BattleState, log: (m: string) => void, ft?: any, pl?: any) => {
-            const hasOceanForestHeart = t.some(hero => (hero.buffs.vairenForestHeartTurns || 0) > 0 || (hero.buffs.nereusGardenTurns || 0) > 0 || hero.stats.maxHp > 30000);
-            if (hasOceanForestHeart) {
+            const teamIds = new Set(state.playerParty.filter(hero => hero.stats.hp > 0).map(hero => hero.id));
+            const hasTideTeam = ['kairen', 'nereus', 'aveline'].every(id => teamIds.has(id)) &&
+              (teamIds.has('farina') || teamIds.has('snezhana'));
+            if (hasTideTeam) {
               const maelstromShatter = 220000;
               s.stats.hp = Math.max(1, s.stats.hp - maelstromShatter);
               s.atb = 0;
-              if (ft) ft(s.uid, `ПРОБУЖДЕНИЕ ЛЕСА И ОКЕАНА: -${maelstromShatter}`, "text-emerald-300 font-black");
-              if (log) log(`Сердце Леса Вайрена и Владыка Океана Нереус сковывают Водоворот на ${maelstromShatter} урона!`);
+              if (ft) ft(s.uid, `СВЯЗАННЫЙ ЛЕДЯНОЙ УДАР: -${maelstromShatter}`, "text-cyan-300 font-black");
+              if (log) log(`Отряд Кайрена, Нереуса и Авелин разрушает ледяной вихрь на ${maelstromShatter} урона!`);
+              state.playerParty.forEach(hero => {
+                if (hero.stats.hp > 0) hero.stats.hp = Math.min(hero.stats.maxHp, hero.stats.hp + Math.floor(hero.stats.maxHp * 0.08));
+              });
               return;
             }
             if (pl) pl(s.uid, "ultimate_aoe");
             t.forEach(enemy => {
-              if (enemy.stats.hp > 0) dealDamage(s, enemy, 3.2, "Hydro", log, ft, pl, 3, state);
+              if (enemy.stats.hp > 0) dealDamage(s, enemy, 3.2, "Cryo", log, ft, pl, 3, state);
             });
           }
         }
@@ -4902,6 +5827,7 @@ export const createBossRushEnemy = (stage: number): Combatant => {
     id: cfg.id + "_" + Math.random(),
     uid: "br_boss_" + Math.random(),
     isEnemy: true,
+    isBoss: true,
     image: cfg.image,
     name: cfg.name,
     element: cfg.element,
@@ -4924,4 +5850,3 @@ export const createBossRushEnemy = (stage: number): Combatant => {
     skills: cfg.skills
   };
 };
-
